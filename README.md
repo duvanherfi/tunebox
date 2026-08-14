@@ -41,12 +41,12 @@ de JavaScript.
 ```
 lib/
   core/innertube/    Cliente HTTP y parsers. Dart puro, sin imports de Flutter.
-  core/audio/        AudioHandler sobre just_audio: cola, notificación, fondo.
+  core/audio/        AudioHandler sobre just_audio + proxy de troceado.
   data/models/       Song, AudioStream. Portables a iOS y escritorio.
   features/          Pantallas de búsqueda y reproducción.
 ```
 
-Dos decisiones que conviene no deshacer:
+Tres decisiones que conviene no deshacer:
 
 **Los parsers buscan por forma, no por ruta.** `findAll` recorre el árbol JSON
 completo buscando el renderer que interesa, en vez de seguir una ruta rígida.
@@ -57,6 +57,30 @@ sobrevive a esos cambios, la ruta fija no.
 que empieza a sonar, porque las URLs de audio van firmadas y caducan en pocos
 minutos. Una cola de URLs pre-resueltas se pudriría mientras suena la primera
 canción.
+
+**El audio pasa por un proxy en loopback, y no es opcional.** googlevideo se
+niega a entregar un fichero entero en una sola respuesta. Medido contra una URL
+real:
+
+| Petición | Respuesta |
+|---|---|
+| sin cabecera `Range` | 403 |
+| `Range: bytes=0-` | 403 |
+| `Range: bytes=0-(último byte)` | 403 |
+| `Range: bytes=0-131071` | 206 |
+
+Pedir el fichero completo se rechaza da igual cómo se exprese; solo se sirven
+ventanas acotadas. ExoPlayer emite exactamente una petición abierta por pista,
+así que ninguna combinación de cabeceras podía funcionar: hay que trocear.
+`StreamProxy` responde al reproductor con un único flujo continuo mientras por
+debajo descarga el origen en bloques de 1 MiB.
+
+Por eso existe `network_security_config.xml`: permite tráfico en claro **solo**
+hacia `127.0.0.1`. Nada sale del dispositivo sin cifrar — el proxy habla con
+googlevideo por HTTPS.
+
+Si alguna vez ves un 403 al reproducir, empieza por aquí antes de sospechar de
+la sesión o de un bloqueo.
 
 ## Desarrollo
 

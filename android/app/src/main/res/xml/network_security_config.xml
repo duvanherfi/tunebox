@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Cleartext is permitted only towards the in-process StreamProxy on loopback.
+  Nothing leaves the device unencrypted: the proxy itself talks to googlevideo
+  over HTTPS. Scoped to 127.0.0.1 rather than enabling usesCleartextTraffic
+  globally, which would allow plain HTTP to any host.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">127.0.0.1</domain>
+    </domain-config>
+</network-security-config>

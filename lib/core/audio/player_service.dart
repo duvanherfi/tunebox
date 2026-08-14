@@ -3,6 +3,7 @@ import 'package:just_audio/just_audio.dart';
 
 import '../../data/models/song.dart';
 import '../innertube/innertube_client.dart';
+import 'stream_proxy.dart';
 
 /// Bridges the queue of [Song]s to the platform's native player and media
 /// notification.
@@ -18,6 +19,7 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
 
   final InnertubeClient _innertube;
   final _player = AudioPlayer();
+  final _proxy = StreamProxy();
 
   List<Song> _songs = const [];
   int _index = 0;
@@ -96,17 +98,13 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     mediaItem.add(_toMediaItem(song));
 
     final stream = await _innertube.resolveStream(song.videoId);
-    await _player.setAudioSource(
-      AudioSource.uri(
-        Uri.parse(stream.url),
-        // Googlevideo ties the signed URL to the client that requested it, so
-        // the stream is fetched with the same identity used to resolve it.
-        headers: const {
-          'User-Agent':
-              'com.google.ios.youtube/20.10.4 (iPhone16,2; U; CPU iOS 18_3_2 like Mac OS X)',
-        },
-      ),
-    );
+
+    // Routed through the proxy so the request carries a Range header, which
+    // googlevideo requires; see StreamProxy for why ExoPlayer cannot do this
+    // on its own. No user agent is set anywhere: the signed URL is verified to
+    // serve any client, so spoofing one would only add a header.
+    await _proxy.start();
+    await _player.setUrl(_proxy.wrap(stream.url).toString());
 
     // The player knows the real duration once the stream is open; the search
     // listing's value is only an estimate.
