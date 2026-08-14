@@ -7,7 +7,10 @@ plugins {
 
 android {
     namespace = "com.tunebox.tunebox"
-    compileSdk = flutter.compileSdkVersion
+    // Pinned above the Flutter default because flutter_secure_storage compiles
+    // against SDK 37. Android SDKs are backward compatible, so raising the
+    // compile target does not change which devices can install the app.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

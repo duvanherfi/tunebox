@@ -2,19 +2,27 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 
 import 'core/audio/player_service.dart';
+import 'core/auth/session.dart';
 import 'core/innertube/innertube_client.dart';
-import 'features/search/search_screen.dart';
+import 'features/home/home_screen.dart';
 
-/// Single shared instance. The audio handler is a process-wide singleton by
-/// nature — there is exactly one media session — so routing it through a state
-/// management package would add indirection without adding anything else.
+/// Single shared instances. The audio handler is a process-wide singleton by
+/// nature — there is exactly one media session — and the session and API client
+/// follow it, so routing them through a state management package would add
+/// indirection without adding anything else.
 late final PlayerService playerService;
 late final InnertubeClient innertube;
+late final Session session;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  innertube = InnertubeClient();
+  // Restored before the first frame so the library tab knows whether it is
+  // signed in without flashing the login prompt.
+  session = Session();
+  await session.load();
+
+  innertube = InnertubeClient(session: session);
   playerService = await AudioService.init(
     builder: () => PlayerService(innertube),
     config: const AudioServiceConfig(
@@ -44,7 +52,7 @@ class TuneboxApp extends StatelessWidget {
         ),
         scaffoldBackgroundColor: const Color(0xFF0B0B0F),
       ),
-      home: const SearchScreen(),
+      home: const HomeScreen(),
     );
   }
 }

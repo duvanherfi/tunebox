@@ -40,6 +40,9 @@ dependencies:
   http:
   just_audio:
   audio_service:
+  webview_flutter:
+  flutter_secure_storage:
+  crypto:
 
 dev_dependencies:
   flutter_test:

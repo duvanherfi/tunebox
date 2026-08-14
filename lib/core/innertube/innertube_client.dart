@@ -2,7 +2,9 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../../data/models/playlist.dart';
 import '../../data/models/song.dart';
+import '../auth/session.dart';
 import 'parsers.dart';
 
 /// Client identities accepted by InnerTube.
@@ -70,20 +72,27 @@ class InnertubeException implements Exception {
 /// unchanged on Android, iOS and desktop, and can be unit tested against
 /// recorded JSON without a Flutter binding.
 class InnertubeClient {
-  InnertubeClient({http.Client? httpClient, this.hl = 'es', this.gl = 'CO'})
-      : _http = httpClient ?? http.Client();
+  InnertubeClient({
+    http.Client? httpClient,
+    this.session,
+    this.hl = 'es',
+    this.gl = 'CO',
+  }) : _http = httpClient ?? http.Client();
 
   final http.Client _http;
+
+  /// When signed in, supplies the cookie and signature headers that unlock
+  /// library, likes and playlists. Null or signed out leaves every call
+  /// anonymous, which is exactly how search and playback already work.
+  final Session? session;
+
   final String hl;
   final String gl;
 
   static const _base = 'https://youtubei.googleapis.com/youtubei/v1';
   static const _musicBase = 'https://music.youtube.com/youtubei/v1';
 
-  /// Session headers for the signed-in requests added in phase 2. Returning an
-  /// empty map keeps every call anonymous; once cookie auth lands, this is the
-  /// only place that has to change for library, likes and playlists to work.
-  Future<Map<String, String>> authHeaders() async => const {};
+  Map<String, String> authHeaders() => session?.headers() ?? const {};
 
   Future<Map<String, dynamic>> _post(
     String base,
@@ -97,8 +106,7 @@ class InnertubeClient {
         'Content-Type': 'application/json',
         'User-Agent': profile.userAgent,
         'Origin': 'https://music.youtube.com',
-        'X-Goog-Visitor-Id': '',
-        ...await authHeaders(),
+        ...authHeaders(),
       },
       body: jsonEncode({
         'context': {'client': profile.context(hl, gl)},
@@ -120,6 +128,30 @@ class InnertubeClient {
     if (query.trim().isEmpty) return const [];
     final json = await _post(_musicBase, 'search', _webRemix, {'query': query});
     return parseSearchResults(json);
+  }
+
+  /// Raw browse call. Every library surface is the same endpoint with a
+  /// different id, so the typed helpers below are thin wrappers.
+  Future<Map<String, dynamic>> browse(String browseId) =>
+      _post(_musicBase, 'browse', _webRemix, {'browseId': browseId});
+
+  /// Songs the account has liked.
+  Future<List<Song>> likedSongs() async =>
+      parseSongList(await browse('FEmusic_liked_videos'));
+
+  /// Recently played tracks.
+  Future<List<Song>> history() async =>
+      parseSongList(await browse('FEmusic_history'));
+
+  /// Playlists the account created or saved.
+  Future<List<Playlist>> savedPlaylists() async =>
+      parsePlaylists(await browse('FEmusic_liked_playlists'));
+
+  /// Tracks inside a playlist. InnerTube addresses playlist contents by
+  /// prefixing the playlist id with `VL`.
+  Future<List<Song>> playlistSongs(String playlistId) async {
+    final id = playlistId.startsWith('VL') ? playlistId : 'VL$playlistId';
+    return parseSongList(await browse(id));
   }
 
   /// Resolves the highest-bitrate audio stream for a track.

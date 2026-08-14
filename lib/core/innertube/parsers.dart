@@ -1,3 +1,4 @@
+import '../../data/models/playlist.dart';
 import '../../data/models/song.dart';
 
 /// Reads a nested value, returning null instead of throwing when any hop is
@@ -80,10 +81,15 @@ Duration? _parseDuration(String text) {
 }
 
 /// Turns a search response into playable tracks.
+List<Song> parseSearchResults(Map<String, dynamic> json) => parseSongList(json);
+
+/// Turns any InnerTube response into playable tracks.
 ///
+/// Search, liked songs, history and playlist contents all render their rows
+/// with the same list-item renderer, so one parser covers every surface.
 /// Items with no `videoId` — artist and album cards, "did you mean" rows — are
-/// dropped, since this screen only offers things that can start playing.
-List<Song> parseSearchResults(Map<String, dynamic> json) {
+/// dropped, since these screens only offer things that can start playing.
+List<Song> parseSongList(Map<String, dynamic> json) {
   final songs = <Song>[];
   final seen = <String>{};
 
@@ -122,6 +128,43 @@ List<Song> parseSearchResults(Map<String, dynamic> json) {
   }
 
   return songs;
+}
+
+/// Extracts playlist and album cards from a library or browse response.
+///
+/// Library shelves render collections as two-row grid cards rather than the
+/// list rows used for tracks, so this walks for that renderer instead. Cards
+/// without a browse id are skipped: they cannot be opened.
+List<Playlist> parsePlaylists(Map<String, dynamic> json) {
+  final playlists = <Playlist>[];
+  final seen = <String>{};
+
+  for (final item in findAll(json, 'musicTwoRowItemRenderer')) {
+    final browseId = readPath(item, [
+      'navigationEndpoint',
+      'browseEndpoint',
+      'browseId',
+    ]);
+    if (browseId is! String || !seen.add(browseId)) continue;
+
+    final title = _readRuns(readPath(item, ['title']));
+    if (title.isEmpty) continue;
+
+    final thumbnails = findFirst(item, 'thumbnails');
+    String? thumbnailUrl;
+    if (thumbnails is List && thumbnails.isNotEmpty) {
+      thumbnailUrl = readPath(thumbnails.last, ['url']) as String?;
+    }
+
+    playlists.add(Playlist(
+      browseId: browseId,
+      title: title,
+      subtitle: _readRuns(readPath(item, ['subtitle'])),
+      thumbnailUrl: thumbnailUrl,
+    ));
+  }
+
+  return playlists;
 }
 
 /// Picks the best audio-only stream from a player response.

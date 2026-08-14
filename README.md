@@ -13,7 +13,7 @@ directo con la API por HTTP y el audio va a ExoPlayer nativo, sin WebView.
 | Fase | Alcance | Estado |
 |---|---|---|
 | 1 | Buscar, reproducir, cola, segundo plano con notificación | Hecho |
-| 2 | Login con cuenta, biblioteca / likes / playlists / historial | Pendiente |
+| 2 | Login con cuenta, biblioteca / likes / playlists / historial | Hecho (lectura) |
 | 3 | Escritura: like, crear playlist, añadir y quitar canciones | Pendiente |
 | 4 | Ping de historial de reproducción, feed de inicio personalizado | Pendiente |
 
@@ -81,6 +81,36 @@ googlevideo por HTTPS.
 
 Si alguna vez ves un 403 al reproducir, empieza por aquí antes de sospechar de
 la sesión o de un bloqueo.
+
+## Sesión y biblioteca
+
+No existe OAuth hacia la API interna, así que la autenticación funciona igual
+que en la web de YouTube Music: cookies de un login real de Google, más una
+cabecera `Authorization` derivada de una de ellas.
+
+El esquema es `SAPISIDHASH`: SHA-1 sobre el timestamp actual, la cookie SAPISID
+y el origen, unidos por espacios, enviado junto a ese mismo timestamp. La web de
+YouTube lo calcula en JavaScript en cada petición, y por eso la cookie que hace
+falta **no** es HttpOnly y se puede leer con `document.cookie` desde el WebView.
+
+Las cookies se guardan cifradas en el dispositivo (`flutter_secure_storage`) y
+no salen de él.
+
+Dos detalles que costaron encontrarse y conviene no deshacer:
+
+**El WebView de login se presenta como Firefox de escritorio.** Google rechaza
+los inicios de sesión desde navegadores embebidos con "this browser or app may
+not be secure". Con el user agent de escritorio la página carga con normalidad.
+
+**`compileSdk` está fijado a 37**, por encima del valor por defecto de Flutter,
+porque `flutter_secure_storage` lo exige. Los SDK de Android son retrocompatibles,
+así que no cambia en qué dispositivos se puede instalar la app.
+
+Todas las superficies de biblioteca son el mismo endpoint `browse` con un id
+distinto (`FEmusic_liked_videos`, `FEmusic_liked_playlists`, `FEmusic_history`),
+y el contenido de una playlist es ese id prefijado con `VL`. Por eso comparten
+un único parser: las filas de canción usan el mismo renderer en búsqueda,
+likes, historial y playlists.
 
 ## Desarrollo
 

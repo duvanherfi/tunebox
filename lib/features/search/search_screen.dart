@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../data/models/song.dart';
 import '../../main.dart';
-import '../player/mini_player.dart';
+import '../shared/song_list_view.dart';
 
+/// Search over the whole YouTube Music catalogue. Works signed out; the session
+/// only changes whether results are personalised.
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
 
@@ -11,11 +13,15 @@ class SearchScreen extends StatefulWidget {
   State<SearchScreen> createState() => _SearchScreenState();
 }
 
-class _SearchScreenState extends State<SearchScreen> {
+class _SearchScreenState extends State<SearchScreen>
+    with AutomaticKeepAliveClientMixin {
   final _controller = TextEditingController();
   List<Song> _results = const [];
   bool _loading = false;
   String? _error;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void dispose() {
@@ -48,50 +54,30 @@ class _SearchScreenState extends State<SearchScreen> {
     }
   }
 
-  /// Starting playback also seeds the queue with everything below the tapped
-  /// row, so the results list doubles as the up-next list.
-  Future<void> _play(int index) async {
-    try {
-      await playerService.setQueue(_results, startIndex: index);
-    } catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo reproducir: $error')),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Tunebox'),
-        backgroundColor: Colors.transparent,
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: TextField(
-              controller: _controller,
-              autofocus: true,
-              textInputAction: TextInputAction.search,
-              onSubmitted: (_) => _search(),
-              decoration: InputDecoration(
-                hintText: 'Buscar canciones o artistas',
-                prefixIcon: const Icon(Icons.search),
-                filled: true,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(28),
-                  borderSide: BorderSide.none,
-                ),
+    super.build(context);
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          child: TextField(
+            controller: _controller,
+            textInputAction: TextInputAction.search,
+            onSubmitted: (_) => _search(),
+            decoration: InputDecoration(
+              hintText: 'Buscar canciones o artistas',
+              prefixIcon: const Icon(Icons.search),
+              filled: true,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(28),
+                borderSide: BorderSide.none,
               ),
             ),
           ),
-          Expanded(child: _buildBody()),
-          const MiniPlayer(),
-        ],
-      ),
+        ),
+        Expanded(child: _buildBody()),
+      ],
     );
   }
 
@@ -111,30 +97,6 @@ class _SearchScreenState extends State<SearchScreen> {
       return const Center(child: Text('Busca algo para empezar'));
     }
 
-    return ListView.builder(
-      itemCount: _results.length,
-      itemBuilder: (context, index) {
-        final song = _results[index];
-        return ListTile(
-          leading: ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: song.thumbnailUrl == null
-                ? const SizedBox(width: 48, height: 48)
-                : Image.network(
-                    song.thumbnailUrl!,
-                    width: 48,
-                    height: 48,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) =>
-                        const SizedBox(width: 48, height: 48),
-                  ),
-          ),
-          title: Text(song.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-          subtitle:
-              Text(song.subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
-          onTap: () => _play(index),
-        );
-      },
-    );
+    return SongListView(songs: _results);
   }
 }
