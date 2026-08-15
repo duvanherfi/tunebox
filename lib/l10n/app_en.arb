@@ -172,5 +172,6 @@
   "menuUnlike": "Remove from liked songs",
   "menuUnliked": "Removed from liked songs",
   "searchRecent": "Recent searches",
-  "searchRecentClear": "Clear"
+  "searchRecentClear": "Clear",
+  "settingsStorageRefresh": "Recalculate"
 }

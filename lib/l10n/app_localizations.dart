@@ -997,6 +997,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Clear'**
   String get searchRecentClear;
+
+  /// No description provided for @settingsStorageRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Recalculate'**
+  String get settingsStorageRefresh;
 }
 
 class _AppLocalizationsDelegate

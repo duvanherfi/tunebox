@@ -504,4 +504,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get searchRecentClear => 'Clear';
+
+  @override
+  String get settingsStorageRefresh => 'Recalculate';
 }
