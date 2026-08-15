@@ -44,6 +44,12 @@ class _FullPlayerState extends State<FullPlayer> {
   @override
   Widget build(BuildContext context) {
     final art = widget.item.artUri?.toString();
+    final size = MediaQuery.sizeOf(context);
+
+    // Side by side once the screen is wider than it is tall. Stacking a square
+    // cover above the controls on a landscape phone leaves the cover a sliver:
+    // there is height for one of the two, and it is not the picture.
+    final sideBySide = size.width > size.height;
 
     return Stack(
       fit: StackFit.expand,
@@ -56,41 +62,34 @@ class _FullPlayerState extends State<FullPlayer> {
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Column(
-                    children: [
-                      Expanded(
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 300),
-                          child: _showLyrics
-                              ? LyricsView(
-                                  key: const ValueKey('lyrics'),
-                                  song: playerService.currentSong,
-                                )
-                              : Center(
-                                  child: _Cover(
-                                    key: ValueKey(widget.item.id),
-                                    url: art,
-                                    size: MediaQuery.sizeOf(context).width - 96,
-                                  ),
+                  child: sideBySide
+                      ? Row(
+                          children: [
+                            Expanded(child: _stage(art)),
+                            const SizedBox(width: 32),
+                            Expanded(
+                              // Scrollable rather than fixed: on a short
+                              // landscape screen the panel is a couple of
+                              // pixels taller than the space, and a player
+                              // that reports an overflow to its user is worse
+                              // than one that lets them nudge it.
+                              child: SingleChildScrollView(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: _panel(),
                                 ),
+                              ),
+                            ),
+                          ],
+                        )
+                      : Column(
+                          children: [
+                            Expanded(child: _stage(art)),
+                            const SizedBox(height: 16),
+                            ..._panel(),
+                            const SizedBox(height: 8),
+                          ],
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      _Title(item: widget.item),
-                      const SizedBox(height: 16),
-                      _QuickActions(
-                        showingLyrics: _showLyrics,
-                        onToggleLyrics: () =>
-                            setState(() => _showLyrics = !_showLyrics),
-                      ),
-                      const SizedBox(height: 8),
-                      _ProgressBar(
-                        total: widget.item.duration ?? Duration.zero,
-                      ),
-                      const _Controls(),
-                      const SizedBox(height: 8),
-                    ],
-                  ),
                 ),
               ),
               // What is coming, one tap away, named rather than hidden behind
@@ -102,6 +101,44 @@ class _FullPlayerState extends State<FullPlayer> {
       ],
     );
   }
+
+  /// The cover, or the words in its place. Sized from what it is given rather
+  /// than from the screen, so the same widget fits both layouts.
+  Widget _stage(String? art) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      child: _showLyrics
+          ? LyricsView(
+              key: const ValueKey('lyrics'),
+              song: playerService.currentSong,
+            )
+          : LayoutBuilder(
+              builder: (context, constraints) => Center(
+                child: _Cover(
+                  key: ValueKey(widget.item.id),
+                  url: art,
+                  size: [
+                    constraints.maxWidth,
+                    constraints.maxHeight,
+                    420.0,
+                  ].reduce((a, b) => a < b ? a : b),
+                ),
+              ),
+            ),
+    );
+  }
+
+  List<Widget> _panel() => [
+        _Title(item: widget.item),
+        const SizedBox(height: 16),
+        _QuickActions(
+          showingLyrics: _showLyrics,
+          onToggleLyrics: () => setState(() => _showLyrics = !_showLyrics),
+        ),
+        const SizedBox(height: 8),
+        _ProgressBar(total: widget.item.duration ?? Duration.zero),
+        const _Controls(),
+      ];
 }
 
 /// The cover, blurred to a wash of its own colours, under a scrim heavy enough

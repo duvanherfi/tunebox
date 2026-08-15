@@ -38,25 +38,33 @@ class FloatingNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
-    return Material(
-      color: colors.surfaceContainerHigh,
-      elevation: 3,
-      shadowColor: Colors.black.withValues(alpha: 0.3),
-      surfaceTintColor: Colors.transparent,
-      borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-      clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            for (var i = 0; i < destinations.length; i++)
-              _Destination(
-                destination: destinations[i],
-                selected: i == index,
-                onTap: () => onSelected(i),
-              ),
-          ],
+    return Center(
+      // Capped and centred: stretched across a landscape screen the four
+      // destinations end up a hand's width apart, which is a longer reach than
+      // any of them is worth.
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 520),
+        child: Material(
+          color: colors.surfaceContainerHigh,
+          elevation: 3,
+          shadowColor: Colors.black.withValues(alpha: 0.3),
+          surfaceTintColor: Colors.transparent,
+          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+          clipBehavior: Clip.antiAlias,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                for (var i = 0; i < destinations.length; i++)
+                  _Destination(
+                    destination: destinations[i],
+                    selected: i == index,
+                    onTap: () => onSelected(i),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );

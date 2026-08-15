@@ -47,6 +47,9 @@ class PlayerSheetState extends State<PlayerSheet>
   /// rather than as two rectangles of different widths.
   static const _sideMargin = 16.0;
 
+  /// And the same ceiling, for the same reason.
+  static const _maxCollapsedWidth = 520.0;
+
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 320),
@@ -115,9 +118,16 @@ class PlayerSheetState extends State<PlayerSheet>
             final barOpacity = (1 - t * 4).clamp(0.0, 1.0);
             final panelOpacity = ((t - 0.25) * 4).clamp(0.0, 1.0);
 
+            // Capped like the navigation under it, so the pair stays a pair on
+            // a wide screen instead of becoming a stripe across it.
+            final width = MediaQuery.sizeOf(context).width;
+            final capped = t < 0.5 && width - margin * 2 > _maxCollapsedWidth
+                ? (width - _maxCollapsedWidth) / 2
+                : margin;
+
             return Positioned(
-              left: margin,
-              right: margin,
+              left: capped,
+              right: capped,
               bottom: bottom,
               height: height,
               child: PopScope(
