@@ -117,6 +117,9 @@ class MiniPlayerBar extends StatelessWidget {
 /// advances smoothly instead of stepping once per state broadcast. Deliberately
 /// not interactive: dragging here belongs to the sheet, and a 3px target would
 /// only produce accidental seeks.
+///
+/// Inset and rounded rather than edge-to-edge: the bar it sits in is a floating
+/// card now, and a line running into a rounded corner gets sliced by it.
 class _MiniProgressBar extends StatelessWidget {
   const _MiniProgressBar({this.fallbackDuration});
 
@@ -125,18 +128,25 @@ class _MiniProgressBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<Duration>(
-      stream: playerService.player.positionStream,
+      stream: playerService.shownPosition,
       builder: (context, snapshot) {
         final position = snapshot.data ?? Duration.zero;
-        final duration = playerService.player.duration ?? fallbackDuration;
+        final duration = playerService.shownDuration ?? fallbackDuration;
         final total = duration?.inMilliseconds ?? 0;
         final value =
             total <= 0 ? 0.0 : (position.inMilliseconds / total).clamp(0.0, 1.0);
 
-        return LinearProgressIndicator(
-          value: total <= 0 ? null : value,
-          minHeight: 3,
-          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(3),
+            child: LinearProgressIndicator(
+              value: total <= 0 ? null : value,
+              minHeight: 3,
+              backgroundColor:
+                  Theme.of(context).colorScheme.surfaceContainerHighest,
+            ),
+          ),
         );
       },
     );

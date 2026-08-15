@@ -69,7 +69,9 @@ class _HomeScreenState extends State<HomeScreen> {
             builder: (context, snapshot) {
               final playerHeight = snapshot.data == null
                   ? 0.0
-                  : PlayerSheetState.collapsedHeight;
+                  // The bar plus the air under it, so a list ends above the
+                  // pair rather than behind either of them.
+                  : PlayerSheetState.collapsedHeight + PlayerSheetState.gap;
               return Padding(
                 padding: EdgeInsets.only(bottom: _navHeight + playerHeight),
                 child: Column(

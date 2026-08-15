@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The app's raspberry, the same seed the interface is generated from. -->
+    <color name="ic_launcher_background">#FFC2185B</color>
+</resources>

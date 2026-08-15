@@ -9,6 +9,7 @@ import '../../data/play_history.dart';
 import '../../data/audio_cache.dart';
 import '../../data/downloads.dart';
 import '../../data/likes.dart';
+import '../../data/resume_point.dart';
 import '../../data/settings.dart';
 import '../innertube/innertube_client.dart';
 import '../scrobble/scrobbler.dart';
@@ -30,6 +31,7 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     this._cache,
     this._scrobbler,
     this._likes,
+    this._resume,
     this._browseLabels,
   ) {
     _wirePlayerStreams();
@@ -50,6 +52,7 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   final AudioCache _cache;
   final Scrobbler _scrobbler;
   final Likes _likes;
+  final ResumePoint _resume;
 
   static const _likeAction = 'like';
 
@@ -137,6 +140,19 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     _equalizer.setEnabled(_settings.equalizerEnabled);
   }
 
+  int _savedAt = -1;
+
+  /// Where a restored track should start, until the first play consumes it.
+  ///
+  /// Nothing is fetched to restore a queue: reopening the app costs no network
+  /// and no battery, and the stream is only resolved when someone actually
+  /// presses play — at which point it opens at the second it was left on.
+  Duration? _pending;
+
+  /// Whether the player currently holds audio for [_index]. False after a
+  /// restore, which is how play() knows it has to load before it can start.
+  bool _loaded = false;
+
   /// Pending confirmation that the current track was really listened to.
   /// Cancelled whenever the track changes, so skipping past something never
   /// counts as having been heard.
@@ -150,6 +166,15 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
 
   AudioPlayer get player => _player;
 
+  /// The position to put on screen: the player's own once audio is loaded, and
+  /// the remembered one before that. A restored track shows where it will
+  /// resume from, rather than sitting at zero until someone presses play.
+  Stream<Duration> get shownPosition => _player.positionStream
+      .map((position) => _loaded ? position : (_pending ?? Duration.zero));
+
+  /// Likewise for the length: known from the listing before the stream opens.
+  Duration? get shownDuration => _player.duration ?? currentSong?.duration;
+
   void _wirePlayerStreams() {
     _player.playbackEventStream.listen(
       (event) => playbackState.add(_transformState(event)),
@@ -159,6 +184,17 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
         playing: false,
       )),
     );
+
+    // Where the music is, written down every few seconds and whenever it
+    // starts or stops. Every few rather than every tick: this is a file, and
+    // losing at most five seconds of position is not worth the writes.
+    _player.positionStream.listen((position) {
+      final second = position.inSeconds;
+      if (second == _savedAt || second % 5 != 0) return;
+      _savedAt = second;
+      unawaited(_saveResumePoint());
+    });
+    _player.playingStream.listen((_) => unawaited(_saveResumePoint()));
 
     // just_audio reports completion of the single loaded track; advancing the
     // queue is this class's job because the queue lives here, not in the player.
@@ -227,6 +263,47 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
             ? null
             : Uri.parse(song.highResThumbnailUrl!),
       );
+
+  /// Puts back what was playing when the app last closed, paused and at the
+  /// second it stopped on. The queue and the modes come back with it.
+  Future<void> restore() async {
+    if (_resume.isEmpty) return;
+
+    _songs = List.of(_resume.songs);
+    _unshuffled = List.of(_resume.songs);
+    _index = _resume.index;
+    _shuffled = _resume.shuffled;
+    _repeat = AudioServiceRepeatMode.values[
+        _resume.repeatMode.clamp(0, AudioServiceRepeatMode.values.length - 1)];
+    _pending = _resume.position;
+    _loaded = false;
+
+    _publishQueue();
+    mediaItem.add(_toMediaItem(_songs[_index]));
+    playbackState.add(playbackState.value.copyWith(
+      processingState: AudioProcessingState.ready,
+      playing: false,
+      updatePosition: _resume.position,
+      queueIndex: _index,
+      repeatMode: _repeat,
+      shuffleMode: _shuffled
+          ? AudioServiceShuffleMode.all
+          : AudioServiceShuffleMode.none,
+    ));
+  }
+
+  /// Writes down where the music is, so the next launch — or the next car —
+  /// can pick it up. Cheap enough to call on every change worth remembering.
+  Future<void> _saveResumePoint() async {
+    if (_songs.isEmpty) return;
+    await _resume.save(
+      songs: _songs,
+      index: _index,
+      position: _loaded ? _player.position : (_pending ?? Duration.zero),
+      shuffled: _shuffled,
+      repeatMode: _repeat.index,
+    );
+  }
 
   /// Replaces the queue and starts playing at [startIndex].
   Future<void> setQueue(List<Song> songs, {int startIndex = 0}) async {
@@ -340,7 +417,7 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     playbackState.add(playbackState.value.copyWith(queueIndex: _index));
   }
 
-  Future<void> _playIndex(int index) async {
+  Future<void> _playIndex(int index, {Duration? from}) async {
     _watchtime?.cancel();
     if (index < 0 || index >= _songs.length) {
       await stop();
@@ -382,6 +459,10 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
       }
     }
 
+    _loaded = true;
+    _pending = null;
+    if (from != null && from > Duration.zero) await _player.seek(from);
+
     // The player knows the real duration once the stream is open; the search
     // listing's value is only an estimate.
     final actual = _player.duration;
@@ -399,6 +480,7 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     // account is told too — and confirmed a while later, once enough of the
     // track has been heard to call it a listen.
     unawaited(_history.record(song));
+    unawaited(_saveResumePoint());
     unawaited(_scrobbler.nowPlaying(song));
 
     // Half the track, or two minutes, whichever comes first — the rule the
@@ -478,6 +560,13 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     String mediaId, [
     Map<String, dynamic>? extras,
   ]) async {
+    // The car's "resume" offer is the track that was already loaded: play it
+    // where it was left rather than starting its queue over.
+    if (currentSong?.videoId == mediaId) {
+      await play();
+      return;
+    }
+
     final source = [..._downloads.songs, ..._history.songs];
     final index = source.indexWhere((song) => song.videoId == mediaId);
     if (index < 0) return;
@@ -499,7 +588,15 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   }
 
   @override
-  Future<void> play() => _player.play();
+  Future<void> play() async {
+    // After a restore there is a track and a position but no audio yet; the
+    // first press is what goes and gets it.
+    if (!_loaded && currentSong != null) {
+      await _playIndex(_index, from: _pending);
+      return;
+    }
+    await _player.play();
+  }
 
   @override
   Future<void> pause() => _player.pause();

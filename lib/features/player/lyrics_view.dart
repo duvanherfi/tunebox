@@ -128,7 +128,7 @@ class _SyncedState extends State<_Synced> {
     final theme = Theme.of(context);
 
     return StreamBuilder<Duration>(
-      stream: playerService.player.positionStream,
+      stream: playerService.shownPosition,
       builder: (context, snapshot) {
         final active = widget.lyrics.indexAt(snapshot.data ?? Duration.zero);
 

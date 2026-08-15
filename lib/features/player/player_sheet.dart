@@ -38,6 +38,15 @@ class PlayerSheetState extends State<PlayerSheet>
   static const collapsedHeight = 76.0;
   static const _flingVelocity = 250.0;
 
+  /// Air between the collapsed bar and the navigation under it. They are two
+  /// separate things — what is playing and where you are — and a hairline
+  /// between two stacked slabs reads as one badly drawn one.
+  static const gap = 10.0;
+
+  /// The same inset the navigation pill uses, so the two line up as a pair
+  /// rather than as two rectangles of different widths.
+  static const _sideMargin = 16.0;
+
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 320),
@@ -97,9 +106,9 @@ class PlayerSheetState extends State<PlayerSheet>
             final t = _controller.value;
             final height =
                 lerpDouble(collapsedHeight, screenHeight, t)!;
-            final bottom = lerpDouble(widget.bottomInset, 0, t)!;
+            final bottom = lerpDouble(widget.bottomInset + gap, 0, t)!;
             final radius = lerpDouble(AppTheme.radiusCard, 0, t)!;
-            final margin = lerpDouble(12, 0, t)!;
+            final margin = lerpDouble(_sideMargin, 0, t)!;
 
             // Fades tuned so the two layouts never overlap visibly: the bar is
             // gone by a quarter of the way up, the panel starts there.
@@ -125,9 +134,12 @@ class PlayerSheetState extends State<PlayerSheet>
                   onVerticalDragCancel: _settle,
                   child: Material(
                     color: colors.surfaceContainerHigh,
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(radius),
-                    ),
+                    // Rounded on all four corners while it is a floating bar,
+                    // squaring off as it grows into the screen.
+                    borderRadius: BorderRadius.circular(radius),
+                    elevation: lerpDouble(3, 0, t)!,
+                    shadowColor: Colors.black.withValues(alpha: 0.3),
+                    surfaceTintColor: Colors.transparent,
                     clipBehavior: Clip.antiAlias,
                     child: Stack(
                       children: [

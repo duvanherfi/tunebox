@@ -17,6 +17,7 @@ import 'data/downloads.dart';
 import 'data/likes.dart';
 import 'data/play_history.dart';
 import 'data/recent_searches.dart';
+import 'data/resume_point.dart';
 import 'data/settings.dart';
 import 'features/home/home_screen.dart';
 import 'l10n/app_localizations.dart';
@@ -37,6 +38,7 @@ late final Scrobbler scrobbler;
 late final Backup backup;
 late final Likes likes;
 late final RecentSearches recentSearches;
+late final ResumePoint resumePoint;
 final LyricsClient lyricsClient = LyricsClient();
 
 Future<void> main() async {
@@ -94,6 +96,11 @@ Future<void> main() async {
   recentSearches = RecentSearches();
   await recentSearches.load();
 
+  // Read before the handler exists, so the first frame can already show what
+  // was playing when the app was last closed.
+  resumePoint = ResumePoint();
+  await resumePoint.load();
+
   playerService = await AudioService.init(
     builder: () => PlayerService(
       innertube,
@@ -103,6 +110,7 @@ Future<void> main() async {
       audioCache,
       scrobbler,
       likes,
+      resumePoint,
       (downloads: l10n.libraryDownloads, history: l10n.libraryHistory),
     ),
     config: AudioServiceConfig(
@@ -129,6 +137,10 @@ Future<void> main() async {
       },
     ),
   );
+
+  // Paused, at the second it stopped on: reopening the app answers "what was
+  // I listening to" without asking the network anything.
+  await playerService.restore();
 
   // The colours follow whatever is playing, when that is switched on.
   playerService.mediaItem.listen(

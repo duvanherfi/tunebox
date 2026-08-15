@@ -455,10 +455,10 @@ class _ProgressBar extends StatelessWidget {
     final theme = Theme.of(context);
 
     return StreamBuilder<Duration>(
-      stream: playerService.player.positionStream,
+      stream: playerService.shownPosition,
       builder: (context, snapshot) {
         final position = snapshot.data ?? Duration.zero;
-        final duration = playerService.player.duration ?? total;
+        final duration = playerService.shownDuration ?? total;
         final max = duration.inMilliseconds.toDouble();
         final value = position.inMilliseconds.clamp(0, max.toInt()).toDouble();
 
