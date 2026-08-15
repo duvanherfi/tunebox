@@ -92,5 +92,10 @@
   "create": "Create",
   "playlistPickTitle": "Add to playlist",
   "@menuAddedTo": {"placeholders": {"playlist": {"type": "String"}}},
-  "@menuFailed": {"placeholders": {"reason": {"type": "String"}}}
+  "@menuFailed": {"placeholders": {"reason": {"type": "String"}}},
+  "play": "Play",
+  "shuffle": "Shuffle",
+  "artistSongs": "Songs",
+  "menuGoArtist": "Go to artist",
+  "menuGoAlbum": "Go to album"
 }

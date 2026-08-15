@@ -253,4 +253,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get playlistPickTitle => 'Add to playlist';
+
+  @override
+  String get play => 'Play';
+
+  @override
+  String get shuffle => 'Shuffle';
+
+  @override
+  String get artistSongs => 'Songs';
+
+  @override
+  String get menuGoArtist => 'Go to artist';
+
+  @override
+  String get menuGoAlbum => 'Go to album';
 }

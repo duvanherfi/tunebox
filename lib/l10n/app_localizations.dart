@@ -559,6 +559,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add to playlist'**
   String get playlistPickTitle;
+
+  /// No description provided for @play.
+  ///
+  /// In en, this message translates to:
+  /// **'Play'**
+  String get play;
+
+  /// No description provided for @shuffle.
+  ///
+  /// In en, this message translates to:
+  /// **'Shuffle'**
+  String get shuffle;
+
+  /// No description provided for @artistSongs.
+  ///
+  /// In en, this message translates to:
+  /// **'Songs'**
+  String get artistSongs;
+
+  /// No description provided for @menuGoArtist.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to artist'**
+  String get menuGoArtist;
+
+  /// No description provided for @menuGoAlbum.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to album'**
+  String get menuGoAlbum;
 }
 
 class _AppLocalizationsDelegate

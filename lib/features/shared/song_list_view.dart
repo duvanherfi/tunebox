@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../l10n/app_localizations.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/song.dart';
+import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import 'song_menu.dart';
 
@@ -17,16 +17,45 @@ class SongListView extends StatelessWidget {
   final List<Song> songs;
   final EdgeInsets? padding;
 
-  Future<void> _play(BuildContext context, int index) async {
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      padding: padding ?? const EdgeInsets.only(bottom: 8),
+      itemCount: songs.length,
+      itemBuilder: (context, index) => SongRow(songs: songs, index: index),
+    );
+  }
+}
+
+/// One track in a list, together with the list it belongs to.
+///
+/// It takes the whole list rather than a single song because tapping a row has
+/// always meant "play from here": the queue that follows is the rest of what
+/// was on screen.
+class SongRow extends StatelessWidget {
+  const SongRow({
+    super.key,
+    required this.songs,
+    required this.index,
+    this.numbered = false,
+  });
+
+  final List<Song> songs;
+  final int index;
+
+  /// Shows the track's position instead of its cover. On an album every row
+  /// would otherwise repeat the same sleeve — or, since YouTube omits it there,
+  /// the same grey placeholder.
+  final bool numbered;
+
+  Future<void> _play(BuildContext context) async {
     try {
       await playerService.setQueue(songs, startIndex: index);
     } catch (error) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            AppLocalizations.of(context)!.playbackFailed(''),
-          ),
+          content: Text(AppLocalizations.of(context)!.playbackFailed('')),
         ),
       );
     }
@@ -34,29 +63,11 @@ class SongListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-      padding: padding ?? const EdgeInsets.only(bottom: 8),
-      itemCount: songs.length,
-      itemBuilder: (context, index) => _SongRow(
-        song: songs[index],
-        onTap: () => _play(context, index),
-      ),
-    );
-  }
-}
-
-class _SongRow extends StatelessWidget {
-  const _SongRow({required this.song, required this.onTap});
-
-  final Song song;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final song = songs[index];
 
     return InkWell(
-      onTap: onTap,
+      onTap: () => _play(context),
       // Both ways in, because both are habits: the long press comes from the
       // phone, the button from every music app that has ever had a row of
       // three dots at the end of a track.
@@ -65,7 +76,20 @@ class _SongRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Row(
           children: [
-            Artwork(url: song.thumbnailUrl),
+            if (numbered)
+              SizedBox(
+                width: 44,
+                child: Text(
+                  '${index + 1}',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              )
+            else
+              Artwork(url: song.thumbnailUrl),
             const SizedBox(width: 14),
             Expanded(
               child: Column(

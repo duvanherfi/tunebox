@@ -25,6 +25,24 @@ class Playlist {
   int get hashCode => browseId.hashCode;
 }
 
+/// An artist's or an album's page: a heading, its tracks, and whatever rows of
+/// other things YouTube attached below them.
+class MusicPage {
+  const MusicPage({
+    required this.title,
+    this.subtitle = '',
+    this.thumbnailUrl,
+    this.songs = const [],
+    this.shelves = const [],
+  });
+
+  final String title;
+  final String subtitle;
+  final String? thumbnailUrl;
+  final List<Song> songs;
+  final List<Shelf> shelves;
+}
+
 /// Who is signed in.
 class Account {
   const Account({required this.name, required this.email, this.photoUrl});

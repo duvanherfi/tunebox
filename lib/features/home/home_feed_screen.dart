@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_theme.dart';
 import '../../data/models/playlist.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
-import '../library/playlist_screen.dart';
+import '../shared/shelf_row.dart';
 
 /// What the app opens on: rows of collections from YouTube Music's front page.
 ///
@@ -73,115 +72,10 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
           child: ListView.builder(
             padding: const EdgeInsets.only(bottom: 16),
             itemCount: shelves.length,
-            itemBuilder: (context, index) => _ShelfRow(shelf: shelves[index]),
+            itemBuilder: (context, index) => ShelfRow(shelf: shelves[index]),
           ),
         );
       },
-    );
-  }
-}
-
-class _ShelfRow extends StatelessWidget {
-  const _ShelfRow({required this.shelf});
-
-  final Shelf shelf;
-
-  static const _cardWidth = 156.0;
-
-  Future<void> _play(BuildContext context, int index) async {
-    try {
-      await playerService.setQueue(shelf.songs, startIndex: index);
-    } catch (_) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.playbackFailed(''))),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // A row is one or the other: tracks when the feed knows the listener,
-    // covers when it does not.
-    final songs = shelf.songs;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SectionHeader(shelf.title),
-        SizedBox(
-          // Room for the cover plus two lines of title beneath it.
-          height: _cardWidth + 56,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: songs.isNotEmpty ? songs.length : shelf.playlists.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 12),
-            itemBuilder: (context, index) => songs.isNotEmpty
-                ? _Card(
-                    title: songs[index].title,
-                    thumbnailUrl: songs[index].thumbnailUrl,
-                    width: _cardWidth,
-                    onTap: () => _play(context, index),
-                  )
-                : _Card(
-                    title: shelf.playlists[index].title,
-                    thumbnailUrl: shelf.playlists[index].thumbnailUrl,
-                    width: _cardWidth,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            PlaylistScreen(playlist: shelf.playlists[index]),
-                      ),
-                    ),
-                  ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// One cover with its title, whether it opens a collection or starts a track.
-class _Card extends StatelessWidget {
-  const _Card({
-    required this.title,
-    required this.thumbnailUrl,
-    required this.width,
-    required this.onTap,
-  });
-
-  final String title;
-  final String? thumbnailUrl;
-  final double width;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return SizedBox(
-      width: width,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppTheme.radiusArtwork),
-        onTap: onTap,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Artwork(url: thumbnailUrl, size: width),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                height: 1.2,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

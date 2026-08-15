@@ -127,10 +127,31 @@ List<Song> parseSongList(Map<String, dynamic> json) {
       subtitle: subtitle,
       thumbnailUrl: thumbnailUrl,
       duration: duration,
+      artistId: _linkedPage(item, 'MUSIC_PAGE_TYPE_ARTIST'),
+      albumId: _linkedPage(item, 'MUSIC_PAGE_TYPE_ALBUM'),
     ));
   }
 
   return songs;
+}
+
+/// Finds the id of the artist or album a row links to.
+///
+/// The words in a metadata line are links, and each carries the kind of page it
+/// opens. Matching on that kind rather than on position is what keeps this
+/// working when YouTube reorders the line — which it does per result type.
+String? _linkedPage(Object? item, String pageType) {
+  for (final endpoint in findAll(item, 'browseEndpoint')) {
+    final kind = readPath(endpoint, [
+      'browseEndpointContextSupportedConfigs',
+      'browseEndpointContextMusicConfig',
+      'pageType',
+    ]);
+    if (kind != pageType) continue;
+    final id = readPath(endpoint, ['browseId']);
+    if (id is String && id.isNotEmpty) return id;
+  }
+  return null;
 }
 
 /// Strips the timestamp and any separator left dangling around it.
@@ -222,6 +243,43 @@ List<Song> parseCardSongs(Map<String, dynamic> json) {
   }
 
   return songs;
+}
+
+/// The title block at the top of an artist or album page.
+///
+/// YouTube has three renderers for the same idea and uses whichever the page
+/// was built with, so all three are tried in turn rather than picking one and
+/// hoping.
+({String title, String subtitle, String? thumbnailUrl}) parsePageHeader(
+  Map<String, dynamic> json,
+) {
+  const renderers = [
+    'musicImmersiveHeaderRenderer',
+    'musicDetailHeaderRenderer',
+    'musicResponsiveHeaderRenderer',
+  ];
+
+  for (final renderer in renderers) {
+    final header = findFirst(json, renderer);
+    if (header == null) continue;
+
+    final title = _readRuns(readPath(header, ['title']));
+    if (title.isEmpty) continue;
+
+    final thumbnails = findFirst(header, 'thumbnails');
+    String? thumbnailUrl;
+    if (thumbnails is List && thumbnails.isNotEmpty) {
+      thumbnailUrl = readPath(thumbnails.last, ['url']) as String?;
+    }
+
+    return (
+      title: title,
+      subtitle: _readRuns(readPath(header, ['subtitle'])),
+      thumbnailUrl: thumbnailUrl,
+    );
+  }
+
+  return (title: '', subtitle: '', thumbnailUrl: null);
 }
 
 /// Splits a browse response into its titled rows.

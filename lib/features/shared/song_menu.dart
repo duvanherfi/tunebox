@@ -6,6 +6,8 @@ import '../../data/models/playlist.dart';
 import '../../data/models/song.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
+import '../browse/album_screen.dart';
+import '../browse/artist_screen.dart';
 
 /// Everything you can do to a track that is not "play it now".
 ///
@@ -92,6 +94,34 @@ class _SongMenu extends StatelessWidget {
               l10n.menuQueued,
             ),
           ),
+          // Only offered when the row said where the track came from: half of
+          // what YouTube returns — videos, mixes — has no artist page behind it.
+          if (song.artistId != null)
+            ListTile(
+              leading: const Icon(Icons.person_outline_rounded),
+              title: Text(l10n.menuGoArtist),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ArtistScreen(browseId: song.artistId!),
+                  ),
+                );
+              },
+            ),
+          if (song.albumId != null)
+            ListTile(
+              leading: const Icon(Icons.album_outlined),
+              title: Text(l10n.menuGoAlbum),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => AlbumScreen(browseId: song.albumId!),
+                  ),
+                );
+              },
+            ),
           if (session.isSignedIn) ...[
             ListTile(
               leading: const Icon(Icons.favorite_border_rounded),

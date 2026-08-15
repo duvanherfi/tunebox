@@ -428,6 +428,32 @@ class InnertubeClient {
   Future<List<Song>> history() async =>
       parseSongList(await browse('FEmusic_history'));
 
+  /// An artist's page: their popular tracks, then their albums and singles.
+  Future<MusicPage> artistPage(String browseId) async {
+    final json = await browse(browseId);
+    final header = parsePageHeader(json);
+    return MusicPage(
+      title: header.title,
+      subtitle: header.subtitle,
+      thumbnailUrl: header.thumbnailUrl,
+      songs: parseSongList(json),
+      shelves: parseShelves(json),
+    );
+  }
+
+  /// An album's page. Only its tracks: the rows underneath are recommendations
+  /// for other albums, which belong to browsing rather than to this record.
+  Future<MusicPage> albumPage(String browseId) async {
+    final json = await browse(browseId);
+    final header = parsePageHeader(json);
+    return MusicPage(
+      title: header.title,
+      subtitle: header.subtitle,
+      thumbnailUrl: header.thumbnailUrl,
+      songs: parseSongList(json),
+    );
+  }
+
   /// Adds or removes a track from the account's liked songs.
   ///
   /// The first write this app makes rather than reads. It goes through the same

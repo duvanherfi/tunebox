@@ -7,6 +7,8 @@ class Song {
     required this.subtitle,
     this.thumbnailUrl,
     this.duration,
+    this.artistId,
+    this.albumId,
   });
 
   final String videoId;
@@ -19,6 +21,14 @@ class Song {
 
   final String? thumbnailUrl;
   final Duration? duration;
+
+  /// Where this track came from, when the row said so.
+  ///
+  /// The metadata line is already showing the artist and the album as text;
+  /// these are the same names as somewhere to go. Absent on plenty of rows —
+  /// videos, mixes, anything YouTube filed loosely — so every use is optional.
+  final String? artistId;
+  final String? albumId;
 
   /// Larger artwork for the now-playing screen. YouTube encodes the requested
   /// size in the URL, so upgrading is a string substitution rather than

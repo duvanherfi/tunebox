@@ -255,4 +255,19 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get playlistPickTitle => 'Añadir a una playlist';
+
+  @override
+  String get play => 'Reproducir';
+
+  @override
+  String get shuffle => 'Aleatorio';
+
+  @override
+  String get artistSongs => 'Canciones';
+
+  @override
+  String get menuGoArtist => 'Ir al artista';
+
+  @override
+  String get menuGoAlbum => 'Ir al álbum';
 }
