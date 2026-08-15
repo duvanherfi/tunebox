@@ -799,6 +799,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Moods'**
   String get exploreMoods;
+
+  /// No description provided for @libraryDownloads.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloads'**
+  String get libraryDownloads;
+
+  /// No description provided for @libraryEmptyDownloads.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing downloaded yet. Use a track\'s menu to keep it on this device.'**
+  String get libraryEmptyDownloads;
+
+  /// No description provided for @menuDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Download'**
+  String get menuDownload;
+
+  /// No description provided for @menuRemoveDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove download'**
+  String get menuRemoveDownload;
+
+  /// No description provided for @menuDownloading.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading…'**
+  String get menuDownloading;
+
+  /// No description provided for @menuDownloaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved to this device'**
+  String get menuDownloaded;
+
+  /// No description provided for @menuDownloadRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed from this device'**
+  String get menuDownloadRemoved;
 }
 
 class _AppLocalizationsDelegate

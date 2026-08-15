@@ -9,6 +9,7 @@ import 'core/innertube/innertube_client.dart';
 import 'core/lyrics/lyrics_client.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
+import 'data/downloads.dart';
 import 'data/play_history.dart';
 import 'data/settings.dart';
 import 'features/home/home_screen.dart';
@@ -24,6 +25,7 @@ late final Session session;
 late final ThemeController themeController;
 late final PlayHistory playHistory;
 late final Settings settings;
+late final Downloads downloads;
 final LyricsClient lyricsClient = LyricsClient();
 
 Future<void> main() async {
@@ -46,6 +48,11 @@ Future<void> main() async {
   settings = Settings();
   await settings.load();
 
+  // Loaded before the first frame so a downloaded track plays offline without
+  // a moment of pretending it has to be fetched.
+  downloads = Downloads();
+  await downloads.load();
+
   // Built from the device locale so search results come back in the same
   // language the interface is drawn in.
   final locale = PlatformDispatcher.instance.locale;
@@ -55,7 +62,7 @@ Future<void> main() async {
     gl: locale.countryCode ?? 'US',
   );
   playerService = await AudioService.init(
-    builder: () => PlayerService(innertube, playHistory, settings),
+    builder: () => PlayerService(innertube, playHistory, settings, downloads),
     config: const AudioServiceConfig(
       androidNotificationChannelId: 'com.tunebox.tunebox.audio',
       androidNotificationChannelName: 'Reproducción',

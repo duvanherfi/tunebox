@@ -395,4 +395,26 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get exploreMoods => 'Ambientes';
+
+  @override
+  String get libraryDownloads => 'Descargas';
+
+  @override
+  String get libraryEmptyDownloads =>
+      'Aún no hay descargas. Usa el menú de una canción para guardarla en este dispositivo.';
+
+  @override
+  String get menuDownload => 'Descargar';
+
+  @override
+  String get menuRemoveDownload => 'Quitar la descarga';
+
+  @override
+  String get menuDownloading => 'Descargando…';
+
+  @override
+  String get menuDownloaded => 'Guardada en este dispositivo';
+
+  @override
+  String get menuDownloadRemoved => 'Quitada de este dispositivo';
 }

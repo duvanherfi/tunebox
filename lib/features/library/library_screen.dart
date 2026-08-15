@@ -47,6 +47,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   Future<List<Song>> _history() async {
     final local = playHistory.songs;
     final seen = local.map((song) => song.videoId).toSet();
+    if (!session.isSignedIn) return local;
     try {
       final remote = await innertube.history();
       return [...local, ...remote.where((song) => !seen.contains(song.videoId))];
@@ -64,14 +65,19 @@ class _LibraryScreenState extends State<LibraryScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    if (!session.isSignedIn) return _SignedOut(onSignIn: _signIn);
 
+    // Only the two account-backed tabs need a session. Downloads and history
+    // are this device's, and hiding them behind a sign-in wall would be a lie
+    // about where they come from.
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Column(
         children: [
           TabBar(
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
             tabs: [
+              Tab(text: l10n.libraryDownloads),
               Tab(text: l10n.libraryLikes),
               Tab(text: l10n.libraryPlaylists),
               Tab(text: l10n.libraryHistory),
@@ -80,16 +86,23 @@ class _LibraryScreenState extends State<LibraryScreen> {
           Expanded(
             child: TabBarView(
               children: [
-                _Shelf<Song>(
-                  load: innertube.likedSongs,
-                  empty: l10n.libraryEmptyLikes,
-                  build: (songs) => SongListView(songs: songs),
-                ),
-                _Shelf<Playlist>(
-                  load: innertube.savedPlaylists,
-                  empty: l10n.libraryEmptyPlaylists,
-                  build: (playlists) => _PlaylistGrid(playlists: playlists),
-                ),
+                const _Downloads(),
+                if (session.isSignedIn)
+                  _Shelf<Song>(
+                    load: innertube.likedSongs,
+                    empty: l10n.libraryEmptyLikes,
+                    build: (songs) => SongListView(songs: songs),
+                  )
+                else
+                  _SignedOut(onSignIn: _signIn),
+                if (session.isSignedIn)
+                  _Shelf<Playlist>(
+                    load: innertube.savedPlaylists,
+                    empty: l10n.libraryEmptyPlaylists,
+                    build: (playlists) => _PlaylistGrid(playlists: playlists),
+                  )
+                else
+                  _SignedOut(onSignIn: _signIn),
                 _Shelf<Song>(
                   load: _history,
                   empty: l10n.libraryEmptyHistory,
@@ -100,6 +113,39 @@ class _LibraryScreenState extends State<LibraryScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// What is on the device, listed whether or not there is a network.
+class _Downloads extends StatelessWidget {
+  const _Downloads();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+
+    return ListenableBuilder(
+      listenable: downloads,
+      builder: (context, _) {
+        final songs = downloads.songs;
+        if (songs.isEmpty && downloads.inProgress.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Text(
+                l10n.libraryEmptyDownloads,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          );
+        }
+        return SongListView(songs: songs);
+      },
     );
   }
 }

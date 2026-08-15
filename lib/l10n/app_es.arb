@@ -136,5 +136,12 @@
   "navExplore": "Explorar",
   "exploreNew": "Novedades",
   "exploreCharts": "Populares",
-  "exploreMoods": "Ambientes"
+  "exploreMoods": "Ambientes",
+  "libraryDownloads": "Descargas",
+  "libraryEmptyDownloads": "Aún no hay descargas. Usa el menú de una canción para guardarla en este dispositivo.",
+  "menuDownload": "Descargar",
+  "menuRemoveDownload": "Quitar la descarga",
+  "menuDownloading": "Descargando…",
+  "menuDownloaded": "Guardada en este dispositivo",
+  "menuDownloadRemoved": "Quitada de este dispositivo"
 }

@@ -6,6 +6,7 @@ import 'package:just_audio/just_audio.dart';
 
 import '../../data/models/song.dart';
 import '../../data/play_history.dart';
+import '../../data/downloads.dart';
 import '../../data/settings.dart';
 import '../innertube/innertube_client.dart';
 import 'stream_proxy.dart';
@@ -18,7 +19,12 @@ import 'stream_proxy.dart';
 /// expire within minutes, so a queue of pre-resolved URLs would rot while the
 /// user listened to the first track.
 class PlayerService extends BaseAudioHandler with SeekHandler {
-  PlayerService(this._innertube, this._history, this._settings) {
+  PlayerService(
+    this._innertube,
+    this._history,
+    this._settings,
+    this._downloads,
+  ) {
     _wirePlayerStreams();
     _settings.addListener(_applySettings);
     _applySettings();
@@ -28,6 +34,7 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   final InnertubeClient _innertube;
   final PlayHistory _history;
   final Settings _settings;
+  final Downloads _downloads;
 
   /// Effects sit in the pipeline whether or not they are switched on: Android
   /// attaches them when the audio session opens, so one added later would not
@@ -304,16 +311,23 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     final song = _songs[index];
     mediaItem.add(_toMediaItem(song));
 
-    final stream = await _innertube.resolveStream(song.videoId);
+    // A downloaded track never touches the network — not to resolve it, not to
+    // report it. That is the whole promise of a download.
+    AudioStream? stream;
+    if (_downloads.has(song.videoId)) {
+      await _player.setFilePath(_downloads.fileFor(song.videoId).path);
+    } else {
+      stream = await _innertube.resolveStream(song.videoId);
 
-    // Routed through the proxy so the request carries a Range header, which
-    // googlevideo requires and ExoPlayer omits on its first request. The user
-    // agent travels along because the URL was issued to one particular client
-    // and is fetched wearing that same identity.
-    await _proxy.start();
-    await _player.setUrl(
-      _proxy.wrap(stream.url, userAgent: stream.userAgent).toString(),
-    );
+      // Routed through the proxy so the request carries a Range header, which
+      // googlevideo requires and ExoPlayer omits on its first request. The user
+      // agent travels along because the URL was issued to one particular client
+      // and is fetched wearing that same identity.
+      await _proxy.start();
+      await _player.setUrl(
+        _proxy.wrap(stream.url, userAgent: stream.userAgent).toString(),
+      );
+    }
 
     // The player knows the real duration once the stream is open; the search
     // listing's value is only an estimate.
@@ -332,11 +346,13 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     // account is told too — and confirmed a while later, once enough of the
     // track has been heard to call it a listen.
     unawaited(_history.record(song));
-    unawaited(_innertube.reportPlayback(stream));
-    _watchtime = Timer(
-      const Duration(seconds: 30),
-      () => unawaited(_innertube.reportWatchtime(stream, _player.position)),
-    );
+    if (stream case final playing?) {
+      unawaited(_innertube.reportPlayback(playing));
+      _watchtime = Timer(
+        const Duration(seconds: 30),
+        () => unawaited(_innertube.reportWatchtime(playing, _player.position)),
+      );
+    }
   }
 
   @override
@@ -381,6 +397,19 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     } catch (_) {
       return false;
     }
+  }
+
+  /// Resolves a track and hands the local proxy's URL to [Downloads], which is
+  /// the only way to fetch a whole file from googlevideo — it refuses anything
+  /// but bounded ranges, and the proxy is what turns one request into many.
+  Future<void> download(Song song) async {
+    final stream = await _innertube.resolveStream(song.videoId);
+    await _proxy.start();
+    await _downloads.add(
+      song,
+      _proxy.wrap(stream.url, userAgent: stream.userAgent),
+      userAgent: stream.userAgent,
+    );
   }
 
   /// Starts a radio from one track: it plays, and what YouTube says goes with

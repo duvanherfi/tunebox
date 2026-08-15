@@ -393,4 +393,26 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exploreMoods => 'Moods';
+
+  @override
+  String get libraryDownloads => 'Downloads';
+
+  @override
+  String get libraryEmptyDownloads =>
+      'Nothing downloaded yet. Use a track\'s menu to keep it on this device.';
+
+  @override
+  String get menuDownload => 'Download';
+
+  @override
+  String get menuRemoveDownload => 'Remove download';
+
+  @override
+  String get menuDownloading => 'Downloading…';
+
+  @override
+  String get menuDownloaded => 'Saved to this device';
+
+  @override
+  String get menuDownloadRemoved => 'Removed from this device';
 }

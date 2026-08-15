@@ -150,6 +150,41 @@ class _SongMenu extends StatelessWidget {
               },
             ),
           ],
+          ListenableBuilder(
+            listenable: downloads,
+            builder: (context, _) {
+              if (downloads.isDownloading(song.videoId)) {
+                return ListTile(
+                  leading: const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  title: Text(l10n.menuDownloading),
+                );
+              }
+              if (downloads.has(song.videoId)) {
+                return ListTile(
+                  leading: const Icon(Icons.download_done_rounded),
+                  title: Text(l10n.menuRemoveDownload),
+                  onTap: () => _run(
+                    context,
+                    () => downloads.remove(song.videoId),
+                    l10n.menuDownloadRemoved,
+                  ),
+                );
+              }
+              return ListTile(
+                leading: const Icon(Icons.download_outlined),
+                title: Text(l10n.menuDownload),
+                onTap: () => _run(
+                  context,
+                  () => playerService.download(song),
+                  l10n.menuDownloaded,
+                ),
+              );
+            },
+          ),
           ListTile(
             leading: const Icon(Icons.link_rounded),
             title: Text(l10n.menuCopyLink),
