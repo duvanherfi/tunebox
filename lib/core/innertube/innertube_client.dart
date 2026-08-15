@@ -163,6 +163,17 @@ const _streamClients = <_ClientProfile>[
   ),
 ];
 
+/// Search filters, as the opaque tokens InnerTube expects.
+enum SearchFilter {
+  songs('Canciones', 'EgWKAQIIAWoKEAkQBRAKEAMQBA=='),
+  videos('Vídeos', 'EgWKAQIQAWoKEAkQBRAKEAMQBA==');
+
+  const SearchFilter(this.label, this.params);
+
+  final String label;
+  final String params;
+}
+
 class InnertubeException implements Exception {
   InnertubeException(this.message);
   final String message;
@@ -209,14 +220,14 @@ class InnertubeClient {
         'Content-Type': 'application/json',
         'User-Agent': profile.userAgent,
         'Origin': 'https://music.youtube.com',
-        if (visitorData != null) 'X-Goog-Visitor-Id': visitorData,
+        'X-Goog-Visitor-Id': ?visitorData,
         ...authHeaders(),
       },
       body: jsonEncode({
         'context': {
           'client': {
             ...profile.context(hl, gl),
-            if (visitorData != null) 'visitorData': visitorData,
+            'visitorData': ?visitorData,
           },
         },
         ...body,
@@ -233,9 +244,16 @@ class InnertubeClient {
   }
 
   /// Full-text search across YouTube Music.
-  Future<List<Song>> search(String query) async {
+  ///
+  /// [filter] narrows results to one kind of thing. Only the filters that
+  /// yield playable rows are offered: album and artist results come back as
+  /// browse cards with no video id, so they would render as an empty list.
+  Future<List<Song>> search(String query, {SearchFilter? filter}) async {
     if (query.trim().isEmpty) return const [];
-    final json = await _post(_musicBase, 'search', _webRemix, {'query': query});
+    final json = await _post(_musicBase, 'search', _webRemix, {
+      'query': query,
+      if (filter != null) 'params': filter.params,
+    });
     return parseSearchResults(json);
   }
 

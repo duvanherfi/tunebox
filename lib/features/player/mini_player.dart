@@ -1,6 +1,7 @@
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_theme.dart';
 import '../../main.dart';
 import 'player_screen.dart';
 
@@ -11,53 +12,57 @@ class MiniPlayer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return StreamBuilder<MediaItem?>(
       stream: playerService.mediaItem,
       builder: (context, snapshot) {
         final item = snapshot.data;
         if (item == null) return const SizedBox.shrink();
 
-        return Material(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          child: InkWell(
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const PlayerScreen()),
-            ),
-            child: SafeArea(
-              top: false,
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+          child: Material(
+            color: colors.surfaceContainerHigh,
+            borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const PlayerScreen()),
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  SizedBox(
-                    height: 64,
+                  Padding(
+                    padding: const EdgeInsets.all(8),
                     child: Row(
                       children: [
-                        const SizedBox(width: 12),
-                        if (item.artUri != null)
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(6),
-                            child: Image.network(
-                              item.artUri.toString(),
-                              width: 44,
-                              height: 44,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) =>
-                                  const SizedBox(width: 44, height: 44),
-                            ),
-                          ),
+                        Artwork(url: item.artUri?.toString(), size: 48),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(item.title,
-                                  maxLines: 1, overflow: TextOverflow.ellipsis),
+                              Text(
+                                item.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(fontWeight: FontWeight.w600),
+                              ),
                               Text(
                                 item.artist ?? '',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.bodySmall,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: colors.onSurfaceVariant,
+                                    ),
                               ),
                             ],
                           ),
@@ -65,10 +70,31 @@ class MiniPlayer extends StatelessWidget {
                         StreamBuilder<PlaybackState>(
                           stream: playerService.playbackState,
                           builder: (context, stateSnapshot) {
-                            final playing = stateSnapshot.data?.playing ?? false;
+                            final state = stateSnapshot.data;
+                            final playing = state?.playing ?? false;
+                            final busy = state?.processingState ==
+                                    AudioProcessingState.loading ||
+                                state?.processingState ==
+                                    AudioProcessingState.buffering;
+
+                            if (busy) {
+                              return const Padding(
+                                padding: EdgeInsets.all(12),
+                                child: SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              );
+                            }
                             return IconButton(
-                              icon:
-                                  Icon(playing ? Icons.pause : Icons.play_arrow),
+                              icon: Icon(
+                                playing
+                                    ? Icons.pause_rounded
+                                    : Icons.play_arrow_rounded,
+                              ),
                               onPressed: playing
                                   ? playerService.pause
                                   : playerService.play,
@@ -76,7 +102,7 @@ class MiniPlayer extends StatelessWidget {
                           },
                         ),
                         IconButton(
-                          icon: const Icon(Icons.skip_next),
+                          icon: const Icon(Icons.skip_next_rounded),
                           onPressed: playerService.skipToNext,
                         ),
                       ],
@@ -97,8 +123,8 @@ class MiniPlayer extends StatelessWidget {
 ///
 /// Driven by the player's position stream rather than the media session, so it
 /// advances smoothly instead of stepping once per state broadcast. Deliberately
-/// not interactive: dragging belongs on the full player, and a 2px target on
-/// the edge of the screen would only produce accidental seeks.
+/// not interactive: dragging belongs on the full player, and a 3px target at
+/// the edge of a card would only produce accidental seeks.
 class _MiniProgressBar extends StatelessWidget {
   const _MiniProgressBar({this.fallbackDuration});
 
@@ -118,8 +144,8 @@ class _MiniProgressBar extends StatelessWidget {
 
         return LinearProgressIndicator(
           value: total <= 0 ? null : value,
-          minHeight: 2,
-          backgroundColor: Colors.white12,
+          minHeight: 3,
+          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         );
       },
     );

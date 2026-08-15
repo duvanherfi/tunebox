@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'core/audio/player_service.dart';
 import 'core/auth/session.dart';
 import 'core/innertube/innertube_client.dart';
+import 'core/theme/app_theme.dart';
 import 'features/home/home_screen.dart';
 
 /// Single shared instances. The audio handler is a process-wide singleton by
@@ -44,14 +45,11 @@ class TuneboxApp extends StatelessWidget {
     return MaterialApp(
       title: 'Tunebox',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFFF0033),
-          brightness: Brightness.dark,
-        ),
-        scaffoldBackgroundColor: const Color(0xFF0B0B0F),
-      ),
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+      // Follows the system so the app matches whatever the phone is doing at
+      // that hour, which for a music player is often late and dark.
+      themeMode: ThemeMode.system,
       home: const HomeScreen(),
     );
   }

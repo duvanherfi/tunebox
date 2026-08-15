@@ -40,6 +40,20 @@ void main() {
           reason: 'duration is no longer in the metadata line');
     });
 
+    test('keeps the duration out of the metadata line', () {
+      final songs = parseSearchResults(_fixture('search_daft_punk.json'));
+      final timed = songs.where((song) => song.duration != null);
+
+      expect(timed, isNotEmpty, reason: 'nothing to check otherwise');
+      for (final song in timed) {
+        expect(
+          song.subtitle,
+          isNot(matches(RegExp(r'\d+:\d{2}'))),
+          reason: 'the duration has its own column and would print twice',
+        );
+      }
+    });
+
     test('returns nothing for a response with no result renderers', () {
       expect(parseSearchResults(const {'contents': {}}), isEmpty);
     });

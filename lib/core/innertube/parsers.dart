@@ -108,9 +108,12 @@ List<Song> parseSongList(Map<String, dynamic> json) {
     if (texts.isEmpty) continue;
 
     final title = texts.first;
-    final subtitle = texts.length > 1 ? texts.sublist(1).join(' · ') : '';
+    var subtitle = texts.length > 1 ? texts.sublist(1).join(' · ') : '';
 
     final duration = _parseDuration(subtitle);
+    // Shown in its own column, so leaving it in the metadata line too would
+    // print every track's length twice.
+    if (duration != null) subtitle = _withoutDuration(subtitle);
 
     final thumbnails = findFirst(item, 'thumbnails');
     String? thumbnailUrl;
@@ -128,6 +131,18 @@ List<Song> parseSongList(Map<String, dynamic> json) {
   }
 
   return songs;
+}
+
+/// Strips the timestamp and any separator left dangling around it.
+///
+/// YouTube joins metadata with several different bullet characters, so the
+/// cleanup has to cope with whichever one happened to sit beside the duration.
+String _withoutDuration(String text) {
+  return text
+      .replaceFirst(_durationPattern, '')
+      .replaceAll(RegExp(r'\s*[•·]\s*[•·]\s*'), ' • ')
+      .replaceAll(RegExp(r'^\s*[•·]\s*|\s*[•·]\s*$'), '')
+      .trim();
 }
 
 /// Extracts playlist and album cards from a library or browse response.
