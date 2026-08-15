@@ -154,4 +154,15 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get homeEmptyBody =>
       'YouTube Music has nothing to show for this device right now.';
+
+  @override
+  String get loginUseDeviceAccount => 'Use an account from this device';
+
+  @override
+  String get loginOr => 'or paste it by hand';
+
+  @override
+  String loginDeviceAccountFailed(String reason) {
+    return 'That account could not be used ($reason). Paste the cookie instead.';
+  }
 }

@@ -373,6 +373,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'YouTube Music has nothing to show for this device right now.'**
   String get homeEmptyBody;
+
+  /// No description provided for @loginUseDeviceAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Use an account from this device'**
+  String get loginUseDeviceAccount;
+
+  /// No description provided for @loginOr.
+  ///
+  /// In en, this message translates to:
+  /// **'or paste it by hand'**
+  String get loginOr;
+
+  /// No description provided for @loginDeviceAccountFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'That account could not be used ({reason}). Paste the cookie instead.'**
+  String loginDeviceAccountFailed(String reason);
 }
 
 class _AppLocalizationsDelegate

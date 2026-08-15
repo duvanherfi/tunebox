@@ -52,5 +52,15 @@
   "loginStorageNote": "Stored encrypted on this device and sent nowhere but YouTube. To revoke it, sign out of your Google account from any browser.",
   "homeErrorTitle": "Couldn't load the home feed",
   "homeEmptyTitle": "Nothing here yet",
-  "homeEmptyBody": "YouTube Music has nothing to show for this device right now."
+  "homeEmptyBody": "YouTube Music has nothing to show for this device right now.",
+  "loginUseDeviceAccount": "Use an account from this device",
+  "loginOr": "or paste it by hand",
+  "loginDeviceAccountFailed": "That account could not be used ({reason}). Paste the cookie instead.",
+  "@loginDeviceAccountFailed": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  }
 }

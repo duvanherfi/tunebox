@@ -52,5 +52,15 @@
   "loginStorageNote": "Se guarda cifrada en este dispositivo y no se envía a ningún sitio salvo a YouTube. Para revocarla, cierra sesión en tu cuenta de Google desde cualquier navegador.",
   "homeErrorTitle": "No se pudo cargar el inicio",
   "homeEmptyTitle": "Todavía no hay nada",
-  "homeEmptyBody": "YouTube Music no tiene nada que mostrar para este dispositivo ahora mismo."
+  "homeEmptyBody": "YouTube Music no tiene nada que mostrar para este dispositivo ahora mismo.",
+  "loginUseDeviceAccount": "Usar una cuenta del dispositivo",
+  "loginOr": "o pégala a mano",
+  "loginDeviceAccountFailed": "No se pudo usar esa cuenta ({reason}). Pega la cookie en su lugar.",
+  "@loginDeviceAccountFailed": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  }
 }
