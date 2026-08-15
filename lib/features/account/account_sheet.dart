@@ -6,6 +6,7 @@ import '../../data/models/playlist.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../auth/login_screen.dart';
+import '../settings/settings_screen.dart';
 
 /// Everything about "you and this app" in one place: who is signed in, and how
 /// the app looks.
@@ -63,6 +64,16 @@ class _AccountSheetState extends State<_AccountSheet> {
                 onSignIn: _signIn,
                 onSignOut: _signOut,
               ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.tune_rounded),
+              title: Text(l10n.accountSettings),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                );
+              },
             ),
             _SectionLabel(l10n.accountAppearance),
             const _ThemeOptions(),

@@ -282,4 +282,62 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get lyricsNone => 'No encontramos la letra de esta canción.';
+
+  @override
+  String get settingsTitle => 'Ajustes';
+
+  @override
+  String get settingsPlayback => 'Reproducción';
+
+  @override
+  String get settingsAutoplay => 'Seguir sonando';
+
+  @override
+  String get settingsAutoplayBody =>
+      'Cuando se acabe la cola, continuar con una radio de lo que estabas escuchando.';
+
+  @override
+  String get settingsSkipSilence => 'Saltar silencios';
+
+  @override
+  String get settingsSkipSilenceBody =>
+      'Pasar por encima de los tramos mudos dentro de una canción.';
+
+  @override
+  String get settingsNormalize => 'Emparejar el volumen';
+
+  @override
+  String get settingsNormalizeBody =>
+      'Levantar las grabaciones bajas para que una canción no llegue mucho más fuerte que la anterior.';
+
+  @override
+  String settingsSpeed(String value) {
+    return 'Velocidad: $value×';
+  }
+
+  @override
+  String get settingsEqualizer => 'Ecualizador';
+
+  @override
+  String get settingsEqualizerOn => 'Usar el ecualizador';
+
+  @override
+  String get settingsSleep => 'Temporizador de apagado';
+
+  @override
+  String settingsSleepMinutes(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String settingsSleepPending(int minutes) {
+    return 'Se detiene en $minutes min';
+  }
+
+  @override
+  String get accountSettings => 'Reproducción y sonido';
+
+  @override
+  String get settingsEqualizerIdle =>
+      'Pon algo a sonar para ajustar las bandas: Android solo abre el ecualizador cuando hay audio.';
 }

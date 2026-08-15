@@ -613,6 +613,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No lyrics found for this track.'**
   String get lyricsNone;
+
+  /// No description provided for @settingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get settingsTitle;
+
+  /// No description provided for @settingsPlayback.
+  ///
+  /// In en, this message translates to:
+  /// **'Playback'**
+  String get settingsPlayback;
+
+  /// No description provided for @settingsAutoplay.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep playing'**
+  String get settingsAutoplay;
+
+  /// No description provided for @settingsAutoplayBody.
+  ///
+  /// In en, this message translates to:
+  /// **'When the queue ends, continue with a radio of what you were listening to.'**
+  String get settingsAutoplayBody;
+
+  /// No description provided for @settingsSkipSilence.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip silence'**
+  String get settingsSkipSilence;
+
+  /// No description provided for @settingsSkipSilenceBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Jump over silent stretches inside a track.'**
+  String get settingsSkipSilenceBody;
+
+  /// No description provided for @settingsNormalize.
+  ///
+  /// In en, this message translates to:
+  /// **'Even out the volume'**
+  String get settingsNormalize;
+
+  /// No description provided for @settingsNormalizeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Lift quiet masters so one track does not arrive much louder than the last.'**
+  String get settingsNormalizeBody;
+
+  /// No description provided for @settingsSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed: {value}×'**
+  String settingsSpeed(String value);
+
+  /// No description provided for @settingsEqualizer.
+  ///
+  /// In en, this message translates to:
+  /// **'Equalizer'**
+  String get settingsEqualizer;
+
+  /// No description provided for @settingsEqualizerOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Use the equalizer'**
+  String get settingsEqualizerOn;
+
+  /// No description provided for @settingsSleep.
+  ///
+  /// In en, this message translates to:
+  /// **'Sleep timer'**
+  String get settingsSleep;
+
+  /// No description provided for @settingsSleepMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} min'**
+  String settingsSleepMinutes(int minutes);
+
+  /// No description provided for @settingsSleepPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Stopping in {minutes} min'**
+  String settingsSleepPending(int minutes);
+
+  /// No description provided for @accountSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Playback and sound'**
+  String get accountSettings;
+
+  /// No description provided for @settingsEqualizerIdle.
+  ///
+  /// In en, this message translates to:
+  /// **'Play something to adjust the bands: Android only opens the equalizer once there is sound.'**
+  String get settingsEqualizerIdle;
 }
 
 class _AppLocalizationsDelegate

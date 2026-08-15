@@ -280,4 +280,62 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get lyricsNone => 'No lyrics found for this track.';
+
+  @override
+  String get settingsTitle => 'Settings';
+
+  @override
+  String get settingsPlayback => 'Playback';
+
+  @override
+  String get settingsAutoplay => 'Keep playing';
+
+  @override
+  String get settingsAutoplayBody =>
+      'When the queue ends, continue with a radio of what you were listening to.';
+
+  @override
+  String get settingsSkipSilence => 'Skip silence';
+
+  @override
+  String get settingsSkipSilenceBody =>
+      'Jump over silent stretches inside a track.';
+
+  @override
+  String get settingsNormalize => 'Even out the volume';
+
+  @override
+  String get settingsNormalizeBody =>
+      'Lift quiet masters so one track does not arrive much louder than the last.';
+
+  @override
+  String settingsSpeed(String value) {
+    return 'Speed: $value×';
+  }
+
+  @override
+  String get settingsEqualizer => 'Equalizer';
+
+  @override
+  String get settingsEqualizerOn => 'Use the equalizer';
+
+  @override
+  String get settingsSleep => 'Sleep timer';
+
+  @override
+  String settingsSleepMinutes(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String settingsSleepPending(int minutes) {
+    return 'Stopping in $minutes min';
+  }
+
+  @override
+  String get accountSettings => 'Playback and sound';
+
+  @override
+  String get settingsEqualizerIdle =>
+      'Play something to adjust the bands: Android only opens the equalizer once there is sound.';
 }

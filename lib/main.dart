@@ -10,6 +10,7 @@ import 'core/lyrics/lyrics_client.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
 import 'data/play_history.dart';
+import 'data/settings.dart';
 import 'features/home/home_screen.dart';
 import 'l10n/app_localizations.dart';
 
@@ -22,6 +23,7 @@ late final InnertubeClient innertube;
 late final Session session;
 late final ThemeController themeController;
 late final PlayHistory playHistory;
+late final Settings settings;
 final LyricsClient lyricsClient = LyricsClient();
 
 Future<void> main() async {
@@ -41,6 +43,9 @@ Future<void> main() async {
   playHistory = PlayHistory();
   await playHistory.load();
 
+  settings = Settings();
+  await settings.load();
+
   // Built from the device locale so search results come back in the same
   // language the interface is drawn in.
   final locale = PlatformDispatcher.instance.locale;
@@ -50,7 +55,7 @@ Future<void> main() async {
     gl: locale.countryCode ?? 'US',
   );
   playerService = await AudioService.init(
-    builder: () => PlayerService(innertube, playHistory),
+    builder: () => PlayerService(innertube, playHistory, settings),
     config: const AudioServiceConfig(
       androidNotificationChannelId: 'com.tunebox.tunebox.audio',
       androidNotificationChannelName: 'Reproducción',

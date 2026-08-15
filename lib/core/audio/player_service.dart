@@ -1,10 +1,12 @@
 import 'dart:async';
 
 import 'package:audio_service/audio_service.dart';
+import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../../data/models/song.dart';
 import '../../data/play_history.dart';
+import '../../data/settings.dart';
 import '../innertube/innertube_client.dart';
 import 'stream_proxy.dart';
 
@@ -16,14 +18,31 @@ import 'stream_proxy.dart';
 /// expire within minutes, so a queue of pre-resolved URLs would rot while the
 /// user listened to the first track.
 class PlayerService extends BaseAudioHandler with SeekHandler {
-  PlayerService(this._innertube, this._history) {
+  PlayerService(this._innertube, this._history, this._settings) {
     _wirePlayerStreams();
+    _settings.addListener(_applySettings);
+    _applySettings();
+    unawaited(_restoreEqualizer());
   }
 
   final InnertubeClient _innertube;
   final PlayHistory _history;
-  final _player = AudioPlayer();
+  final Settings _settings;
+
+  /// Effects sit in the pipeline whether or not they are switched on: Android
+  /// attaches them when the audio session opens, so one added later would not
+  /// take hold until the next track.
+  final _equalizer = AndroidEqualizer();
+  final _loudness = AndroidLoudnessEnhancer();
+
+  late final _player = AudioPlayer(
+    audioPipeline: AudioPipeline(
+      androidAudioEffects: [_loudness, _equalizer],
+    ),
+  );
   final _proxy = StreamProxy();
+
+  AndroidEqualizer get equalizer => _equalizer;
 
   /// The queue in the order it will play, which is what the queue screen shows
   /// and what shuffling rearranges.
@@ -41,7 +60,53 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   /// Whether a finished queue reaches for YouTube's radio instead of stopping.
   /// On by default: someone who pressed play on one song usually meant "play
   /// music", and the queue running dry is not a decision they made.
-  bool autoplay = true;
+  bool get autoplay => _settings.autoplay;
+
+  /// When the music will stop by itself, if it will. Exposed as a notifier so
+  /// the interface can count down without polling the player.
+  final sleepAt = ValueNotifier<DateTime?>(null);
+  Timer? _sleep;
+
+  /// Stops the music after [after], or cancels a pending stop when null.
+  void sleepAfter(Duration? after) {
+    _sleep?.cancel();
+    if (after == null) {
+      _sleep = null;
+      sleepAt.value = null;
+      return;
+    }
+    sleepAt.value = DateTime.now().add(after);
+    _sleep = Timer(after, () {
+      sleepAt.value = null;
+      // Paused rather than stopped: someone who fell asleep to an album should
+      // find it where they left it, not back at the start of nothing.
+      pause();
+    });
+  }
+
+  /// Puts the saved band gains back.
+  ///
+  /// Deliberately without a timeout: the equalizer's parameters only exist once
+  /// Android has opened an audio session, so this waits — possibly for minutes,
+  /// until the first track plays — and then applies them.
+  Future<void> _restoreEqualizer() async {
+    final gains = _settings.bandGains;
+    if (gains.isEmpty) return;
+    final parameters = await _equalizer.parameters;
+    for (var i = 0; i < parameters.bands.length && i < gains.length; i++) {
+      await parameters.bands[i].setGain(gains[i]);
+    }
+  }
+
+  void _applySettings() {
+    _player.setSpeed(_settings.speed);
+    _player.setSkipSilenceEnabled(_settings.skipSilence);
+    _loudness.setEnabled(_settings.normalizeVolume);
+    // A few decibels: enough to lift a quiet master to meet a loud one, not so
+    // much that anything clips.
+    _loudness.setTargetGain(_settings.normalizeVolume ? 0.5 : 0);
+    _equalizer.setEnabled(_settings.equalizerEnabled);
+  }
 
   /// Pending confirmation that the current track was really listened to.
   /// Cancelled whenever the track changes, so skipping past something never
@@ -342,6 +407,7 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   @override
   Future<void> stop() async {
     _watchtime?.cancel();
+    sleepAfter(null);
     await _player.stop();
     playbackState.add(playbackState.value.copyWith(
       processingState: AudioProcessingState.idle,
