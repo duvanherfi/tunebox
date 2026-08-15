@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../data/models/playlist.dart';
 import '../../data/models/song.dart';
 import '../../main.dart';
-import '../player/mini_player.dart';
 import '../shared/song_list_view.dart';
 
 /// The tracks inside a saved playlist or album.
@@ -57,7 +56,6 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
               },
             ),
           ),
-          const MiniPlayer(),
         ],
       ),
     );

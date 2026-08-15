@@ -4,9 +4,15 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../../main.dart';
 
-/// The full player: artwork, position and transport controls.
-class PlayerScreen extends StatelessWidget {
-  const PlayerScreen({super.key});
+/// The player in its expanded state.
+///
+/// Presentational, like its collapsed counterpart: the sheet owns the size and
+/// the drag, so this only draws and can be faded in mid-gesture.
+class FullPlayer extends StatelessWidget {
+  const FullPlayer({super.key, required this.item, required this.onCollapse});
+
+  final MediaItem item;
+  final VoidCallback onCollapse;
 
   static String format(Duration duration) {
     final minutes = duration.inMinutes;
@@ -18,49 +24,38 @@ class PlayerScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.keyboard_arrow_down_rounded),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: Text(
-          'Reproduciendo',
-          style: theme.textTheme.labelLarge?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ),
-      body: StreamBuilder<MediaItem?>(
-        stream: playerService.mediaItem,
-        builder: (context, snapshot) {
-          final item = snapshot.data;
-          if (item == null) {
-            return const Center(child: Text('Nada sonando'));
-          }
-
-          return SafeArea(
+    return SafeArea(
+      child: Column(
+        children: [
+          // A grab handle rather than a back arrow: this panel is dragged
+          // shut, not navigated away from.
+          Padding(
+            padding: const EdgeInsets.only(top: 10, bottom: 6),
             child: GestureDetector(
-              // Flicking down closes the player, the way a sheet would. Bound
-              // to velocity rather than distance so a decisive flick works
-              // without dragging the whole screen height.
-              onVerticalDragEnd: (details) {
-                if ((details.primaryVelocity ?? 0) > 300) {
-                  Navigator.of(context).maybePop();
-                }
-              },
-              child: Padding(
+              onTap: onCollapse,
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.onSurfaceVariant.withValues(
+                    alpha: 0.4,
+                  ),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 28),
               child: Column(
                 children: [
-                  const Spacer(flex: 2),
-                  // Artwork carries the screen, so it gets the space and a
-                  // radius large enough to read as a card rather than a photo.
+                  const Spacer(),
                   Center(
                     child: _SwipeableArtwork(
                       key: ValueKey(item.id),
                       url: item.artUri?.toString(),
-                      size: MediaQuery.sizeOf(context).width - 56,
+                      size: MediaQuery.sizeOf(context).width - 112,
                     ),
                   ),
                   const Spacer(),
@@ -84,17 +79,16 @@ class PlayerScreen extends StatelessWidget {
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
                   _ProgressBar(total: item.duration ?? Duration.zero),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   const _Controls(),
-                  const Spacer(flex: 2),
+                  const Spacer(),
                 ],
               ),
-              ),
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }
@@ -102,10 +96,9 @@ class PlayerScreen extends StatelessWidget {
 
 /// Artwork that changes track on a horizontal flick.
 ///
-/// The card follows the finger and animates out in the direction of travel, so
-/// the gesture reads as pushing the current track aside rather than pressing a
-/// hidden button. Anything short of a real flick springs back, which keeps an
-/// accidental brush from skipping a song.
+/// The card follows the finger and fades with distance, so the gesture reads as
+/// pushing the current track aside rather than pressing a hidden button.
+/// Horizontal only, which leaves vertical drags to the sheet that contains it.
 class _SwipeableArtwork extends StatefulWidget {
   const _SwipeableArtwork({super.key, required this.url, required this.size});
 
@@ -116,8 +109,7 @@ class _SwipeableArtwork extends StatefulWidget {
   State<_SwipeableArtwork> createState() => _SwipeableArtworkState();
 }
 
-class _SwipeableArtworkState extends State<_SwipeableArtwork>
-    with SingleTickerProviderStateMixin {
+class _SwipeableArtworkState extends State<_SwipeableArtwork> {
   static const _flickVelocity = 400.0;
 
   double _offset = 0;
@@ -133,7 +125,7 @@ class _SwipeableArtworkState extends State<_SwipeableArtwork>
       return;
     }
 
-    final forward = (flicked ? velocity < 0 : _offset < 0);
+    final forward = flicked ? velocity < 0 : _offset < 0;
     setState(() {
       _settling = true;
       _offset = forward ? -width : width;
@@ -170,8 +162,6 @@ class _SwipeableArtworkState extends State<_SwipeableArtwork>
         curve: Curves.easeOutCubic,
         transform: Matrix4.translationValues(_offset, 0, 0),
         child: Opacity(
-          // Fading with distance signals that letting go will commit, without
-          // needing any on-screen hint.
           opacity: (1 - (_offset.abs() / widget.size)).clamp(0.3, 1.0),
           child: Artwork(url: widget.url, size: widget.size, radius: 24),
         ),
@@ -198,18 +188,18 @@ class _Controls extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             IconButton(
-              iconSize: 40,
+              iconSize: 38,
               icon: const Icon(Icons.skip_previous_rounded),
               onPressed: playerService.skipToPrevious,
             ),
             const SizedBox(width: 16),
             SizedBox(
-              width: 76,
-              height: 76,
+              width: 72,
+              height: 72,
               child: busy
                   ? const Center(child: CircularProgressIndicator())
                   : IconButton.filled(
-                      iconSize: 40,
+                      iconSize: 38,
                       icon: Icon(
                         playing
                             ? Icons.pause_rounded
@@ -221,7 +211,7 @@ class _Controls extends StatelessWidget {
             ),
             const SizedBox(width: 16),
             IconButton(
-              iconSize: 40,
+              iconSize: 38,
               icon: const Icon(Icons.skip_next_rounded),
               onPressed: playerService.skipToNext,
             ),
@@ -270,8 +260,8 @@ class _ProgressBar extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(PlayerScreen.format(position), style: labels),
-                  Text(PlayerScreen.format(duration), style: labels),
+                  Text(FullPlayer.format(position), style: labels),
+                  Text(FullPlayer.format(duration), style: labels),
                 ],
               ),
             ),

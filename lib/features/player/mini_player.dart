@@ -3,118 +3,97 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../main.dart';
-import 'player_screen.dart';
 
-/// Persistent bar above the bottom of the app. Hidden until something is
-/// loaded, so an empty session shows no dead chrome.
-class MiniPlayer extends StatelessWidget {
-  const MiniPlayer({super.key});
+/// The player in its collapsed state: a bar showing what is on and the two
+/// controls worth reaching for without opening anything.
+///
+/// Purely presentational — expanding is the sheet's job, so this stays free of
+/// navigation and can be faded in and out mid-drag without side effects.
+class MiniPlayerBar extends StatelessWidget {
+  const MiniPlayerBar({super.key, required this.item});
+
+  final MediaItem item;
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
 
-    return StreamBuilder<MediaItem?>(
-      stream: playerService.mediaItem,
-      builder: (context, snapshot) {
-        final item = snapshot.data;
-        if (item == null) return const SizedBox.shrink();
-
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-          child: Material(
-            color: colors.surfaceContainerHigh,
-            borderRadius: BorderRadius.circular(AppTheme.radiusCard),
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const PlayerScreen()),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: Row(
-                      children: [
-                        Artwork(url: item.artUri?.toString(), size: 48),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                item.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(fontWeight: FontWeight.w600),
-                              ),
-                              Text(
-                                item.artist ?? '',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(
-                                      color: colors.onSurfaceVariant,
-                                    ),
-                              ),
-                            ],
-                          ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Row(
+              children: [
+                Artwork(url: item.artUri?.toString(), size: 48),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
                         ),
-                        StreamBuilder<PlaybackState>(
-                          stream: playerService.playbackState,
-                          builder: (context, stateSnapshot) {
-                            final state = stateSnapshot.data;
-                            final playing = state?.playing ?? false;
-                            final busy = state?.processingState ==
-                                    AudioProcessingState.loading ||
-                                state?.processingState ==
-                                    AudioProcessingState.buffering;
-
-                            if (busy) {
-                              return const Padding(
-                                padding: EdgeInsets.all(12),
-                                child: SizedBox(
-                                  width: 24,
-                                  height: 24,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                ),
-                              );
-                            }
-                            return IconButton(
-                              icon: Icon(
-                                playing
-                                    ? Icons.pause_rounded
-                                    : Icons.play_arrow_rounded,
-                              ),
-                              onPressed: playing
-                                  ? playerService.pause
-                                  : playerService.play,
-                            );
-                          },
+                      ),
+                      Text(
+                        item.artist ?? '',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.skip_next_rounded),
-                          onPressed: playerService.skipToNext,
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  _MiniProgressBar(fallbackDuration: item.duration),
-                ],
-              ),
+                ),
+                StreamBuilder<PlaybackState>(
+                  stream: playerService.playbackState,
+                  builder: (context, snapshot) {
+                    final state = snapshot.data;
+                    final playing = state?.playing ?? false;
+                    final busy = state?.processingState ==
+                            AudioProcessingState.loading ||
+                        state?.processingState ==
+                            AudioProcessingState.buffering;
+
+                    if (busy) {
+                      return const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      );
+                    }
+                    return IconButton(
+                      icon: Icon(
+                        playing
+                            ? Icons.pause_rounded
+                            : Icons.play_arrow_rounded,
+                      ),
+                      onPressed:
+                          playing ? playerService.pause : playerService.play,
+                    );
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.skip_next_rounded),
+                  onPressed: playerService.skipToNext,
+                ),
+              ],
             ),
           ),
-        );
-      },
+        ),
+        _MiniProgressBar(fallbackDuration: item.duration),
+      ],
     );
   }
 }
@@ -123,12 +102,11 @@ class MiniPlayer extends StatelessWidget {
 ///
 /// Driven by the player's position stream rather than the media session, so it
 /// advances smoothly instead of stepping once per state broadcast. Deliberately
-/// not interactive: dragging belongs on the full player, and a 3px target at
-/// the edge of a card would only produce accidental seeks.
+/// not interactive: dragging here belongs to the sheet, and a 3px target would
+/// only produce accidental seeks.
 class _MiniProgressBar extends StatelessWidget {
   const _MiniProgressBar({this.fallbackDuration});
 
-  /// Duration from the listing, used until the player reports the real one.
   final Duration? fallbackDuration;
 
   @override
