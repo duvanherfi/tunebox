@@ -464,4 +464,32 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountScrobble => 'Listening history';
+
+  @override
+  String get settingsBackup => 'Backups';
+
+  @override
+  String get settingsBackupAuto => 'Daily copy';
+
+  @override
+  String get settingsBackupAutoBody =>
+      'Write a copy of your listening log and settings once a day, keeping the last five.';
+
+  @override
+  String get settingsBackupNow => 'Write a copy now';
+
+  @override
+  String settingsBackupWritten(String path) {
+    return 'Saved to $path';
+  }
+
+  @override
+  String get settingsBackupRestore => 'Restore a copy';
+
+  @override
+  String get settingsBackupRestored =>
+      'Restored. Reopen the app to see everything.';
+
+  @override
+  String get settingsBackupNone => 'There are no copies on this device yet.';
 }

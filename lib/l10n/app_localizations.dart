@@ -925,6 +925,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Listening history'**
   String get accountScrobble;
+
+  /// No description provided for @settingsBackup.
+  ///
+  /// In en, this message translates to:
+  /// **'Backups'**
+  String get settingsBackup;
+
+  /// No description provided for @settingsBackupAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily copy'**
+  String get settingsBackupAuto;
+
+  /// No description provided for @settingsBackupAutoBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Write a copy of your listening log and settings once a day, keeping the last five.'**
+  String get settingsBackupAutoBody;
+
+  /// No description provided for @settingsBackupNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Write a copy now'**
+  String get settingsBackupNow;
+
+  /// No description provided for @settingsBackupWritten.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved to {path}'**
+  String settingsBackupWritten(String path);
+
+  /// No description provided for @settingsBackupRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore a copy'**
+  String get settingsBackupRestore;
+
+  /// No description provided for @settingsBackupRestored.
+  ///
+  /// In en, this message translates to:
+  /// **'Restored. Reopen the app to see everything.'**
+  String get settingsBackupRestored;
+
+  /// No description provided for @settingsBackupNone.
+  ///
+  /// In en, this message translates to:
+  /// **'There are no copies on this device yet.'**
+  String get settingsBackupNone;
 }
 
 class _AppLocalizationsDelegate

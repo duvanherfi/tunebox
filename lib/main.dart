@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' show PlatformDispatcher;
 
 import 'package:audio_service/audio_service.dart';
@@ -11,6 +12,7 @@ import 'core/scrobble/scrobbler.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
 import 'data/audio_cache.dart';
+import 'data/backup.dart';
 import 'data/downloads.dart';
 import 'data/play_history.dart';
 import 'data/settings.dart';
@@ -30,6 +32,7 @@ late final Settings settings;
 late final Downloads downloads;
 late final AudioCache audioCache;
 late final Scrobbler scrobbler;
+late final Backup backup;
 final LyricsClient lyricsClient = LyricsClient();
 
 Future<void> main() async {
@@ -62,6 +65,11 @@ Future<void> main() async {
 
   scrobbler = Scrobbler();
   await scrobbler.load();
+
+  backup = Backup(history: playHistory);
+  await backup.load();
+  // Not awaited: a copy is worth writing, never worth delaying the first frame.
+  unawaited(backup.maybeWriteAutomatic());
 
   // Built from the device locale so search results come back in the same
   // language the interface is drawn in.

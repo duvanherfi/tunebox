@@ -466,4 +466,32 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get accountScrobble => 'Historial de escucha';
+
+  @override
+  String get settingsBackup => 'Copias de seguridad';
+
+  @override
+  String get settingsBackupAuto => 'Copia diaria';
+
+  @override
+  String get settingsBackupAutoBody =>
+      'Escribir una copia del historial y los ajustes una vez al día, guardando las últimas cinco.';
+
+  @override
+  String get settingsBackupNow => 'Crear una copia ahora';
+
+  @override
+  String settingsBackupWritten(String path) {
+    return 'Guardada en $path';
+  }
+
+  @override
+  String get settingsBackupRestore => 'Restaurar una copia';
+
+  @override
+  String get settingsBackupRestored =>
+      'Restaurada. Vuelve a abrir la app para verlo todo.';
+
+  @override
+  String get settingsBackupNone => 'Todavía no hay copias en este dispositivo.';
 }

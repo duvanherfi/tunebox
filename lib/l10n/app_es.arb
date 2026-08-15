@@ -159,5 +159,14 @@
   "scrobbleTokenHint": "Token de usuario",
   "scrobbleLastFmBody": "Last.fm entrega sus claves por aplicación, así que esta compilación necesita la tuya: créala en last.fm/api y luego autoriza la conexión.",
   "scrobbleApproved": "Ya autoricé",
-  "accountScrobble": "Historial de escucha"
+  "accountScrobble": "Historial de escucha",
+  "settingsBackup": "Copias de seguridad",
+  "settingsBackupAuto": "Copia diaria",
+  "settingsBackupAutoBody": "Escribir una copia del historial y los ajustes una vez al día, guardando las últimas cinco.",
+  "settingsBackupNow": "Crear una copia ahora",
+  "settingsBackupWritten": "Guardada en {path}",
+  "settingsBackupRestore": "Restaurar una copia",
+  "settingsBackupRestored": "Restaurada. Vuelve a abrir la app para verlo todo.",
+  "settingsBackupNone": "Todavía no hay copias en este dispositivo.",
+  "@settingsBackupWritten": {"placeholders": {"path": {"type": "String"}}}
 }

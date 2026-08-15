@@ -159,5 +159,14 @@
   "scrobbleTokenHint": "User token",
   "scrobbleLastFmBody": "Last.fm issues its keys per application, so this build needs your own — create one at last.fm/api, then approve the connection.",
   "scrobbleApproved": "I approved it",
-  "accountScrobble": "Listening history"
+  "accountScrobble": "Listening history",
+  "settingsBackup": "Backups",
+  "settingsBackupAuto": "Daily copy",
+  "settingsBackupAutoBody": "Write a copy of your listening log and settings once a day, keeping the last five.",
+  "settingsBackupNow": "Write a copy now",
+  "settingsBackupWritten": "Saved to {path}",
+  "settingsBackupRestore": "Restore a copy",
+  "settingsBackupRestored": "Restored. Reopen the app to see everything.",
+  "settingsBackupNone": "There are no copies on this device yet.",
+  "@settingsBackupWritten": {"placeholders": {"path": {"type": "String"}}}
 }
