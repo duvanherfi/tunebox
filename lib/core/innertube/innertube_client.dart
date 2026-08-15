@@ -306,6 +306,40 @@ class InnertubeClient {
   Future<List<Shelf>> homeFeed() async =>
       parseShelves(await browse('FEmusic_home'));
 
+  /// Who is signed in, for the account panel to show.
+  ///
+  /// Returns null rather than throwing when signed out or when the shape
+  /// changes: a missing name is a cosmetic loss, and it should never be the
+  /// reason a settings panel refuses to open.
+  Future<Account?> accountInfo() async {
+    if (session?.isSignedIn != true) return null;
+    try {
+      final json = await _post(_musicBase, 'account/account_menu', _webRemix, {});
+      final header = findFirst(json, 'activeAccountHeaderRenderer');
+      if (header == null) return null;
+
+      final thumbnails = findFirst(readPath(header, ['accountPhoto']), 'thumbnails');
+      return Account(
+        name: _runsText(readPath(header, ['accountName'])),
+        email: _runsText(readPath(header, ['email'])),
+        photoUrl: thumbnails is List && thumbnails.isNotEmpty
+            ? readPath(thumbnails.last, ['url']) as String?
+            : null,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static String _runsText(Object? node) {
+    final runs = readPath(node, ['runs']);
+    if (runs is! List) return '';
+    return runs
+        .map((run) => readPath(run, ['text']))
+        .whereType<String>()
+        .join();
+  }
+
   /// Songs the account has liked.
   Future<List<Song>> likedSongs() async =>
       parseSongList(await browse('FEmusic_liked_videos'));

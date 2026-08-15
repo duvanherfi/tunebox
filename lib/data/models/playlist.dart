@@ -23,6 +23,15 @@ class Playlist {
   int get hashCode => browseId.hashCode;
 }
 
+/// Who is signed in.
+class Account {
+  const Account({required this.name, required this.email, this.photoUrl});
+
+  final String name;
+  final String email;
+  final String? photoUrl;
+}
+
 /// A titled row of collections, as the home feed is built from.
 class Shelf {
   const Shelf({required this.title, required this.playlists});

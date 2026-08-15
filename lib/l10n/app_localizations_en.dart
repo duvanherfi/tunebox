@@ -165,4 +165,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String loginDeviceAccountFailed(String reason) {
     return 'That account could not be used ($reason). Paste the cookie instead.';
   }
+
+  @override
+  String get accountTooltip => 'Account';
+
+  @override
+  String get accountAppearance => 'Appearance';
+
+  @override
+  String get accountSignedOut => 'Not signed in';
+
+  @override
+  String get accountSignedIn => 'Signed in';
 }

@@ -62,5 +62,9 @@
         "type": "String"
       }
     }
-  }
+  },
+  "accountTooltip": "Cuenta",
+  "accountAppearance": "Apariencia",
+  "accountSignedOut": "Sin sesión iniciada",
+  "accountSignedIn": "Sesión iniciada"
 }

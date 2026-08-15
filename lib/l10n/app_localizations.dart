@@ -391,6 +391,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'That account could not be used ({reason}). Paste the cookie instead.'**
   String loginDeviceAccountFailed(String reason);
+
+  /// No description provided for @accountTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get accountTooltip;
+
+  /// No description provided for @accountAppearance.
+  ///
+  /// In en, this message translates to:
+  /// **'Appearance'**
+  String get accountAppearance;
+
+  /// No description provided for @accountSignedOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Not signed in'**
+  String get accountSignedOut;
+
+  /// No description provided for @accountSignedIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed in'**
+  String get accountSignedIn;
 }
 
 class _AppLocalizationsDelegate
