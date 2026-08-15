@@ -14,6 +14,7 @@ import 'core/theme/theme_controller.dart';
 import 'data/audio_cache.dart';
 import 'data/backup.dart';
 import 'data/downloads.dart';
+import 'data/likes.dart';
 import 'data/play_history.dart';
 import 'data/settings.dart';
 import 'features/home/home_screen.dart';
@@ -33,6 +34,7 @@ late final Downloads downloads;
 late final AudioCache audioCache;
 late final Scrobbler scrobbler;
 late final Backup backup;
+late final Likes likes;
 final LyricsClient lyricsClient = LyricsClient();
 
 Future<void> main() async {
@@ -84,6 +86,8 @@ Future<void> main() async {
   final l10n = await AppLocalizations.delegate.load(
     AppLocalizations.delegate.isSupported(locale) ? locale : const Locale('en'),
   );
+
+  likes = Likes(innertube);
 
   playerService = await AudioService.init(
     builder: () => PlayerService(

@@ -194,7 +194,11 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   MediaItem _toMediaItem(Song song) => MediaItem(
         id: song.videoId,
         title: song.title,
-        artist: song.subtitle.isEmpty ? 'YouTube Music' : song.subtitle,
+        // The performer when the row named one; the whole metadata line only
+        // as a fallback, since a notification reading "Song • 5.3M plays" says
+        // nothing about who is playing.
+        artist: song.artist ??
+            (song.subtitle.isEmpty ? 'YouTube Music' : song.subtitle),
         duration: song.duration,
         artUri: song.highResThumbnailUrl == null
             ? null

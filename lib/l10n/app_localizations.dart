@@ -973,6 +973,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'There are no copies on this device yet.'**
   String get settingsBackupNone;
+
+  /// No description provided for @menuUnlike.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from liked songs'**
+  String get menuUnlike;
+
+  /// No description provided for @menuUnliked.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed from liked songs'**
+  String get menuUnliked;
 }
 
 class _AppLocalizationsDelegate

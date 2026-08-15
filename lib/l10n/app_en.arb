@@ -168,5 +168,7 @@
   "settingsBackupRestore": "Restore a copy",
   "settingsBackupRestored": "Restored. Reopen the app to see everything.",
   "settingsBackupNone": "There are no copies on this device yet.",
-  "@settingsBackupWritten": {"placeholders": {"path": {"type": "String"}}}
+  "@settingsBackupWritten": {"placeholders": {"path": {"type": "String"}}},
+  "menuUnlike": "Remove from liked songs",
+  "menuUnliked": "Removed from liked songs"
 }

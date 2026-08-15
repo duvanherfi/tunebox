@@ -48,21 +48,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final l10n = AppLocalizations.of(context)!;
     final bottomSafe = MediaQuery.paddingOf(context).bottom;
 
+    // The header lives in the body rather than in the Scaffold, so the player
+    // can rise over it: a full-screen now-playing view with the app's title
+    // still showing above it would look like a dialog, not a screen.
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Tunebox'),
-        actions: [
-          IconButton(
-            tooltip: l10n.accountTooltip,
-            icon: Icon(
-              session.isSignedIn
-                  ? Icons.account_circle
-                  : Icons.account_circle_outlined,
-            ),
-            onPressed: () => showAccountSheet(context),
-          ),
-        ],
-      ),
       body: Stack(
         children: [
           // Padded so the collapsed player and the navigation never sit on top
@@ -79,13 +68,33 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: EdgeInsets.only(
                   bottom: _navHeight + playerHeight + bottomSafe,
                 ),
-                child: IndexedStack(
-                  index: _index,
-                  children: const [
-                    HomeFeedScreen(),
-                    ExploreScreen(),
-                    SearchScreen(),
-                    LibraryScreen(),
+                child: Column(
+                  children: [
+                    AppBar(
+                      title: const Text('Tunebox'),
+                      actions: [
+                        IconButton(
+                          tooltip: l10n.accountTooltip,
+                          icon: Icon(
+                            session.isSignedIn
+                                ? Icons.account_circle
+                                : Icons.account_circle_outlined,
+                          ),
+                          onPressed: () => showAccountSheet(context),
+                        ),
+                      ],
+                    ),
+                    Expanded(
+                      child: IndexedStack(
+                        index: _index,
+                        children: const [
+                          HomeFeedScreen(),
+                          ExploreScreen(),
+                          SearchScreen(),
+                          LibraryScreen(),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               );

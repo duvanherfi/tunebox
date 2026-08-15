@@ -168,5 +168,7 @@
   "settingsBackupRestore": "Restaurar una copia",
   "settingsBackupRestored": "Restaurada. Vuelve a abrir la app para verlo todo.",
   "settingsBackupNone": "Todavía no hay copias en este dispositivo.",
-  "@settingsBackupWritten": {"placeholders": {"path": {"type": "String"}}}
+  "@settingsBackupWritten": {"placeholders": {"path": {"type": "String"}}},
+  "menuUnlike": "Quitar de Me gusta",
+  "menuUnliked": "Quitada de Me gusta"
 }

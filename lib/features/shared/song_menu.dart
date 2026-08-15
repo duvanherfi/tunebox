@@ -132,14 +132,24 @@ class _SongMenu extends StatelessWidget {
               },
             ),
           if (session.isSignedIn) ...[
-            ListTile(
-              leading: const Icon(Icons.favorite_border_rounded),
-              title: Text(l10n.menuLike),
-              onTap: () => _run(
-                context,
-                () => innertube.setLiked(song.videoId, true),
-                l10n.menuLiked,
-              ),
+            ListenableBuilder(
+              listenable: likes,
+              builder: (context, _) {
+                final liked = likes.isLiked(song.videoId);
+                return ListTile(
+                  leading: Icon(
+                    liked
+                        ? Icons.favorite_rounded
+                        : Icons.favorite_border_rounded,
+                  ),
+                  title: Text(liked ? l10n.menuUnlike : l10n.menuLike),
+                  onTap: () => _run(
+                    context,
+                    () => likes.toggle(song),
+                    liked ? l10n.menuUnliked : l10n.menuLiked,
+                  ),
+                );
+              },
             ),
             ListTile(
               leading: const Icon(Icons.playlist_add_rounded),

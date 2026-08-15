@@ -494,4 +494,10 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get settingsBackupNone => 'Todavía no hay copias en este dispositivo.';
+
+  @override
+  String get menuUnlike => 'Quitar de Me gusta';
+
+  @override
+  String get menuUnliked => 'Quitada de Me gusta';
 }

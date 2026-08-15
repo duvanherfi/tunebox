@@ -492,4 +492,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsBackupNone => 'There are no copies on this device yet.';
+
+  @override
+  String get menuUnlike => 'Remove from liked songs';
+
+  @override
+  String get menuUnliked => 'Removed from liked songs';
 }
