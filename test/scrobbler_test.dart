@@ -78,14 +78,9 @@ void main() {
       'method': 'auth.getSession',
       'token': 'T',
     };
-    final expected = md5
-        .convert(utf8.encode(
-          (signed.keys.toList()..sort())
-                  .map((k) => '$k${signed[k]}')
-                  .join() +
-              'SECRET',
-        ))
-        .toString();
+    final joined =
+        (signed.keys.toList()..sort()).map((k) => '$k${signed[k]}').join();
+    final expected = md5.convert(utf8.encode('${joined}SECRET')).toString();
 
     expect(params['api_sig'], expected);
     expect(params['format'], 'json');
