@@ -509,4 +509,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get settingsStorageRefresh => 'Recalcular';
+
+  @override
+  String get settingsStorageCache => 'Caché';
 }

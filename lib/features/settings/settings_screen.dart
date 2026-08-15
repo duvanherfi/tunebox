@@ -221,7 +221,7 @@ class _StorageSummaryState extends State<_StorageSummary> {
               ),
               const SizedBox(height: 14),
               _StorageBar(
-                label: l10n.settingsCache,
+                label: l10n.settingsStorageCache,
                 used: sizes.cache,
                 of: limit,
                 value: '${megabytes(sizes.cache)} / ${settings.cacheLimitMb} MB',

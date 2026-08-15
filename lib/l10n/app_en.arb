@@ -173,5 +173,6 @@
   "menuUnliked": "Removed from liked songs",
   "searchRecent": "Recent searches",
   "searchRecentClear": "Clear",
-  "settingsStorageRefresh": "Recalculate"
+  "settingsStorageRefresh": "Recalculate",
+  "settingsStorageCache": "Cache"
 }

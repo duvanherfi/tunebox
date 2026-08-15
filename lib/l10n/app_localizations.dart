@@ -1003,6 +1003,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Recalculate'**
   String get settingsStorageRefresh;
+
+  /// No description provided for @settingsStorageCache.
+  ///
+  /// In en, this message translates to:
+  /// **'Cache'**
+  String get settingsStorageCache;
 }
 
 class _AppLocalizationsDelegate

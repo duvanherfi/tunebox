@@ -173,5 +173,6 @@
   "menuUnliked": "Quitada de Me gusta",
   "searchRecent": "Búsquedas recientes",
   "searchRecentClear": "Borrar",
-  "settingsStorageRefresh": "Recalcular"
+  "settingsStorageRefresh": "Recalcular",
+  "settingsStorageCache": "Caché"
 }
