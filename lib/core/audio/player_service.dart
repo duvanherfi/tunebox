@@ -28,6 +28,7 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     this._downloads,
     this._cache,
     this._scrobbler,
+    this._browseLabels,
   ) {
     _wirePlayerStreams();
     _settings.addListener(_applySettings);
@@ -41,6 +42,11 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   final Downloads _downloads;
   final AudioCache _cache;
   final Scrobbler _scrobbler;
+
+  /// Names for the two shelves a car shows. Passed in rather than looked up,
+  /// because this class runs without a widget tree and the translations live
+  /// in one.
+  final ({String downloads, String history}) _browseLabels;
 
   /// Effects sit in the pipeline whether or not they are switched on: Android
   /// attaches them when the audio session opens, so one added later would not
@@ -391,6 +397,57 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     if (stream case final playing?) {
       unawaited(_innertube.reportPlayback(playing));
     }
+  }
+
+  /// The browsing tree a car stereo asks for.
+  ///
+  /// Android Auto talks to the same media session the phone uses, but it can
+  /// only show what this answers with — and it will not fetch anything: a car
+  /// gets what is already on the device, which is downloads and what has been
+  /// played, plus the liked songs the account already handed over.
+  static const _rootId = 'root';
+  static const _downloadsId = 'downloads';
+  static const _historyId = 'history';
+
+  @override
+  Future<List<MediaItem>> getChildren(
+    String parentMediaId, [
+    Map<String, dynamic>? options,
+  ]) async {
+    switch (parentMediaId) {
+      case _rootId:
+        return [
+          MediaItem(
+            id: _downloadsId,
+            title: _browseLabels.downloads,
+            playable: false,
+          ),
+          MediaItem(
+            id: _historyId,
+            title: _browseLabels.history,
+            playable: false,
+          ),
+        ];
+      case _downloadsId:
+        return _downloads.songs.map(_toMediaItem).toList();
+      case _historyId:
+        return _history.songs.take(50).map(_toMediaItem).toList();
+      default:
+        return const [];
+    }
+  }
+
+  /// Playing something the car chose means making it the queue, since a car has
+  /// no way to say "this and then those".
+  @override
+  Future<void> playFromMediaId(
+    String mediaId, [
+    Map<String, dynamic>? extras,
+  ]) async {
+    final source = [..._downloads.songs, ..._history.songs];
+    final index = source.indexWhere((song) => song.videoId == mediaId);
+    if (index < 0) return;
+    await setQueue(source, startIndex: index);
   }
 
   @override

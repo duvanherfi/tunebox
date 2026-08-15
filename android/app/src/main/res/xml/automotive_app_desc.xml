@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tells Android Auto that this app is a media source. Without it the car
+     never lists Tunebox, however well the media session behaves. -->
+<automotiveApp>
+    <uses name="media"/>
+</automotiveApp>

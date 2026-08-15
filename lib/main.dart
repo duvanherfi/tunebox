@@ -71,6 +71,12 @@ Future<void> main() async {
     hl: locale.languageCode,
     gl: locale.countryCode ?? 'US',
   );
+  // Resolved here because the audio handler runs without a widget tree, and
+  // the shelf names a car shows still have to be in the listener's language.
+  final l10n = await AppLocalizations.delegate.load(
+    AppLocalizations.delegate.isSupported(locale) ? locale : const Locale('en'),
+  );
+
   playerService = await AudioService.init(
     builder: () => PlayerService(
       innertube,
@@ -79,6 +85,7 @@ Future<void> main() async {
       downloads,
       audioCache,
       scrobbler,
+      (downloads: l10n.libraryDownloads, history: l10n.libraryHistory),
     ),
     config: const AudioServiceConfig(
       androidNotificationChannelId: 'com.tunebox.tunebox.audio',
