@@ -177,4 +177,34 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountSignedIn => 'Signed in';
+
+  @override
+  String get queueTitle => 'Up next';
+
+  @override
+  String get queueEmpty => 'Nothing queued';
+
+  @override
+  String get queueTooltip => 'Queue';
+
+  @override
+  String get shuffleOn => 'Shuffle on';
+
+  @override
+  String get shuffleOff => 'Shuffle off';
+
+  @override
+  String get repeatOff => 'Repeat off';
+
+  @override
+  String get repeatAll => 'Repeat queue';
+
+  @override
+  String get repeatOne => 'Repeat track';
+
+  @override
+  String get queueRemoved => 'Removed from the queue';
+
+  @override
+  String get undo => 'Undo';
 }

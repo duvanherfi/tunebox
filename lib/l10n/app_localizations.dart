@@ -415,6 +415,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Signed in'**
   String get accountSignedIn;
+
+  /// No description provided for @queueTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Up next'**
+  String get queueTitle;
+
+  /// No description provided for @queueEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing queued'**
+  String get queueEmpty;
+
+  /// No description provided for @queueTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Queue'**
+  String get queueTooltip;
+
+  /// No description provided for @shuffleOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Shuffle on'**
+  String get shuffleOn;
+
+  /// No description provided for @shuffleOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Shuffle off'**
+  String get shuffleOff;
+
+  /// No description provided for @repeatOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat off'**
+  String get repeatOff;
+
+  /// No description provided for @repeatAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat queue'**
+  String get repeatAll;
+
+  /// No description provided for @repeatOne.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat track'**
+  String get repeatOne;
+
+  /// No description provided for @queueRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed from the queue'**
+  String get queueRemoved;
+
+  /// No description provided for @undo.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get undo;
 }
 
 class _AppLocalizationsDelegate

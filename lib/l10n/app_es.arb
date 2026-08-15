@@ -66,5 +66,15 @@
   "accountTooltip": "Cuenta",
   "accountAppearance": "Apariencia",
   "accountSignedOut": "Sin sesión iniciada",
-  "accountSignedIn": "Sesión iniciada"
+  "accountSignedIn": "Sesión iniciada",
+  "queueTitle": "A continuación",
+  "queueEmpty": "No hay nada en cola",
+  "queueTooltip": "Cola",
+  "shuffleOn": "Aleatorio activado",
+  "shuffleOff": "Aleatorio desactivado",
+  "repeatOff": "Sin repetición",
+  "repeatAll": "Repetir la cola",
+  "repeatOne": "Repetir la canción",
+  "queueRemoved": "Quitada de la cola",
+  "undo": "Deshacer"
 }

@@ -2,7 +2,9 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../l10n/app_localizations.dart';
 import '../../main.dart';
+import 'queue_sheet.dart';
 
 /// The player in its expanded state.
 ///
@@ -83,6 +85,7 @@ class FullPlayer extends StatelessWidget {
                   _ProgressBar(total: item.duration ?? Duration.zero),
                   const SizedBox(height: 8),
                   const _Controls(),
+                  const _SecondaryControls(),
                   const Spacer(),
                 ],
               ),
@@ -218,6 +221,31 @@ class _Controls extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+/// Shuffle, the queue, and repeat: the three things a listener reaches for once
+/// the music is already playing, kept off the main row so the transport
+/// controls stay unmistakable.
+class _SecondaryControls extends StatelessWidget {
+  const _SecondaryControls();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        const ShuffleButton(),
+        IconButton(
+          tooltip: l10n.queueTooltip,
+          icon: const Icon(Icons.queue_music_rounded),
+          onPressed: () => showQueueSheet(context),
+        ),
+        const RepeatButton(),
+      ],
     );
   }
 }

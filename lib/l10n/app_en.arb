@@ -66,5 +66,15 @@
   "accountTooltip": "Account",
   "accountAppearance": "Appearance",
   "accountSignedOut": "Not signed in",
-  "accountSignedIn": "Signed in"
+  "accountSignedIn": "Signed in",
+  "queueTitle": "Up next",
+  "queueEmpty": "Nothing queued",
+  "queueTooltip": "Queue",
+  "shuffleOn": "Shuffle on",
+  "shuffleOff": "Shuffle off",
+  "repeatOff": "Repeat off",
+  "repeatAll": "Repeat queue",
+  "repeatOne": "Repeat track",
+  "queueRemoved": "Removed from the queue",
+  "undo": "Undo"
 }

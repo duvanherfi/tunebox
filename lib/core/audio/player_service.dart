@@ -25,8 +25,18 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   final _player = AudioPlayer();
   final _proxy = StreamProxy();
 
+  /// The queue in the order it will play, which is what the queue screen shows
+  /// and what shuffling rearranges.
   List<Song> _songs = const [];
+
+  /// The same tracks in the order they arrived, kept only so that turning
+  /// shuffle off puts the album back the way its maker intended.
+  List<Song> _unshuffled = const [];
+
   int _index = 0;
+
+  AudioServiceRepeatMode _repeat = AudioServiceRepeatMode.none;
+  bool _shuffled = false;
 
   /// Pending confirmation that the current track was really listened to.
   /// Cancelled whenever the track changes, so skipping past something never
@@ -35,6 +45,9 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
 
   Song? get currentSong =>
       _index >= 0 && _index < _songs.length ? _songs[_index] : null;
+
+  List<Song> get songs => _songs;
+  int get currentIndex => _index;
 
   AudioPlayer get player => _player;
 
@@ -51,7 +64,12 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     // just_audio reports completion of the single loaded track; advancing the
     // queue is this class's job because the queue lives here, not in the player.
     _player.processingStateStream.listen((state) {
-      if (state == ProcessingState.completed) skipToNext();
+      if (state != ProcessingState.completed) return;
+      if (_repeat == AudioServiceRepeatMode.one) {
+        _playIndex(_index);
+      } else {
+        skipToNext();
+      }
     });
   }
 
@@ -77,6 +95,10 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
       bufferedPosition: _player.bufferedPosition,
       speed: _player.speed,
       queueIndex: _index,
+      repeatMode: _repeat,
+      shuffleMode: _shuffled
+          ? AudioServiceShuffleMode.all
+          : AudioServiceShuffleMode.none,
     );
   }
 
@@ -92,9 +114,114 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
 
   /// Replaces the queue and starts playing at [startIndex].
   Future<void> setQueue(List<Song> songs, {int startIndex = 0}) async {
-    _songs = List.unmodifiable(songs);
+    _songs = List.of(songs);
+    _unshuffled = List.of(songs);
+    if (_shuffled) _shuffleAround(startIndex);
+    _publishQueue();
+    await _playIndex(_shuffled ? 0 : startIndex);
+  }
+
+  /// Puts a track right after the one playing, for "play next".
+  Future<void> playNext(Song song) async {
+    if (_songs.isEmpty) return setQueue([song]);
+    _insert(song, _index + 1);
+  }
+
+  /// Puts a track at the end of the queue.
+  Future<void> addToQueue(Song song) async {
+    if (_songs.isEmpty) return setQueue([song]);
+    _insert(song, _songs.length);
+  }
+
+  void _insert(Song song, int at) {
+    // A track already queued moves rather than doubling: two identical rows in
+    // a queue are never what someone meant.
+    final existing = _songs.indexOf(song);
+    if (existing >= 0) {
+      if (existing == _index) return;
+      _songs.removeAt(existing);
+      if (existing < _index) _index--;
+      if (existing < at) at--;
+    }
+    _songs.insert(at.clamp(0, _songs.length), song);
+    if (!_unshuffled.contains(song)) _unshuffled.add(song);
+    _publishQueue();
+  }
+
+  /// Moves a track within the queue, as dragging a row does. [to] is the
+  /// destination once the track has been lifted out.
+  Future<void> moveQueueItem(int from, int to) async {
+    if (from < 0 || from >= _songs.length) return;
+    final playing = currentSong;
+    final song = _songs.removeAt(from);
+    _songs.insert(to.clamp(0, _songs.length), song);
+
+    // The track that is playing keeps playing wherever it ends up, so the
+    // index follows the song rather than the position.
+    if (playing != null) _index = _songs.indexOf(playing);
+    _publishQueue();
+  }
+
+  /// Drops a track from the queue. Removing what is playing moves on to the
+  /// next one, which is the only reading of the gesture that makes sense.
+  @override
+  Future<void> removeQueueItemAt(int index) async {
+    if (index < 0 || index >= _songs.length) return;
+    final song = _songs.removeAt(index);
+    _unshuffled.remove(song);
+
+    if (_songs.isEmpty) {
+      _publishQueue();
+      await stop();
+      return;
+    }
+    if (index < _index) {
+      _index--;
+      _publishQueue();
+    } else if (index == _index) {
+      _index = index.clamp(0, _songs.length - 1);
+      _publishQueue();
+      await _playIndex(_index);
+    } else {
+      _publishQueue();
+    }
+  }
+
+  @override
+  Future<void> setRepeatMode(AudioServiceRepeatMode repeatMode) async {
+    _repeat = repeatMode;
+    playbackState.add(playbackState.value.copyWith(repeatMode: repeatMode));
+  }
+
+  @override
+  Future<void> setShuffleMode(AudioServiceShuffleMode shuffleMode) async {
+    _shuffled = shuffleMode != AudioServiceShuffleMode.none;
+    if (_shuffled) {
+      _shuffleAround(_index);
+    } else {
+      // Back to the arrival order, with the current track still current.
+      final playing = currentSong;
+      _songs = _unshuffled.where(_songs.contains).toList();
+      _index = playing == null ? 0 : _songs.indexOf(playing).clamp(0, _songs.length - 1);
+    }
+    _publishQueue();
+    playbackState.add(playbackState.value.copyWith(shuffleMode: shuffleMode));
+  }
+
+  /// Shuffles the queue while leaving the track at [around] playing, first in
+  /// the new order: stopping the music to shuffle it would be absurd.
+  void _shuffleAround(int around) {
+    if (_songs.isEmpty) return;
+    final current = _songs[around.clamp(0, _songs.length - 1)];
+    final rest = List.of(_songs)..remove(current);
+    rest.shuffle();
+    _songs = [current, ...rest];
+    _index = 0;
+  }
+
+  void _publishQueue() {
     queue.add(_songs.map(_toMediaItem).toList());
-    await _playIndex(startIndex);
+    playbackState.add(playbackState.value.copyWith(queueIndex: _index));
   }
 
   Future<void> _playIndex(int index) async {
@@ -153,7 +280,11 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> skipToNext() async {
-    if (_index + 1 < _songs.length) await _playIndex(_index + 1);
+    if (_index + 1 < _songs.length) {
+      await _playIndex(_index + 1);
+    } else if (_repeat == AudioServiceRepeatMode.all && _songs.isNotEmpty) {
+      await _playIndex(0);
+    }
   }
 
   @override

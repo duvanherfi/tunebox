@@ -179,4 +179,34 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get accountSignedIn => 'Sesión iniciada';
+
+  @override
+  String get queueTitle => 'A continuación';
+
+  @override
+  String get queueEmpty => 'No hay nada en cola';
+
+  @override
+  String get queueTooltip => 'Cola';
+
+  @override
+  String get shuffleOn => 'Aleatorio activado';
+
+  @override
+  String get shuffleOff => 'Aleatorio desactivado';
+
+  @override
+  String get repeatOff => 'Sin repetición';
+
+  @override
+  String get repeatAll => 'Repetir la cola';
+
+  @override
+  String get repeatOne => 'Repetir la canción';
+
+  @override
+  String get queueRemoved => 'Quitada de la cola';
+
+  @override
+  String get undo => 'Deshacer';
 }
