@@ -64,6 +64,11 @@ Future<void> main() async {
     ),
   );
 
+  // The colours follow whatever is playing, when that is switched on.
+  playerService.mediaItem.listen(
+    (item) => themeController.adoptArtwork(item?.artUri?.toString()),
+  );
+
   runApp(const TuneboxApp());
 }
 
@@ -77,8 +82,8 @@ class TuneboxApp extends StatelessWidget {
       builder: (context, _) => MaterialApp(
         title: 'Tunebox',
         debugShowCheckedModeBanner: false,
-        theme: AppTheme.light(),
-        darkTheme: AppTheme.dark(),
+        theme: AppTheme.light(themeController.lightFromArtwork),
+        darkTheme: AppTheme.dark(themeController.darkFromArtwork),
         themeMode: themeController.mode,
         // Flutter resolves the device locale against this list and falls back
         // to English when the phone speaks something we do not.

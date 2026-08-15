@@ -7,6 +7,7 @@ import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../auth/login_screen.dart';
 import '../settings/settings_screen.dart';
+import '../stats/stats_screen.dart';
 
 /// Everything about "you and this app" in one place: who is signed in, and how
 /// the app looks.
@@ -66,6 +67,16 @@ class _AccountSheetState extends State<_AccountSheet> {
               ),
             ),
             ListTile(
+              leading: const Icon(Icons.insights_rounded),
+              title: Text(l10n.accountStats),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const StatsScreen()),
+                );
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.tune_rounded),
               title: Text(l10n.accountSettings),
               onTap: () {
@@ -77,6 +88,23 @@ class _AccountSheetState extends State<_AccountSheet> {
             ),
             _SectionLabel(l10n.accountAppearance),
             const _ThemeOptions(),
+            ListenableBuilder(
+              listenable: themeController,
+              builder: (context, _) => SwitchListTile(
+                secondary: const Icon(Icons.palette_outlined),
+                title: Text(l10n.themeDynamic),
+                subtitle: Text(l10n.themeDynamicBody),
+                value: themeController.dynamicColors,
+                onChanged: (value) async {
+                  await themeController.setDynamicColors(value);
+                  if (value) {
+                    await themeController.adoptArtwork(
+                      playerService.mediaItem.value?.artUri?.toString(),
+                    );
+                  }
+                },
+              ),
+            ),
             const SizedBox(height: 12),
           ],
         ),

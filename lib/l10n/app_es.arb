@@ -120,5 +120,17 @@
   "@settingsSpeed": {"placeholders": {"value": {"type": "String"}}},
   "@settingsSleepMinutes": {"placeholders": {"minutes": {"type": "int"}}},
   "@settingsSleepPending": {"placeholders": {"minutes": {"type": "int"}}},
-  "settingsEqualizerIdle": "Pon algo a sonar para ajustar las bandas: Android solo abre el ecualizador cuando hay audio."
+  "settingsEqualizerIdle": "Pon algo a sonar para ajustar las bandas: Android solo abre el ecualizador cuando hay audio.",
+  "themeDynamic": "Colores de la portada",
+  "themeDynamicBody": "Repintar la app con los colores de la carátula que suena.",
+  "statsTitle": "Lo que escuchas",
+  "statsWeek": "Semana",
+  "statsMonth": "Mes",
+  "statsYear": "Año",
+  "statsPlays": "{count, plural, =0{Aún no hay reproducciones} =1{1 reproducción} other{{count} reproducciones}}",
+  "statsEmpty": "Pon algo a sonar y aparecerá aquí.",
+  "statsArtists": "Artistas más escuchados",
+  "statsSongs": "Canciones más escuchadas",
+  "accountStats": "Lo que escuchas",
+  "@statsPlays": {"placeholders": {"count": {"type": "int"}}}
 }

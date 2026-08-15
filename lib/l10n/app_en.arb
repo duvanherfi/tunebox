@@ -120,5 +120,17 @@
   "@settingsSpeed": {"placeholders": {"value": {"type": "String"}}},
   "@settingsSleepMinutes": {"placeholders": {"minutes": {"type": "int"}}},
   "@settingsSleepPending": {"placeholders": {"minutes": {"type": "int"}}},
-  "settingsEqualizerIdle": "Play something to adjust the bands: Android only opens the equalizer once there is sound."
+  "settingsEqualizerIdle": "Play something to adjust the bands: Android only opens the equalizer once there is sound.",
+  "themeDynamic": "Colours from the cover",
+  "themeDynamicBody": "Repaint the app around the artwork that is playing.",
+  "statsTitle": "Your listening",
+  "statsWeek": "Week",
+  "statsMonth": "Month",
+  "statsYear": "Year",
+  "statsPlays": "{count, plural, =0{No plays yet} =1{1 play} other{{count} plays}}",
+  "statsEmpty": "Play something and it will show up here.",
+  "statsArtists": "Most played artists",
+  "statsSongs": "Most played songs",
+  "accountStats": "Your listening",
+  "@statsPlays": {"placeholders": {"count": {"type": "int"}}}
 }

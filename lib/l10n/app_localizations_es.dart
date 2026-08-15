@@ -340,4 +340,47 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get settingsEqualizerIdle =>
       'Pon algo a sonar para ajustar las bandas: Android solo abre el ecualizador cuando hay audio.';
+
+  @override
+  String get themeDynamic => 'Colores de la portada';
+
+  @override
+  String get themeDynamicBody =>
+      'Repintar la app con los colores de la carátula que suena.';
+
+  @override
+  String get statsTitle => 'Lo que escuchas';
+
+  @override
+  String get statsWeek => 'Semana';
+
+  @override
+  String get statsMonth => 'Mes';
+
+  @override
+  String get statsYear => 'Año';
+
+  @override
+  String statsPlays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count reproducciones',
+      one: '1 reproducción',
+      zero: 'Aún no hay reproducciones',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get statsEmpty => 'Pon algo a sonar y aparecerá aquí.';
+
+  @override
+  String get statsArtists => 'Artistas más escuchados';
+
+  @override
+  String get statsSongs => 'Canciones más escuchadas';
+
+  @override
+  String get accountStats => 'Lo que escuchas';
 }

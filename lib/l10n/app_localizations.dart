@@ -709,6 +709,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Play something to adjust the bands: Android only opens the equalizer once there is sound.'**
   String get settingsEqualizerIdle;
+
+  /// No description provided for @themeDynamic.
+  ///
+  /// In en, this message translates to:
+  /// **'Colours from the cover'**
+  String get themeDynamic;
+
+  /// No description provided for @themeDynamicBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Repaint the app around the artwork that is playing.'**
+  String get themeDynamicBody;
+
+  /// No description provided for @statsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your listening'**
+  String get statsTitle;
+
+  /// No description provided for @statsWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Week'**
+  String get statsWeek;
+
+  /// No description provided for @statsMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Month'**
+  String get statsMonth;
+
+  /// No description provided for @statsYear.
+  ///
+  /// In en, this message translates to:
+  /// **'Year'**
+  String get statsYear;
+
+  /// No description provided for @statsPlays.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No plays yet} =1{1 play} other{{count} plays}}'**
+  String statsPlays(int count);
+
+  /// No description provided for @statsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Play something and it will show up here.'**
+  String get statsEmpty;
+
+  /// No description provided for @statsArtists.
+  ///
+  /// In en, this message translates to:
+  /// **'Most played artists'**
+  String get statsArtists;
+
+  /// No description provided for @statsSongs.
+  ///
+  /// In en, this message translates to:
+  /// **'Most played songs'**
+  String get statsSongs;
+
+  /// No description provided for @accountStats.
+  ///
+  /// In en, this message translates to:
+  /// **'Your listening'**
+  String get accountStats;
 }
 
 class _AppLocalizationsDelegate

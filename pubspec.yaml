@@ -47,6 +47,7 @@ dependencies:
   crypto:
   flutter_inappwebview:
   shared_preferences:
+  path_provider:
 
 dev_dependencies:
   flutter_test:
