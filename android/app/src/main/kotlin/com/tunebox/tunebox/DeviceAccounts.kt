@@ -101,7 +101,11 @@ class DeviceAccounts(private val activity: Activity) {
                     return@Thread
                 }
 
-                post { result.success(collectCookies(loginUrl)) }
+                // Collected here, on this thread. Doing it inside post() would
+                // evaluate the network call on the UI thread, which Android
+                // kills the process for.
+                val cookies = collectCookies(loginUrl)
+                post { result.success(cookies) }
             } catch (error: Throwable) {
                 post { result.error("account_failed", error.message, null) }
             }
@@ -134,7 +138,16 @@ class DeviceAccounts(private val activity: Activity) {
 
             val code = connection.responseCode
             val next = connection.getHeaderField("Location")
-            connection.inputStream?.close()
+            android.util.Log.i(
+                "DeviceAccounts",
+                "hop=$hops code=$code host=${url.host} " +
+                    "setCookie=${connection.headerFields["Set-Cookie"]?.size ?: 0}",
+            )
+            try {
+                connection.inputStream?.close()
+            } catch (_: Throwable) {
+                connection.errorStream?.close()
+            }
             connection.disconnect()
 
             url = if (code in 300..399 && !next.isNullOrBlank()) {
@@ -145,9 +158,21 @@ class DeviceAccounts(private val activity: Activity) {
             hops++
         }
 
-        return jar.cookieStore
-            .get(URI("https://music.youtube.com"))
-            .joinToString("; ") { "${it.name}=${it.value}" }
+        // Read from the whole store rather than filtering by music.youtube.com.
+        // The cookie that matters, SAPISID, is issued on .google.com, so asking
+        // only about the music host leaves out precisely the one needed.
+        // Later duplicates win: the redirect chain refines values as it goes.
+        val collected = LinkedHashMap<String, String>()
+        for (cookie in jar.cookieStore.cookies) {
+            collected[cookie.name] = cookie.value
+        }
+
+        android.util.Log.i(
+            "DeviceAccounts",
+            "cookies=${collected.size} hasSapisid=${collected.containsKey("SAPISID")}",
+        )
+
+        return collected.entries.joinToString("; ") { "${it.key}=${it.value}" }
     }
 
     private fun post(block: () -> Unit) = activity.runOnUiThread(block)
