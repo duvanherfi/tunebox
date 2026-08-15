@@ -435,4 +435,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String settingsCacheClear(String size) {
     return 'Clear the cache ($size)';
   }
+
+  @override
+  String get scrobbleTitle => 'Listening history';
+
+  @override
+  String get scrobbleBody =>
+      'YouTube will not accept what this app reports about what you play. These services will, and have been keeping listening histories for twenty years.';
+
+  @override
+  String get scrobbleConnect => 'Connect';
+
+  @override
+  String get scrobbleConnected => 'Connected';
+
+  @override
+  String get scrobbleDisconnect => 'Disconnect';
+
+  @override
+  String get scrobbleTokenHint => 'User token';
+
+  @override
+  String get scrobbleLastFmBody =>
+      'Last.fm issues its keys per application, so this build needs your own — create one at last.fm/api, then approve the connection.';
+
+  @override
+  String get scrobbleApproved => 'I approved it';
+
+  @override
+  String get accountScrobble => 'Listening history';
 }

@@ -10,6 +10,7 @@ import '../../data/audio_cache.dart';
 import '../../data/downloads.dart';
 import '../../data/settings.dart';
 import '../innertube/innertube_client.dart';
+import '../scrobble/scrobbler.dart';
 import 'stream_proxy.dart';
 
 /// Bridges the queue of [Song]s to the platform's native player and media
@@ -26,6 +27,7 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     this._settings,
     this._downloads,
     this._cache,
+    this._scrobbler,
   ) {
     _wirePlayerStreams();
     _settings.addListener(_applySettings);
@@ -38,6 +40,7 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   final Settings _settings;
   final Downloads _downloads;
   final AudioCache _cache;
+  final Scrobbler _scrobbler;
 
   /// Effects sit in the pipeline whether or not they are switched on: Android
   /// attaches them when the audio session opens, so one added later would not
@@ -120,7 +123,7 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
 
   /// Pending confirmation that the current track was really listened to.
   /// Cancelled whenever the track changes, so skipping past something never
-  /// writes it into the account's history.
+  /// counts as having been heard.
   Timer? _watchtime;
 
   Song? get currentSong =>
@@ -363,12 +366,30 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     // account is told too — and confirmed a while later, once enough of the
     // track has been heard to call it a listen.
     unawaited(_history.record(song));
+    unawaited(_scrobbler.nowPlaying(song));
+
+    // Half the track, or two minutes, whichever comes first — the rule the
+    // scrobbling services ask for, and a fair definition of "listened to".
+    final startedAt = DateTime.now();
+    final duration = _player.duration ?? song.duration;
+    final counts = duration == null
+        ? const Duration(seconds: 30)
+        : Duration(
+            milliseconds: (duration.inMilliseconds ~/ 2).clamp(
+              30 * 1000,
+              120 * 1000,
+            ),
+          );
+
+    _watchtime = Timer(counts, () {
+      unawaited(_scrobbler.scrobble(song, startedAt));
+      if (stream case final playing?) {
+        unawaited(_innertube.reportWatchtime(playing, _player.position));
+      }
+    });
+
     if (stream case final playing?) {
       unawaited(_innertube.reportPlayback(playing));
-      _watchtime = Timer(
-        const Duration(seconds: 30),
-        () => unawaited(_innertube.reportWatchtime(playing, _player.position)),
-      );
     }
   }
 

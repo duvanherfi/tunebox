@@ -871,6 +871,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Clear the cache ({size})'**
   String settingsCacheClear(String size);
+
+  /// No description provided for @scrobbleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Listening history'**
+  String get scrobbleTitle;
+
+  /// No description provided for @scrobbleBody.
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube will not accept what this app reports about what you play. These services will, and have been keeping listening histories for twenty years.'**
+  String get scrobbleBody;
+
+  /// No description provided for @scrobbleConnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect'**
+  String get scrobbleConnect;
+
+  /// No description provided for @scrobbleConnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected'**
+  String get scrobbleConnected;
+
+  /// No description provided for @scrobbleDisconnect.
+  ///
+  /// In en, this message translates to:
+  /// **'Disconnect'**
+  String get scrobbleDisconnect;
+
+  /// No description provided for @scrobbleTokenHint.
+  ///
+  /// In en, this message translates to:
+  /// **'User token'**
+  String get scrobbleTokenHint;
+
+  /// No description provided for @scrobbleLastFmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Last.fm issues its keys per application, so this build needs your own — create one at last.fm/api, then approve the connection.'**
+  String get scrobbleLastFmBody;
+
+  /// No description provided for @scrobbleApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'I approved it'**
+  String get scrobbleApproved;
+
+  /// No description provided for @accountScrobble.
+  ///
+  /// In en, this message translates to:
+  /// **'Listening history'**
+  String get accountScrobble;
 }
 
 class _AppLocalizationsDelegate

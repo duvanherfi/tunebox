@@ -7,6 +7,7 @@ import 'core/audio/player_service.dart';
 import 'core/auth/session.dart';
 import 'core/innertube/innertube_client.dart';
 import 'core/lyrics/lyrics_client.dart';
+import 'core/scrobble/scrobbler.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
 import 'data/audio_cache.dart';
@@ -28,6 +29,7 @@ late final PlayHistory playHistory;
 late final Settings settings;
 late final Downloads downloads;
 late final AudioCache audioCache;
+late final Scrobbler scrobbler;
 final LyricsClient lyricsClient = LyricsClient();
 
 Future<void> main() async {
@@ -58,6 +60,9 @@ Future<void> main() async {
   audioCache = AudioCache();
   await audioCache.load();
 
+  scrobbler = Scrobbler();
+  await scrobbler.load();
+
   // Built from the device locale so search results come back in the same
   // language the interface is drawn in.
   final locale = PlatformDispatcher.instance.locale;
@@ -73,6 +78,7 @@ Future<void> main() async {
       settings,
       downloads,
       audioCache,
+      scrobbler,
     ),
     config: const AudioServiceConfig(
       androidNotificationChannelId: 'com.tunebox.tunebox.audio',

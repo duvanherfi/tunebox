@@ -150,5 +150,14 @@
   "settingsCacheLimit": "Cache limit: {mb} MB",
   "settingsCacheClear": "Clear the cache ({size})",
   "@settingsCacheLimit": {"placeholders": {"mb": {"type": "int"}}},
-  "@settingsCacheClear": {"placeholders": {"size": {"type": "String"}}}
+  "@settingsCacheClear": {"placeholders": {"size": {"type": "String"}}},
+  "scrobbleTitle": "Listening history",
+  "scrobbleBody": "YouTube will not accept what this app reports about what you play. These services will, and have been keeping listening histories for twenty years.",
+  "scrobbleConnect": "Connect",
+  "scrobbleConnected": "Connected",
+  "scrobbleDisconnect": "Disconnect",
+  "scrobbleTokenHint": "User token",
+  "scrobbleLastFmBody": "Last.fm issues its keys per application, so this build needs your own — create one at last.fm/api, then approve the connection.",
+  "scrobbleApproved": "I approved it",
+  "accountScrobble": "Listening history"
 }

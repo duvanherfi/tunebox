@@ -7,6 +7,7 @@ import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../auth/login_screen.dart';
 import '../settings/settings_screen.dart';
+import '../settings/scrobble_screen.dart';
 import '../stats/stats_screen.dart';
 
 /// Everything about "you and this app" in one place: who is signed in, and how
@@ -83,6 +84,16 @@ class _AccountSheetState extends State<_AccountSheet> {
                 Navigator.of(context).pop();
                 Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.timeline_rounded),
+              title: Text(l10n.accountScrobble),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ScrobbleScreen()),
                 );
               },
             ),
