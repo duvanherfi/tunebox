@@ -7,6 +7,7 @@ class Playlist {
     required this.title,
     this.subtitle = '',
     this.thumbnailUrl,
+    this.params,
   });
 
   /// InnerTube's identifier for the collection. Already carries the `VL`
@@ -16,6 +17,11 @@ class Playlist {
   final String title;
   final String subtitle;
   final String? thumbnailUrl;
+
+  /// An opaque selector some collections need alongside their id — the mood and
+  /// genre pages are one browse id with a different one of these per category.
+  /// Meaningless on its own, and never inspected: it is passed back as given.
+  final String? params;
 
   @override
   bool operator ==(Object other) =>

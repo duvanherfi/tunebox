@@ -306,8 +306,11 @@ class InnertubeClient {
 
   /// Raw browse call. Every library surface is the same endpoint with a
   /// different id, so the typed helpers below are thin wrappers.
-  Future<Map<String, dynamic>> browse(String browseId) =>
-      _post(_musicBase, 'browse', _webRemix, {'browseId': browseId});
+  Future<Map<String, dynamic>> browse(String browseId, {String? params}) =>
+      _post(_musicBase, 'browse', _webRemix, {
+        'browseId': browseId,
+        'params': ?params,
+      });
 
   /// What the app shows on opening: whatever YouTube Music puts on its front
   /// page for this client.
@@ -427,6 +430,23 @@ class InnertubeClient {
   /// Recently played tracks.
   Future<List<Song>> history() async =>
       parseSongList(await browse('FEmusic_history'));
+
+  /// Records released this week, as YouTube's explore page lists them.
+  Future<List<Shelf>> newReleases() async =>
+      parseShelves(await browse('FEmusic_new_releases'));
+
+  /// The charts: what is being played most, where the account says it is.
+  Future<List<Shelf>> charts() async =>
+      parseShelves(await browse('FEmusic_charts'));
+
+  /// The mood and genre buttons, each of which opens a page of its own.
+  Future<List<Playlist>> moods() async =>
+      parseMoodChips(await browse('FEmusic_moods_and_genres'));
+
+  /// One mood or genre. The params are what tell an otherwise identical browse
+  /// id which category is wanted.
+  Future<List<Shelf>> moodPage(Playlist chip) async =>
+      parseShelves(await browse(chip.browseId, params: chip.params));
 
   /// What YouTube would play after this track, on and on.
   ///

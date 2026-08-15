@@ -347,38 +347,137 @@ List<Song> parseCardSongs(Map<String, dynamic> json) {
   return (title: '', subtitle: '', thumbnailUrl: null);
 }
 
-/// Splits a browse response into its titled rows.
+/// The containers YouTube builds a page's sections out of.
 ///
-/// The home feed is a list of carousels, each with a heading and a run of
-/// cards. Every way a carousel can carry something playable is read, because
-/// which one it uses depends on who is asking — and a row is dropped only when
-/// all of them come back empty, rather than rendered as a title over nothing.
+/// A carousel scrolls sideways, a grid wraps, a shelf is a plain list — but
+/// they are the same idea, a heading over some things, and the app draws them
+/// the same way. Which one a page uses is not a decision anyone here made.
+const _sectionRenderers = {
+  'musicCarouselShelfRenderer',
+  'musicShelfRenderer',
+  'gridRenderer',
+};
+
+/// Splits a browse response into its titled sections.
+///
+/// Every way a section can carry something playable is read, because which one
+/// it uses depends on the page and on who is asking — and a section is dropped
+/// only when all of them come back empty, rather than rendered as a title over
+/// nothing. Sections are collected in the order the page lists them, since that
+/// order is editorial: the front page leads with what it wants seen first.
 List<Shelf> parseShelves(Map<String, dynamic> json) {
   final shelves = <Shelf>[];
 
-  for (final carousel in findAll(json, 'musicCarouselShelfRenderer')) {
-    final headings = findAll(carousel, 'runs')
-        .whereType<List>()
-        .map((runs) => runs.isEmpty ? null : readPath(runs.first, ['text']))
-        .whereType<String>()
-        .where((text) => text.trim().isNotEmpty);
-    if (headings.isEmpty) continue;
+  void walk(Object? node) {
+    if (node is List) {
+      node.forEach(walk);
+      return;
+    }
+    if (node is! Map) return;
 
-    final contents = carousel is Map<String, dynamic>
-        ? carousel
-        : <String, dynamic>{'contents': carousel};
+    for (final entry in node.entries) {
+      if (!_sectionRenderers.contains(entry.key)) {
+        walk(entry.value);
+        continue;
+      }
 
-    final shelf = Shelf(
-      title: headings.first,
-      playlists: parsePlaylists(contents),
-      songs: [...parseSongList(contents), ...parseCardSongs(contents)],
-    );
-    if (shelf.isEmpty) continue;
+      final section = entry.value is Map<String, dynamic>
+          ? entry.value as Map<String, dynamic>
+          : <String, dynamic>{'contents': entry.value};
 
-    shelves.add(shelf);
+      final shelf = Shelf(
+        title: _sectionTitle(section),
+        playlists: [...parsePlaylists(section), ...parseArtistRows(section)],
+        songs: [...parseSongList(section), ...parseCardSongs(section)],
+      );
+      if (shelf.title.isNotEmpty && !shelf.isEmpty) shelves.add(shelf);
+    }
   }
 
+  walk(json);
   return shelves;
+}
+
+/// The heading of a section: the first non-empty run of text inside it.
+///
+/// Headers come wrapped in a different renderer per section type, so the text
+/// is found by shape. It works because the heading is always the first text in
+/// the block — the cards' own titles come after.
+String _sectionTitle(Map<String, dynamic> section) {
+  for (final runs in findAll(section, 'runs').whereType<List>()) {
+    if (runs.isEmpty) continue;
+    final text = readPath(runs.first, ['text']);
+    if (text is String && text.trim().isNotEmpty) return text;
+  }
+  return '';
+}
+
+/// Reads people out of a list of rows.
+///
+/// The charts rank artists in the same renderer used for tracks, but without a
+/// video id — there is nothing to play, only someone to go and see. Those rows
+/// were being dropped as unplayable, which is how a chart of forty artists
+/// rendered as nothing at all.
+List<Playlist> parseArtistRows(Map<String, dynamic> json) {
+  final artists = <Playlist>[];
+  final seen = <String>{};
+
+  for (final item in findAll(json, 'musicResponsiveListItemRenderer')) {
+    if (findFirst(item, 'videoId') != null) continue;
+
+    final browseId = _linkedPage(item, 'MUSIC_PAGE_TYPE_ARTIST');
+    if (browseId == null || !seen.add(browseId)) continue;
+
+    final columns = readPath(item, ['flexColumns']);
+    if (columns is! List || columns.isEmpty) continue;
+
+    final title = _readRuns(readPath(columns.first, [
+      'musicResponsiveListItemFlexColumnRenderer',
+      'text',
+    ]));
+    if (title.isEmpty) continue;
+
+    final thumbnails = findFirst(item, 'thumbnails');
+    String? thumbnailUrl;
+    if (thumbnails is List && thumbnails.isNotEmpty) {
+      thumbnailUrl = readPath(thumbnails.last, ['url']) as String?;
+    }
+
+    artists.add(Playlist(
+      browseId: browseId,
+      title: title,
+      thumbnailUrl: thumbnailUrl,
+    ));
+  }
+
+  return artists;
+}
+
+/// The mood and genre buttons of the explore page.
+///
+/// Each is a browse id plus opaque params; neither means anything without the
+/// other, so they travel together.
+List<Playlist> parseMoodChips(Map<String, dynamic> json) {
+  final chips = <Playlist>[];
+  final seen = <String>{};
+
+  for (final button in findAll(json, 'musicNavigationButtonRenderer')) {
+    final title = _readRuns(readPath(button, ['buttonText']));
+    final endpoint = readPath(button, ['clickCommand', 'browseEndpoint']);
+    final browseId = readPath(endpoint, ['browseId']);
+    final params = readPath(endpoint, ['params']);
+    if (title.isEmpty || browseId is! String || !seen.add('$browseId$params')) {
+      continue;
+    }
+
+    chips.add(Playlist(
+      browseId: browseId,
+      title: title,
+      params: params is String ? params : null,
+    ));
+  }
+
+  return chips;
 }
 
 /// Picks the best audio-only stream from a player response.

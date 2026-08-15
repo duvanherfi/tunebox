@@ -132,5 +132,9 @@
   "statsArtists": "Most played artists",
   "statsSongs": "Most played songs",
   "accountStats": "Your listening",
-  "@statsPlays": {"placeholders": {"count": {"type": "int"}}}
+  "@statsPlays": {"placeholders": {"count": {"type": "int"}}},
+  "navExplore": "Explore",
+  "exploreNew": "New",
+  "exploreCharts": "Charts",
+  "exploreMoods": "Moods"
 }

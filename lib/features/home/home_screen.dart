@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../account/account_sheet.dart';
+import '../browse/explore_screen.dart';
 import '../library/library_screen.dart';
 import '../player/player_sheet.dart';
 import '../search/search_screen.dart';
@@ -82,6 +83,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   index: _index,
                   children: const [
                     HomeFeedScreen(),
+                    ExploreScreen(),
                     SearchScreen(),
                     LibraryScreen(),
                   ],
@@ -101,6 +103,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   icon: const Icon(Icons.home_outlined),
                   selectedIcon: const Icon(Icons.home_rounded),
                   label: l10n.navHome,
+                ),
+                NavigationDestination(
+                  icon: const Icon(Icons.explore_outlined),
+                  selectedIcon: const Icon(Icons.explore_rounded),
+                  label: l10n.navExplore,
                 ),
                 NavigationDestination(
                   icon: const Icon(Icons.search_rounded),

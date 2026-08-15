@@ -775,6 +775,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your listening'**
   String get accountStats;
+
+  /// No description provided for @navExplore.
+  ///
+  /// In en, this message translates to:
+  /// **'Explore'**
+  String get navExplore;
+
+  /// No description provided for @exploreNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New'**
+  String get exploreNew;
+
+  /// No description provided for @exploreCharts.
+  ///
+  /// In en, this message translates to:
+  /// **'Charts'**
+  String get exploreCharts;
+
+  /// No description provided for @exploreMoods.
+  ///
+  /// In en, this message translates to:
+  /// **'Moods'**
+  String get exploreMoods;
 }
 
 class _AppLocalizationsDelegate

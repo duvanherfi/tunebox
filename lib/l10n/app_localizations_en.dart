@@ -381,4 +381,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountStats => 'Your listening';
+
+  @override
+  String get navExplore => 'Explore';
+
+  @override
+  String get exploreNew => 'New';
+
+  @override
+  String get exploreCharts => 'Charts';
+
+  @override
+  String get exploreMoods => 'Moods';
 }

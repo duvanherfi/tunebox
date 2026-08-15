@@ -132,5 +132,9 @@
   "statsArtists": "Artistas más escuchados",
   "statsSongs": "Canciones más escuchadas",
   "accountStats": "Lo que escuchas",
-  "@statsPlays": {"placeholders": {"count": {"type": "int"}}}
+  "@statsPlays": {"placeholders": {"count": {"type": "int"}}},
+  "navExplore": "Explorar",
+  "exploreNew": "Novedades",
+  "exploreCharts": "Populares",
+  "exploreMoods": "Ambientes"
 }
