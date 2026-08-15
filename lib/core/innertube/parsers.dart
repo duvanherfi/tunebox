@@ -129,10 +129,33 @@ List<Song> parseSongList(Map<String, dynamic> json) {
       duration: duration,
       artistId: _linkedPage(item, 'MUSIC_PAGE_TYPE_ARTIST'),
       albumId: _linkedPage(item, 'MUSIC_PAGE_TYPE_ALBUM'),
+      artist: _artistName(texts),
     ));
   }
 
   return songs;
+}
+
+/// Picks the performer out of the columns of a row.
+///
+/// The metadata column opens with the kind of thing the row is — "Song",
+/// "Video" — whenever YouTube feels like saying so, and the name follows.
+/// Taking the first field that is neither one of those labels nor a number is
+/// steadier than counting positions, which differ between search, playlists
+/// and albums.
+String? _artistName(List<String> texts) {
+  if (texts.length < 2) return null;
+  for (final field in texts[1].split(RegExp(r'\s*[•·]\s*'))) {
+    final value = field.trim();
+    if (value.isEmpty) continue;
+    if (RegExp(r'^(song|video|episode|canción|episodio)$', caseSensitive: false)
+        .hasMatch(value)) {
+      continue;
+    }
+    if (RegExp(r'^\d').hasMatch(value)) continue; // play counts and years
+    return value;
+  }
+  return null;
 }
 
 /// Finds the id of the artist or album a row links to.
@@ -242,6 +265,10 @@ List<Song> parseWatchQueue(Map<String, dynamic> json) {
       duration: length == null ? null : _parseDuration(_readRuns(length)),
       artistId: _linkedPage(item, 'MUSIC_PAGE_TYPE_ARTIST'),
       albumId: _linkedPage(item, 'MUSIC_PAGE_TYPE_ALBUM'),
+      artist: _readRuns(readPath(item, ['longBylineText']))
+          .split(RegExp(r'\s*[•·]\s*'))
+          .firstOrNull
+          ?.trim(),
     ));
   }
 

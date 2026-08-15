@@ -9,6 +9,7 @@ class Song {
     this.duration,
     this.artistId,
     this.albumId,
+    this.artist,
   });
 
   final String videoId;
@@ -30,6 +31,13 @@ class Song {
   final String? artistId;
   final String? albumId;
 
+  /// Just the performer, pulled out of the metadata line.
+  ///
+  /// The subtitle is for reading; this is for asking other services about the
+  /// track — a lyrics database wants "Portishead", not "Song • Portishead ·
+  /// 140M plays".
+  final String? artist;
+
   /// Larger artwork for the now-playing screen. YouTube encodes the requested
   /// size in the URL, so upgrading is a string substitution rather than
   /// another network round trip.
@@ -47,6 +55,7 @@ class Song {
         'subtitle': subtitle,
         'thumbnailUrl': thumbnailUrl,
         'durationMs': duration?.inMilliseconds,
+        'artist': artist,
       };
 
   factory Song.fromJson(Map<String, dynamic> json) {
@@ -57,6 +66,7 @@ class Song {
       subtitle: json['subtitle'] as String? ?? '',
       thumbnailUrl: json['thumbnailUrl'] as String?,
       duration: durationMs is int ? Duration(milliseconds: durationMs) : null,
+      artist: json['artist'] as String?,
     );
   }
 

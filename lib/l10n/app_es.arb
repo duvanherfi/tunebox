@@ -99,5 +99,7 @@
   "menuGoArtist": "Ir al artista",
   "menuGoAlbum": "Ir al álbum",
   "menuRadio": "Iniciar radio",
-  "menuRadioStarted": "Radio iniciada"
+  "menuRadioStarted": "Radio iniciada",
+  "lyricsTitle": "Letra",
+  "lyricsNone": "No encontramos la letra de esta canción."
 }

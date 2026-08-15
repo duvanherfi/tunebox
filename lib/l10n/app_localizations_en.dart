@@ -274,4 +274,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get menuRadioStarted => 'Radio started';
+
+  @override
+  String get lyricsTitle => 'Lyrics';
+
+  @override
+  String get lyricsNone => 'No lyrics found for this track.';
 }

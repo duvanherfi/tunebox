@@ -601,6 +601,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Radio started'**
   String get menuRadioStarted;
+
+  /// No description provided for @lyricsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Lyrics'**
+  String get lyricsTitle;
+
+  /// No description provided for @lyricsNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No lyrics found for this track.'**
+  String get lyricsNone;
 }
 
 class _AppLocalizationsDelegate

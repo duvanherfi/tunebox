@@ -5,6 +5,7 @@ import '../../core/theme/app_theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../shared/song_menu.dart';
+import 'lyrics_sheet.dart';
 import 'queue_sheet.dart';
 
 /// The player in its expanded state.
@@ -262,6 +263,14 @@ class _SecondaryControls extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
         const ShuffleButton(),
+        IconButton(
+          tooltip: l10n.lyricsTitle,
+          icon: const Icon(Icons.lyrics_outlined),
+          onPressed: () {
+            final song = playerService.currentSong;
+            if (song != null) showLyricsSheet(context, song);
+          },
+        ),
         IconButton(
           tooltip: l10n.queueTooltip,
           icon: const Icon(Icons.queue_music_rounded),

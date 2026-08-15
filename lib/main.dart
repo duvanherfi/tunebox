@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'core/audio/player_service.dart';
 import 'core/auth/session.dart';
 import 'core/innertube/innertube_client.dart';
+import 'core/lyrics/lyrics_client.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
 import 'data/play_history.dart';
@@ -21,6 +22,7 @@ late final InnertubeClient innertube;
 late final Session session;
 late final ThemeController themeController;
 late final PlayHistory playHistory;
+final LyricsClient lyricsClient = LyricsClient();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
