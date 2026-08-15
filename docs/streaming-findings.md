@@ -140,6 +140,45 @@ Conclusión: **no hay un fallo que arreglar en este código**. Reintentar,
 trocear más fino o refrescar URLs no cambia nada. No volver a intentarlo sin
 una idea nueva de verdad.
 
+## Por qué existe la cuota: la entrega ya no va por ahí
+
+Descartadas también las señales que envía un cliente real. Con `cpn` (el nonce
+de reproducción) y con los pings de seguimiento —aceptados, devuelven 204— la
+descarga muere **en el mismo byte exacto**:
+
+```
+sin nada         917.504 / 4.155.462  (403 en bloque 8)
+con cpn          917.504 / 4.155.462  (403 en bloque 8)
+con cpn + pings  917.504 / 4.155.462  (403 en bloque 8)
+```
+
+Idéntico al byte. La cuota no se contabiliza por sesión ni por reproducción.
+
+La explicación aparece al mirar qué anuncia el propio servidor:
+
+```
+IOS   status=OK   streamingData: serverAbrStreamingUrl, adaptiveFormats
+```
+
+**`serverAbrStreamingUrl` es SABR**, la entrega por POST con protobuf que usan
+hoy las apps oficiales. El `videoplayback` por GET con rangos que usa todo este
+código es el **camino heredado**, y está limitado a ~1 MB justamente porque ya
+no es por donde YouTube sirve música.
+
+Eso reencuadra el problema entero: no estábamos chocando contra una defensa
+antibot que sortear, sino usando una puerta en desuso que dejan entreabierta.
+
+### Qué costaría usar SABR
+
+Es un protocolo binario sin documentar: hay que construir los cuerpos protobuf
+de petición, interpretar el enmarcado UMP de la respuesta, y mantenerlo cuando
+cambie. Las implementaciones de referencia llevan mucho tiempo con soporte
+parcial, y para Dart no existe ninguna madura que se pueda adoptar.
+
+No es una tarde. Es un proyecto en sí mismo, y del tipo que exige mantenimiento
+continuo — la misma categoría en la que esta sesión aprendió dos veces que hay
+que usar una implementación mantenida en vez de escribir la propia.
+
 ## Lo que falta
 
 Descifrar la firma de los formatos del cliente web. Las rutinas viven dentro
