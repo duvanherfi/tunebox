@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
+import '../shared/song_menu.dart';
 import 'queue_sheet.dart';
 
 /// The player in its expanded state.
@@ -30,21 +31,43 @@ class FullPlayer extends StatelessWidget {
       child: Column(
         children: [
           // A grab handle rather than a back arrow: this panel is dragged
-          // shut, not navigated away from.
+          // shut, not navigated away from. The track's menu sits beside it,
+          // where a title bar's overflow button would be.
           Padding(
-            padding: const EdgeInsets.only(top: 10, bottom: 6),
-            child: GestureDetector(
-              onTap: onCollapse,
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.onSurfaceVariant.withValues(
-                    alpha: 0.4,
+            padding: const EdgeInsets.only(top: 4, bottom: 2),
+            child: Row(
+              children: [
+                const SizedBox(width: 48),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: onCollapse,
+                    behavior: HitTestBehavior.opaque,
+                    child: Center(
+                      child: Container(
+                        width: 36,
+                        height: 4,
+                        margin: const EdgeInsets.symmetric(vertical: 14),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.onSurfaceVariant.withValues(
+                            alpha: 0.4,
+                          ),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
                   ),
-                  borderRadius: BorderRadius.circular(2),
                 ),
-              ),
+                SizedBox(
+                  width: 48,
+                  child: IconButton(
+                    icon: const Icon(Icons.more_vert_rounded),
+                    onPressed: () {
+                      final song = playerService.currentSong;
+                      if (song != null) showSongMenu(context, song);
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
           Expanded(

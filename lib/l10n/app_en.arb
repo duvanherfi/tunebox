@@ -76,5 +76,21 @@
   "repeatAll": "Repeat queue",
   "repeatOne": "Repeat track",
   "queueRemoved": "Removed from the queue",
-  "undo": "Undo"
+  "undo": "Undo",
+  "menuPlayNext": "Play next",
+  "menuAddToQueue": "Add to queue",
+  "menuLike": "Add to liked songs",
+  "menuAddToPlaylist": "Add to playlist",
+  "menuCopyLink": "Copy link",
+  "menuLinkCopied": "Link copied",
+  "menuLiked": "Added to liked songs",
+  "menuQueued": "Added to the queue",
+  "menuAddedTo": "Added to {playlist}",
+  "menuFailed": "That did not work: {reason}",
+  "playlistNew": "New playlist",
+  "playlistNameHint": "Playlist name",
+  "create": "Create",
+  "playlistPickTitle": "Add to playlist",
+  "@menuAddedTo": {"placeholders": {"playlist": {"type": "String"}}},
+  "@menuFailed": {"placeholders": {"reason": {"type": "String"}}}
 }

@@ -475,6 +475,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Undo'**
   String get undo;
+
+  /// No description provided for @menuPlayNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Play next'**
+  String get menuPlayNext;
+
+  /// No description provided for @menuAddToQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to queue'**
+  String get menuAddToQueue;
+
+  /// No description provided for @menuLike.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to liked songs'**
+  String get menuLike;
+
+  /// No description provided for @menuAddToPlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to playlist'**
+  String get menuAddToPlaylist;
+
+  /// No description provided for @menuCopyLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy link'**
+  String get menuCopyLink;
+
+  /// No description provided for @menuLinkCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Link copied'**
+  String get menuLinkCopied;
+
+  /// No description provided for @menuLiked.
+  ///
+  /// In en, this message translates to:
+  /// **'Added to liked songs'**
+  String get menuLiked;
+
+  /// No description provided for @menuQueued.
+  ///
+  /// In en, this message translates to:
+  /// **'Added to the queue'**
+  String get menuQueued;
+
+  /// No description provided for @menuAddedTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Added to {playlist}'**
+  String menuAddedTo(String playlist);
+
+  /// No description provided for @menuFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'That did not work: {reason}'**
+  String menuFailed(String reason);
+
+  /// No description provided for @playlistNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New playlist'**
+  String get playlistNew;
+
+  /// No description provided for @playlistNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Playlist name'**
+  String get playlistNameHint;
+
+  /// No description provided for @create.
+  ///
+  /// In en, this message translates to:
+  /// **'Create'**
+  String get create;
+
+  /// No description provided for @playlistPickTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to playlist'**
+  String get playlistPickTitle;
 }
 
 class _AppLocalizationsDelegate

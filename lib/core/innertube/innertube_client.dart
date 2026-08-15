@@ -247,6 +247,17 @@ class InnertubeClient {
       }),
     );
 
+    // A cookie can die while the app still believes in it — signing out
+    // elsewhere, changing the password, or rotating it deliberately. Dropping
+    // it here is what keeps the interface honest: otherwise the account panel
+    // shows a name and every write fails for no visible reason. Only 401 is
+    // read this way; the player endpoint answers 403 to perfectly good
+    // sessions all the time.
+    if (response.statusCode == 401 && session?.isSignedIn == true) {
+      await session?.signOut();
+      throw InnertubeException('La sesión caducó. Vuelve a iniciar sesión.');
+    }
+
     if (response.statusCode != 200) {
       throw InnertubeException(
         '$endpoint responded ${response.statusCode}. If this is the player '
@@ -416,6 +427,61 @@ class InnertubeClient {
   /// Recently played tracks.
   Future<List<Song>> history() async =>
       parseSongList(await browse('FEmusic_history'));
+
+  /// Adds or removes a track from the account's liked songs.
+  ///
+  /// The first write this app makes rather than reads. It goes through the same
+  /// endpoint the web player uses, so a like made here shows up everywhere else
+  /// the account is signed in.
+  Future<void> setLiked(String videoId, bool liked) async {
+    _requireSession();
+    await _post(
+      _musicBase,
+      liked ? 'like/like' : 'like/removelike',
+      _webRemix,
+      {
+        'target': {'videoId': videoId},
+      },
+    );
+  }
+
+  /// Adds a track to one of the account's playlists.
+  Future<void> addToPlaylist(String playlistId, String videoId) async {
+    _requireSession();
+    await _post(_musicBase, 'browse/edit_playlist', _webRemix, {
+      // The edit endpoint wants the bare id, not the `VL` browse form.
+      'playlistId': playlistId.startsWith('VL')
+          ? playlistId.substring(2)
+          : playlistId,
+      'actions': [
+        {'action': 'ACTION_ADD_VIDEO', 'addedVideoId': videoId},
+      ],
+    });
+  }
+
+  /// Creates a playlist on the account and returns its id.
+  ///
+  /// Private by default: a playlist made from a phone in a moment is not a
+  /// publication, and anything else would be a surprising thing for an app to
+  /// decide on someone's behalf.
+  Future<String?> createPlaylist(
+    String title, {
+    List<String> videoIds = const [],
+  }) async {
+    _requireSession();
+    final json = await _post(_musicBase, 'playlist/create', _webRemix, {
+      'title': title,
+      'privacyStatus': 'PRIVATE',
+      if (videoIds.isNotEmpty) 'videoIds': videoIds,
+    });
+    return (readPath(json, ['playlistId']) ?? readPath(json, ['id'])) as String?;
+  }
+
+  void _requireSession() {
+    if (session?.isSignedIn != true) {
+      throw InnertubeException('Esta acción necesita una sesión iniciada');
+    }
+  }
 
   /// Playlists the account created or saved.
   Future<List<Playlist>> savedPlaylists() async =>

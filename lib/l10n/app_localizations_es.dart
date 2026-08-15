@@ -209,4 +209,50 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get undo => 'Deshacer';
+
+  @override
+  String get menuPlayNext => 'Reproducir a continuación';
+
+  @override
+  String get menuAddToQueue => 'Añadir a la cola';
+
+  @override
+  String get menuLike => 'Añadir a Me gusta';
+
+  @override
+  String get menuAddToPlaylist => 'Añadir a una playlist';
+
+  @override
+  String get menuCopyLink => 'Copiar enlace';
+
+  @override
+  String get menuLinkCopied => 'Enlace copiado';
+
+  @override
+  String get menuLiked => 'Añadida a Me gusta';
+
+  @override
+  String get menuQueued => 'Añadida a la cola';
+
+  @override
+  String menuAddedTo(String playlist) {
+    return 'Añadida a $playlist';
+  }
+
+  @override
+  String menuFailed(String reason) {
+    return 'No se pudo: $reason';
+  }
+
+  @override
+  String get playlistNew => 'Nueva playlist';
+
+  @override
+  String get playlistNameHint => 'Nombre de la playlist';
+
+  @override
+  String get create => 'Crear';
+
+  @override
+  String get playlistPickTitle => 'Añadir a una playlist';
 }

@@ -76,5 +76,21 @@
   "repeatAll": "Repetir la cola",
   "repeatOne": "Repetir la canción",
   "queueRemoved": "Quitada de la cola",
-  "undo": "Deshacer"
+  "undo": "Deshacer",
+  "menuPlayNext": "Reproducir a continuación",
+  "menuAddToQueue": "Añadir a la cola",
+  "menuLike": "Añadir a Me gusta",
+  "menuAddToPlaylist": "Añadir a una playlist",
+  "menuCopyLink": "Copiar enlace",
+  "menuLinkCopied": "Enlace copiado",
+  "menuLiked": "Añadida a Me gusta",
+  "menuQueued": "Añadida a la cola",
+  "menuAddedTo": "Añadida a {playlist}",
+  "menuFailed": "No se pudo: {reason}",
+  "playlistNew": "Nueva playlist",
+  "playlistNameHint": "Nombre de la playlist",
+  "create": "Crear",
+  "playlistPickTitle": "Añadir a una playlist",
+  "@menuAddedTo": {"placeholders": {"playlist": {"type": "String"}}},
+  "@menuFailed": {"placeholders": {"reason": {"type": "String"}}}
 }

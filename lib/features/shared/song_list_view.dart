@@ -4,6 +4,7 @@ import '../../l10n/app_localizations.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/song.dart';
 import '../../main.dart';
+import 'song_menu.dart';
 
 /// Renders tracks and starts playback on tap.
 ///
@@ -56,6 +57,10 @@ class _SongRow extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
+      // Both ways in, because both are habits: the long press comes from the
+      // phone, the button from every music app that has ever had a row of
+      // three dots at the end of a track.
+      onLongPress: () => showSongMenu(context, song),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Row(
@@ -99,6 +104,10 @@ class _SongRow extends StatelessWidget {
                 ),
               ),
             ],
+            IconButton(
+              icon: const Icon(Icons.more_vert_rounded),
+              onPressed: () => showSongMenu(context, song),
+            ),
           ],
         ),
       ),
