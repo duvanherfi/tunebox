@@ -1,24 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import '../../core/auth/session.dart';
 import '../../l10n/app_localizations.dart';
 
-/// Signs in by pasting the session cookie from a desktop browser.
+/// Signs in through Google's own login page, and keeps the session cookies it
+/// leaves behind.
 ///
-/// Three other routes were built and measured before settling here. An embedded
-/// WebView carrying Google's login page is blocked on purpose — Google answers
-/// "this browser or app may not be secure" at the credential step. The
-/// device-code flow television apps use does authenticate, but its token is
-/// refused by the music endpoints and the Data API is disabled on the project
-/// those credentials belong to, so it returns an empty library.
+/// An earlier attempt at this was abandoned as impossible after Google
+/// answered "this browser or app may not be secure". It was wrong on two
+/// counts, and both mattered:
 ///
-/// And a Google account already on the phone reaches nothing: Android issues
-/// the weblogin token, but following it never leaves accounts.google.com and
-/// no session cookie comes back.
+/// It presented a desktop browser's user agent, believing that would slip past
+/// the check. A desktop browser reporting itself from a phone is the shape
+/// that check looks for — the disguise was the trigger. The browser here is
+/// left to introduce itself honestly.
 ///
-/// Pasting is unglamorous and takes a minute, but it is the one route measured
-/// to reach the real library, and nothing Google ships can quietly break it.
-/// On desktop it is barely an inconvenience — the browser is right there.
+/// And it read `document.cookie`, which by design cannot see HttpOnly cookies —
+/// several of the ones a Google session depends on. Even a successful login
+/// would have yielded an incomplete set. The platform's cookie store has them
+/// all.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key, required this.session});
 
@@ -29,119 +30,67 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _controller = TextEditingController();
-  String? _error;
-  bool _saving = false;
+  /// Sign in to Google, then continue on to YouTube Music so the session lands
+  /// on the host whose cookies are wanted.
+  static const _loginUrl =
+      'https://accounts.google.com/ServiceLogin'
+      '?continue=https%3A%2F%2Fmusic.youtube.com';
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+  /// Google spreads a YouTube session across these hosts, so all three are
+  /// merged rather than trusting any one of them to hold everything.
+  static const _cookieHosts = [
+    'https://music.youtube.com',
+    'https://www.youtube.com',
+    'https://youtube.com',
+  ];
 
-  Future<void> _save() async {
-    final l10n = AppLocalizations.of(context)!;
-    final pasted = _controller.text.trim();
+  bool _captured = false;
 
-    // Checked before storing: a cookie string without this value cannot sign
-    // anything, and failing here is far clearer than an empty library later.
-    if (Session.sapisidOf(pasted) == null) {
-      setState(() => _error = l10n.loginNoSapisid);
-      return;
+  /// Harvests cookies once the browser lands back on YouTube.
+  ///
+  /// Called on every page load rather than once, because the session is only
+  /// complete after the final redirect — earlier pages carry a partial set.
+  Future<void> _tryCapture(WebUri? url) async {
+    if (_captured) return;
+    if (url == null || !url.host.contains('youtube.com')) return;
+
+    final manager = CookieManager.instance();
+    final jar = <String, String>{};
+
+    for (final host in _cookieHosts) {
+      for (final cookie in await manager.getCookies(url: WebUri(host))) {
+        if (cookie.name.isNotEmpty) jar[cookie.name] = cookie.value.toString();
+      }
     }
 
-    setState(() {
-      _saving = true;
-      _error = null;
-    });
+    final header = jar.entries.map((e) => '${e.key}=${e.value}').join('; ');
 
-    await widget.session.signIn(pasted);
+    // The signing cookie is what makes a session usable; without it the login
+    // has not finished, so this waits for a later page rather than storing a
+    // half-formed one.
+    if (Session.sapisidOf(header) == null) return;
+
+    _captured = true;
+    await widget.session.signIn(header);
     if (mounted) Navigator.of(context).pop(true);
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.loginTitle)),
-      body: ListView(
-        padding: const EdgeInsets.all(24),
-        children: [
-          Text(l10n.loginPasteTitle, style: theme.textTheme.titleLarge),
-          const SizedBox(height: 16),
-          _Steps(
-            steps: [
-              l10n.loginStep1,
-              l10n.loginStep2,
-              l10n.loginStep3,
-              l10n.loginStep4,
-              l10n.loginStep5,
-            ],
-          ),
-          const SizedBox(height: 24),
-          TextField(
-            controller: _controller,
-            maxLines: 6,
-            minLines: 4,
-            autocorrect: false,
-            enableSuggestions: false,
-            style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
-            decoration: InputDecoration(
-              hintText: 'VISITOR_INFO1_LIVE=…; SAPISID=…; …',
-              errorText: _error,
-              border: const OutlineInputBorder(),
-              alignLabelWithHint: true,
-            ),
-          ),
-          const SizedBox(height: 20),
-          FilledButton(
-            onPressed: _saving ? null : _save,
-            child: _saving
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Text(l10n.loginSave),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            l10n.loginStorageNote,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
+      body: InAppWebView(
+        initialUrlRequest: URLRequest(url: WebUri(_loginUrl)),
+        initialSettings: InAppWebViewSettings(
+          javaScriptEnabled: true,
+          // No user agent is set on purpose. See the note on this class.
+          thirdPartyCookiesEnabled: true,
+          supportZoom: true,
+        ),
+        onLoadStop: (controller, url) => _tryCapture(url),
       ),
-    );
-  }
-}
-
-class _Steps extends StatelessWidget {
-  const _Steps({required this.steps});
-
-  final List<String> steps;
-
-  @override
-  Widget build(BuildContext context) {
-    final style = Theme.of(context).textTheme.bodyMedium;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (var i = 0; i < steps.length; i++)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(width: 22, child: Text('${i + 1}.', style: style)),
-                Expanded(child: Text(steps[i], style: style)),
-              ],
-            ),
-          ),
-      ],
     );
   }
 }

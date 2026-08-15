@@ -45,6 +45,7 @@ dependencies:
   audio_service:
   flutter_secure_storage:
   crypto:
+  flutter_inappwebview:
   shared_preferences:
 
 dev_dependencies:
