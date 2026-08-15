@@ -6,6 +6,7 @@ import 'package:just_audio/just_audio.dart';
 
 import '../../data/models/song.dart';
 import '../../data/play_history.dart';
+import '../../data/audio_cache.dart';
 import '../../data/downloads.dart';
 import '../../data/settings.dart';
 import '../innertube/innertube_client.dart';
@@ -24,6 +25,7 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     this._history,
     this._settings,
     this._downloads,
+    this._cache,
   ) {
     _wirePlayerStreams();
     _settings.addListener(_applySettings);
@@ -35,6 +37,7 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   final PlayHistory _history;
   final Settings _settings;
   final Downloads _downloads;
+  final AudioCache _cache;
 
   /// Effects sit in the pipeline whether or not they are switched on: Android
   /// attaches them when the audio session opens, so one added later would not
@@ -324,9 +327,23 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
       // agent travels along because the URL was issued to one particular client
       // and is fetched wearing that same identity.
       await _proxy.start();
-      await _player.setUrl(
-        _proxy.wrap(stream.url, userAgent: stream.userAgent).toString(),
-      );
+      final source = _proxy.wrap(stream.url, userAgent: stream.userAgent);
+
+      if (_settings.cacheEnabled) {
+        // The same bytes are written to disk as they play, so hearing a track
+        // twice costs one download. Keyed by video id rather than by URL: the
+        // URL is signed and different every time, the track is not.
+        // just_audio marks this experimental; it has been in every release for
+        // years and there is no other way to cache while streaming.
+        // ignore: experimental_member_use
+        await _player.setAudioSource(LockCachingAudioSource(
+          source,
+          cacheFile: _cache.fileFor(song.videoId),
+        ));
+        unawaited(_cache.prune(_settings.cacheLimitMb * 1024 * 1024));
+      } else {
+        await _player.setUrl(source.toString());
+      }
     }
 
     // The player knows the real duration once the stream is open; the search

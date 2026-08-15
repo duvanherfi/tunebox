@@ -46,6 +46,15 @@ class SettingsScreen extends StatelessWidget {
               onChanged: settings.setEqualizerEnabled,
             ),
             if (settings.equalizerEnabled) const _EqualizerBands(),
+            _Label(l10n.settingsStorage),
+            SwitchListTile(
+              title: Text(l10n.settingsCache),
+              subtitle: Text(l10n.settingsCacheBody),
+              value: settings.cacheEnabled,
+              onChanged: settings.setCacheEnabled,
+            ),
+            if (settings.cacheEnabled) const _CacheLimit(),
+            const _ClearCache(),
             _Label(l10n.settingsSleep),
             const _SleepTimer(),
           ],
@@ -150,6 +159,64 @@ class _EqualizerBands extends StatelessWidget {
   static String _hertz(double frequency) => frequency >= 1000
       ? '${(frequency / 1000).toStringAsFixed(frequency % 1000 == 0 ? 0 : 1)} kHz'
       : '${frequency.round()} Hz';
+}
+
+class _CacheLimit extends StatelessWidget {
+  const _CacheLimit();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
+    return ListTile(
+      title: Text(l10n.settingsCacheLimit(settings.cacheLimitMb)),
+      subtitle: Slider(
+        value: settings.cacheLimitMb.toDouble(),
+        min: 128,
+        max: 4096,
+        divisions: 31,
+        label: '${settings.cacheLimitMb} MB',
+        onChanged: (value) => settings.setCacheLimitMb(value.round()),
+      ),
+    );
+  }
+}
+
+/// Shows what the cache currently costs, because "clear the cache" without a
+/// number is a question nobody can answer.
+class _ClearCache extends StatefulWidget {
+  const _ClearCache();
+
+  @override
+  State<_ClearCache> createState() => _ClearCacheState();
+}
+
+class _ClearCacheState extends State<_ClearCache> {
+  late Future<int> _size = audioCache.sizeInBytes();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
+    return FutureBuilder<int>(
+      future: _size,
+      builder: (context, snapshot) {
+        final bytes = snapshot.data ?? 0;
+        return ListTile(
+          leading: const Icon(Icons.delete_outline_rounded),
+          title: Text(l10n.settingsCacheClear(_megabytes(bytes))),
+          enabled: bytes > 0,
+          onTap: () async {
+            await audioCache.clear();
+            if (mounted) setState(() => _size = audioCache.sizeInBytes());
+          },
+        );
+      },
+    );
+  }
+
+  static String _megabytes(int bytes) =>
+      '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
 }
 
 class _SleepTimer extends StatelessWidget {

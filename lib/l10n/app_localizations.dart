@@ -841,6 +841,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Removed from this device'**
   String get menuDownloadRemoved;
+
+  /// No description provided for @settingsStorage.
+  ///
+  /// In en, this message translates to:
+  /// **'Storage'**
+  String get settingsStorage;
+
+  /// No description provided for @settingsCache.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep what you play'**
+  String get settingsCache;
+
+  /// No description provided for @settingsCacheBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Hearing a track again costs no data. Downloads are never touched by this.'**
+  String get settingsCacheBody;
+
+  /// No description provided for @settingsCacheLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Cache limit: {mb} MB'**
+  String settingsCacheLimit(int mb);
+
+  /// No description provided for @settingsCacheClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear the cache ({size})'**
+  String settingsCacheClear(String size);
 }
 
 class _AppLocalizationsDelegate

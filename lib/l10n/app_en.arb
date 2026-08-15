@@ -143,5 +143,12 @@
   "menuRemoveDownload": "Remove download",
   "menuDownloading": "Downloading…",
   "menuDownloaded": "Saved to this device",
-  "menuDownloadRemoved": "Removed from this device"
+  "menuDownloadRemoved": "Removed from this device",
+  "settingsStorage": "Storage",
+  "settingsCache": "Keep what you play",
+  "settingsCacheBody": "Hearing a track again costs no data. Downloads are never touched by this.",
+  "settingsCacheLimit": "Cache limit: {mb} MB",
+  "settingsCacheClear": "Clear the cache ({size})",
+  "@settingsCacheLimit": {"placeholders": {"mb": {"type": "int"}}},
+  "@settingsCacheClear": {"placeholders": {"size": {"type": "String"}}}
 }

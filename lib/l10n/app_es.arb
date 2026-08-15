@@ -143,5 +143,12 @@
   "menuRemoveDownload": "Quitar la descarga",
   "menuDownloading": "Descargando…",
   "menuDownloaded": "Guardada en este dispositivo",
-  "menuDownloadRemoved": "Quitada de este dispositivo"
+  "menuDownloadRemoved": "Quitada de este dispositivo",
+  "settingsStorage": "Almacenamiento",
+  "settingsCache": "Guardar lo que suena",
+  "settingsCacheBody": "Volver a oír una canción no gasta datos. Esto nunca toca las descargas.",
+  "settingsCacheLimit": "Límite de la caché: {mb} MB",
+  "settingsCacheClear": "Vaciar la caché ({size})",
+  "@settingsCacheLimit": {"placeholders": {"mb": {"type": "int"}}},
+  "@settingsCacheClear": {"placeholders": {"size": {"type": "String"}}}
 }

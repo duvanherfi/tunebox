@@ -14,12 +14,20 @@ class Settings extends ChangeNotifier {
   static const _normalizeKey = 'normalize_volume';
   static const _equalizerKey = 'equalizer_enabled';
   static const _bandsKey = 'equalizer_bands';
+  static const _cacheKey = 'cache_enabled';
+  static const _cacheLimitKey = 'cache_limit_mb';
 
   bool autoplay = true;
   double speed = 1;
   bool skipSilence = false;
   bool normalizeVolume = false;
   bool equalizerEnabled = false;
+
+  /// Whether played tracks are kept for next time.
+  bool cacheEnabled = true;
+
+  /// How much of the phone this app may take for that, in megabytes.
+  int cacheLimitMb = 512;
 
   /// Gain per equalizer band, in decibels, in the order the device reports its
   /// bands. Empty until the equalizer has been opened once — the number of
@@ -33,6 +41,8 @@ class Settings extends ChangeNotifier {
     skipSilence = prefs.getBool(_skipSilenceKey) ?? skipSilence;
     normalizeVolume = prefs.getBool(_normalizeKey) ?? normalizeVolume;
     equalizerEnabled = prefs.getBool(_equalizerKey) ?? equalizerEnabled;
+    cacheEnabled = prefs.getBool(_cacheKey) ?? cacheEnabled;
+    cacheLimitMb = prefs.getInt(_cacheLimitKey) ?? cacheLimitMb;
     bandGains = prefs
             .getStringList(_bandsKey)
             ?.map((value) => double.tryParse(value) ?? 0.0)
@@ -67,6 +77,14 @@ class Settings extends ChangeNotifier {
           _bandsKey,
           gains.map((gain) => gain.toString()).toList(),
         ),
+      );
+
+  Future<void> setCacheEnabled(bool value) =>
+      _write(() => cacheEnabled = value, (p) => p.setBool(_cacheKey, value));
+
+  Future<void> setCacheLimitMb(int value) => _write(
+        () => cacheLimitMb = value,
+        (p) => p.setInt(_cacheLimitKey, value),
       );
 
   Future<void> _write(

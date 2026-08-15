@@ -417,4 +417,24 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get menuDownloadRemoved => 'Quitada de este dispositivo';
+
+  @override
+  String get settingsStorage => 'Almacenamiento';
+
+  @override
+  String get settingsCache => 'Guardar lo que suena';
+
+  @override
+  String get settingsCacheBody =>
+      'Volver a oír una canción no gasta datos. Esto nunca toca las descargas.';
+
+  @override
+  String settingsCacheLimit(int mb) {
+    return 'Límite de la caché: $mb MB';
+  }
+
+  @override
+  String settingsCacheClear(String size) {
+    return 'Vaciar la caché ($size)';
+  }
 }
