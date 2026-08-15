@@ -77,6 +77,15 @@ class _SongMenu extends StatelessWidget {
           ),
           const Divider(height: 1),
           ListTile(
+            leading: const Icon(Icons.radio_rounded),
+            title: Text(l10n.menuRadio),
+            onTap: () => _run(
+              context,
+              () => playerService.startRadio(song),
+              l10n.menuRadioStarted,
+            ),
+          ),
+          ListTile(
             leading: const Icon(Icons.playlist_play_rounded),
             title: Text(l10n.menuPlayNext),
             onTap: () => _run(

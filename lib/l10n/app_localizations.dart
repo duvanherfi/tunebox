@@ -589,6 +589,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Go to album'**
   String get menuGoAlbum;
+
+  /// No description provided for @menuRadio.
+  ///
+  /// In en, this message translates to:
+  /// **'Start radio'**
+  String get menuRadio;
+
+  /// No description provided for @menuRadioStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Radio started'**
+  String get menuRadioStarted;
 }
 
 class _AppLocalizationsDelegate

@@ -97,5 +97,7 @@
   "shuffle": "Shuffle",
   "artistSongs": "Songs",
   "menuGoArtist": "Go to artist",
-  "menuGoAlbum": "Go to album"
+  "menuGoAlbum": "Go to album",
+  "menuRadio": "Start radio",
+  "menuRadioStarted": "Radio started"
 }

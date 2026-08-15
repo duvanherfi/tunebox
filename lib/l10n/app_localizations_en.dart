@@ -268,4 +268,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get menuGoAlbum => 'Go to album';
+
+  @override
+  String get menuRadio => 'Start radio';
+
+  @override
+  String get menuRadioStarted => 'Radio started';
 }

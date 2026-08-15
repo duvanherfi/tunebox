@@ -38,6 +38,11 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   AudioServiceRepeatMode _repeat = AudioServiceRepeatMode.none;
   bool _shuffled = false;
 
+  /// Whether a finished queue reaches for YouTube's radio instead of stopping.
+  /// On by default: someone who pressed play on one song usually meant "play
+  /// music", and the queue running dry is not a decision they made.
+  bool autoplay = true;
+
   /// Pending confirmation that the current track was really listened to.
   /// Cancelled whenever the track changes, so skipping past something never
   /// writes it into the account's history.
@@ -282,9 +287,42 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   Future<void> skipToNext() async {
     if (_index + 1 < _songs.length) {
       await _playIndex(_index + 1);
-    } else if (_repeat == AudioServiceRepeatMode.all && _songs.isNotEmpty) {
-      await _playIndex(0);
+      return;
     }
+    if (_repeat == AudioServiceRepeatMode.all && _songs.isNotEmpty) {
+      await _playIndex(0);
+      return;
+    }
+    // Nothing queued and nothing to repeat: rather than fall silent, ask
+    // YouTube what goes with this and keep going. Silence at the end of a
+    // queue is a playlist's behaviour, not a radio's.
+    if (await _extendWithRadio()) await _playIndex(_index + 1);
+  }
+
+  /// Appends the current track's radio to the queue. False when there was
+  /// nothing to add, which is also what happens with no network — and then the
+  /// music simply stops, as it did before.
+  Future<bool> _extendWithRadio() async {
+    final seed = currentSong;
+    if (seed == null || !autoplay) return false;
+    try {
+      final related = await _innertube.radio(seed.videoId);
+      final fresh = related.where((song) => !_songs.contains(song)).toList();
+      if (fresh.isEmpty) return false;
+      _songs.addAll(fresh);
+      _unshuffled.addAll(fresh);
+      _publishQueue();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Starts a radio from one track: it plays, and what YouTube says goes with
+  /// it queues up behind.
+  Future<void> startRadio(Song seed) async {
+    await setQueue([seed]);
+    await _extendWithRadio();
   }
 
   @override

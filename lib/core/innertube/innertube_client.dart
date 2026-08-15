@@ -428,6 +428,26 @@ class InnertubeClient {
   Future<List<Song>> history() async =>
       parseSongList(await browse('FEmusic_history'));
 
+  /// What YouTube would play after this track, on and on.
+  ///
+  /// This is the endless mix its own player runs on: ask for the radio of a
+  /// song and you get that song plus a queue of what goes with it. The app uses
+  /// it twice — to start a radio on demand, and to keep the music going when a
+  /// queue runs out, which is the difference between a player and a playlist.
+  Future<List<Song>> radio(String videoId) async {
+    final json = await _post(_musicBase, 'next', _webRemix, {
+      'videoId': videoId,
+      // `RDAMVM` is the radio of one track. Without it, `next` answers with
+      // that single song and nothing after it.
+      'playlistId': 'RDAMVM$videoId',
+      'isAudioOnly': true,
+    });
+    final songs = parseWatchQueue(json);
+
+    // The seed is always first in the answer, and it is already playing.
+    return songs.where((song) => song.videoId != videoId).toList();
+  }
+
   /// An artist's page: their popular tracks, then their albums and singles.
   Future<MusicPage> artistPage(String browseId) async {
     final json = await browse(browseId);

@@ -210,6 +210,44 @@ List<Playlist> parsePlaylists(Map<String, dynamic> json) {
   return playlists;
 }
 
+/// Reads the track list of a watch queue — what `next` answers with.
+///
+/// A different renderer from every other list in the app: the watch queue is
+/// the player's own view of what comes next, and YouTube gives it its own
+/// shape, with the artist and the album already joined into one byline.
+List<Song> parseWatchQueue(Map<String, dynamic> json) {
+  final songs = <Song>[];
+  final seen = <String>{};
+
+  for (final item in findAll(json, 'playlistPanelVideoRenderer')) {
+    final videoId = readPath(item, ['videoId']);
+    if (videoId is! String || !seen.add(videoId)) continue;
+
+    final title = _readRuns(readPath(item, ['title']));
+    if (title.isEmpty) continue;
+
+    final thumbnails = findFirst(item, 'thumbnails');
+    String? thumbnailUrl;
+    if (thumbnails is List && thumbnails.isNotEmpty) {
+      thumbnailUrl = readPath(thumbnails.last, ['url']) as String?;
+    }
+
+    final length = readPath(item, ['lengthText']);
+
+    songs.add(Song(
+      videoId: videoId,
+      title: title,
+      subtitle: _withoutDuration(_readRuns(readPath(item, ['longBylineText']))),
+      thumbnailUrl: thumbnailUrl,
+      duration: length == null ? null : _parseDuration(_readRuns(length)),
+      artistId: _linkedPage(item, 'MUSIC_PAGE_TYPE_ARTIST'),
+      albumId: _linkedPage(item, 'MUSIC_PAGE_TYPE_ALBUM'),
+    ));
+  }
+
+  return songs;
+}
+
 /// Extracts single tracks rendered as grid cards.
 ///
 /// The home feed shows songs the same way it shows albums — as a cover with a

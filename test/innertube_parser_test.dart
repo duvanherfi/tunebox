@@ -146,6 +146,43 @@ void main() {
     });
   });
 
+  group('parseWatchQueue', () {
+    test('reads the rows a radio comes back as', () {
+      final songs = parseWatchQueue({
+        'contents': [
+          {
+            'playlistPanelVideoRenderer': {
+              'videoId': 'abc123',
+              'title': {
+                'runs': [
+                  {'text': 'Daydream In Blue'},
+                ],
+              },
+              'longBylineText': {
+                'runs': [
+                  {'text': 'I Monster • Neveroddoreven • 3:52'},
+                ],
+              },
+              'lengthText': {
+                'runs': [
+                  {'text': '3:52'},
+                ],
+              },
+            },
+          },
+        ],
+      });
+
+      expect(songs.single.videoId, 'abc123');
+      expect(songs.single.duration, const Duration(minutes: 3, seconds: 52));
+      expect(
+        songs.single.subtitle,
+        isNot(contains('3:52')),
+        reason: 'the length has its own column',
+      );
+    });
+  });
+
   group('readPath', () {
     test('returns null instead of throwing on a missing hop', () {
       expect(readPath(const {'a': 1}, ['b', 'c']), isNull);
