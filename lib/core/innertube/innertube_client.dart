@@ -164,13 +164,15 @@ const _streamClients = <_ClientProfile>[
 ];
 
 /// Search filters, as the opaque tokens InnerTube expects.
+///
+/// Only the token lives here; the visible name belongs to the UI, where the
+/// translations are.
 enum SearchFilter {
-  songs('Canciones', 'EgWKAQIIAWoKEAkQBRAKEAMQBA=='),
-  videos('Vídeos', 'EgWKAQIQAWoKEAkQBRAKEAMQBA==');
+  songs('EgWKAQIIAWoKEAkQBRAKEAMQBA=='),
+  videos('EgWKAQIQAWoKEAkQBRAKEAMQBA==');
 
-  const SearchFilter(this.label, this.params);
+  const SearchFilter(this.params);
 
-  final String label;
   final String params;
 }
 
@@ -191,6 +193,16 @@ class InnertubeClient {
     this.hl = 'es',
     this.gl = 'CO',
   }) : _http = httpClient ?? http.Client();
+
+  /// Language and region asked of InnerTube.
+  ///
+  /// Not cosmetic: InnerTube localises what it returns, so the category labels
+  /// beside every result — the "Song" and "Video" in a metadata line — arrive
+  /// in whatever language is requested. A translated interface listing
+  /// untranslated results looks broken.
+  ///
+  /// Taken as plain strings rather than a Locale so this file stays free of
+  /// Flutter imports and testable without a binding; the caller converts.
 
   final http.Client _http;
 

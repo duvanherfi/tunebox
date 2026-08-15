@@ -1,5 +1,8 @@
+import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
+import '../../core/theme/theme_controller.dart';
 import '../../main.dart';
 import '../auth/login_screen.dart';
 import '../library/library_screen.dart';
@@ -39,23 +42,78 @@ class _HomeScreenState extends State<HomeScreen> {
     if (mounted) setState(() {});
   }
 
+  /// Theme picker as a bottom sheet: it lives one tap from anywhere and does
+  /// not warrant a screen of its own for a single choice.
+  Future<void> _pickTheme() async {
+    final l10n = AppLocalizations.of(context)!;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => ListenableBuilder(
+        listenable: themeController,
+        builder: (context, _) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    l10n.themeTitle,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+              ),
+              RadioGroup<ThemeMode>(
+                groupValue: themeController.mode,
+                onChanged: (picked) {
+                  if (picked != null) themeController.select(picked);
+                },
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final mode in ThemeController.options)
+                      RadioListTile<ThemeMode>(
+                        value: mode,
+                        title: Text(_themeLabel(l10n, mode)),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  static String _themeLabel(AppLocalizations l10n, ThemeMode mode) {
+    return switch (mode) {
+      ThemeMode.light => l10n.themeLight,
+      ThemeMode.dark => l10n.themeDark,
+      ThemeMode.system => l10n.themeSystem,
+    };
+  }
+
   Future<void> _account() async {
+    final l10n = AppLocalizations.of(context)!;
     if (session.isSignedIn) {
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Cerrar sesión'),
-          content: const Text(
-            'Se borrarán las cookies guardadas en este dispositivo.',
-          ),
+          title: Text(l10n.signOut),
+          content: Text(l10n.signOutBody),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancelar'),
+              child: Text(l10n.cancel),
             ),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Cerrar sesión'),
+              child: Text(l10n.signOut),
             ),
           ],
         ),
@@ -71,6 +129,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final bottomSafe = MediaQuery.paddingOf(context).bottom;
 
     return Scaffold(
@@ -78,7 +137,12 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('Tunebox'),
         actions: [
           IconButton(
-            tooltip: session.isSignedIn ? 'Cerrar sesión' : 'Iniciar sesión',
+            tooltip: l10n.themeTooltip,
+            icon: const Icon(Icons.palette_outlined),
+            onPressed: _pickTheme,
+          ),
+          IconButton(
+            tooltip: session.isSignedIn ? l10n.signOut : l10n.signIn,
             icon: Icon(
               session.isSignedIn
                   ? Icons.account_circle
@@ -91,15 +155,25 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Stack(
         children: [
           // Padded so the collapsed player and the navigation never sit on top
-          // of the last row of a list.
-          Padding(
-            padding: EdgeInsets.only(
-              bottom: _navHeight + PlayerSheetState.collapsedHeight + bottomSafe,
-            ),
-            child: IndexedStack(
-              index: _index,
-              children: const [SearchScreen(), LibraryScreen()],
-            ),
+          // of the last row of a list — but only reserving the player's height
+          // once there is a player, since the sheet draws nothing until a track
+          // is loaded and the gap would otherwise show as dead space.
+          StreamBuilder<MediaItem?>(
+            stream: playerService.mediaItem,
+            builder: (context, snapshot) {
+              final playerHeight = snapshot.data == null
+                  ? 0.0
+                  : PlayerSheetState.collapsedHeight;
+              return Padding(
+                padding: EdgeInsets.only(
+                  bottom: _navHeight + playerHeight + bottomSafe,
+                ),
+                child: IndexedStack(
+                  index: _index,
+                  children: const [SearchScreen(), LibraryScreen()],
+                ),
+              );
+            },
           ),
           Positioned(
             left: 0,
@@ -108,15 +182,15 @@ class _HomeScreenState extends State<HomeScreen> {
             child: NavigationBar(
               selectedIndex: _index,
               onDestinationSelected: (index) => setState(() => _index = index),
-              destinations: const [
+              destinations: [
                 NavigationDestination(
-                  icon: Icon(Icons.search_rounded),
-                  label: 'Buscar',
+                  icon: const Icon(Icons.search_rounded),
+                  label: l10n.navSearch,
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.library_music_outlined),
-                  selectedIcon: Icon(Icons.library_music_rounded),
-                  label: 'Biblioteca',
+                  icon: const Icon(Icons.library_music_outlined),
+                  selectedIcon: const Icon(Icons.library_music_rounded),
+                  label: l10n.navLibrary,
                 ),
               ],
             ),

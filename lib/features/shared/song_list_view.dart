@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/song.dart';
 import '../../main.dart';
@@ -21,7 +22,11 @@ class SongListView extends StatelessWidget {
     } catch (error) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo reproducir: $error')),
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!.playbackFailed(''),
+          ),
+        ),
       );
     }
   }

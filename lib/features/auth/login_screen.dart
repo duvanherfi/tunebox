@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/auth/session.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Signs in by pasting the session cookie from a desktop browser.
 ///
@@ -35,13 +36,13 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _save() async {
+    final l10n = AppLocalizations.of(context)!;
     final pasted = _controller.text.trim();
 
     // Checked before storing: a cookie string without this value cannot sign
     // anything, and failing here is far clearer than an empty library later.
     if (Session.sapisidOf(pasted) == null) {
-      setState(() => _error = 'No encuentro la cookie de sesión (SAPISID) en '
-          'lo que pegaste. Asegúrate de copiar la cabecera Cookie completa.');
+      setState(() => _error = l10n.loginNoSapisid);
       return;
     }
 
@@ -56,17 +57,25 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Iniciar sesión')),
+      appBar: AppBar(title: Text(l10n.loginTitle)),
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [
-          Text(
-            'Pega tu cookie de sesión',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
+          Text(l10n.loginPasteTitle, style: theme.textTheme.titleLarge),
           const SizedBox(height: 16),
-          const _Steps(),
+          _Steps(
+            steps: [
+              l10n.loginStep1,
+              l10n.loginStep2,
+              l10n.loginStep3,
+              l10n.loginStep4,
+              l10n.loginStep5,
+            ],
+          ),
           const SizedBox(height: 24),
           TextField(
             controller: _controller,
@@ -91,14 +100,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('Guardar sesión'),
+                : Text(l10n.loginSave),
           ),
           const SizedBox(height: 16),
           Text(
-            'Se guarda cifrada en este dispositivo y no se envía a ningún sitio '
-            'salvo a YouTube. Para revocarla, cierra sesión en tu cuenta de '
-            'Google desde cualquier navegador.',
-            style: Theme.of(context).textTheme.bodySmall,
+            l10n.loginStorageNote,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
       ),
@@ -107,15 +116,9 @@ class _LoginScreenState extends State<LoginScreen> {
 }
 
 class _Steps extends StatelessWidget {
-  const _Steps();
+  const _Steps({required this.steps});
 
-  static const _steps = [
-    'Abre music.youtube.com en el navegador del ordenador, con tu sesión ya iniciada.',
-    'Pulsa F12 y ve a la pestaña Network (Red).',
-    'Recarga la página y haz clic en cualquier petición de la lista.',
-    'En Request Headers, copia el valor completo de Cookie.',
-    'Pégalo aquí abajo.',
-  ];
+  final List<String> steps;
 
   @override
   Widget build(BuildContext context) {
@@ -123,17 +126,14 @@ class _Steps extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (var i = 0; i < _steps.length; i++)
+        for (var i = 0; i < steps.length; i++)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(
-                  width: 22,
-                  child: Text('${i + 1}.', style: style),
-                ),
-                Expanded(child: Text(_steps[i], style: style)),
+                SizedBox(width: 22, child: Text('${i + 1}.', style: style)),
+                Expanded(child: Text(steps[i], style: style)),
               ],
             ),
           ),

@@ -1,3 +1,5 @@
+import 'dart:ui' show PlatformDispatcher;
+
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 
@@ -5,7 +7,9 @@ import 'core/audio/player_service.dart';
 import 'core/auth/session.dart';
 import 'core/innertube/innertube_client.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/theme_controller.dart';
 import 'features/home/home_screen.dart';
+import 'l10n/app_localizations.dart';
 
 /// Single shared instances. The audio handler is a process-wide singleton by
 /// nature — there is exactly one media session — and the session and API client
@@ -14,6 +18,7 @@ import 'features/home/home_screen.dart';
 late final PlayerService playerService;
 late final InnertubeClient innertube;
 late final Session session;
+late final ThemeController themeController;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,7 +28,18 @@ Future<void> main() async {
   session = Session();
   await session.load();
 
-  innertube = InnertubeClient(session: session);
+  // Loaded before the first frame so the app never flashes the wrong theme.
+  themeController = ThemeController();
+  await themeController.load();
+
+  // Built from the device locale so search results come back in the same
+  // language the interface is drawn in.
+  final locale = PlatformDispatcher.instance.locale;
+  innertube = InnertubeClient(
+    session: session,
+    hl: locale.languageCode,
+    gl: locale.countryCode ?? 'US',
+  );
   playerService = await AudioService.init(
     builder: () => PlayerService(innertube),
     config: const AudioServiceConfig(
@@ -42,15 +58,20 @@ class TuneboxApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Tunebox',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      // Follows the system so the app matches whatever the phone is doing at
-      // that hour, which for a music player is often late and dark.
-      themeMode: ThemeMode.system,
-      home: const HomeScreen(),
+    return ListenableBuilder(
+      listenable: themeController,
+      builder: (context, _) => MaterialApp(
+        title: 'Tunebox',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
+        themeMode: themeController.mode,
+        // Flutter resolves the device locale against this list and falls back
+        // to English when the phone speaks something we do not.
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const HomeScreen(),
+      ),
     );
   }
 }

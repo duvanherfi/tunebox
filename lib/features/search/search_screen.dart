@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../core/innertube/innertube_client.dart';
 import '../../data/models/song.dart';
 import '../../main.dart';
@@ -64,9 +65,17 @@ class _SearchScreenState extends State<SearchScreen>
     if (_lastQuery.isNotEmpty) _search(query: _lastQuery);
   }
 
+  String _filterLabel(AppLocalizations l10n, SearchFilter filter) {
+    return switch (filter) {
+      SearchFilter.songs => l10n.filterSongs,
+      SearchFilter.videos => l10n.filterVideos,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Column(
       children: [
@@ -74,7 +83,7 @@ class _SearchScreenState extends State<SearchScreen>
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
           child: SearchBar(
             controller: _controller,
-            hintText: 'Buscar canciones o artistas',
+            hintText: l10n.searchHint,
             leading: const Icon(Icons.search_rounded),
             trailing: [
               if (_controller.text.isNotEmpty)
@@ -101,25 +110,25 @@ class _SearchScreenState extends State<SearchScreen>
               padding: const EdgeInsets.symmetric(horizontal: 16),
               children: [
                 _Chip(
-                  label: 'Todo',
+                  label: l10n.filterAll,
                   selected: _filter == null,
                   onSelected: () => _selectFilter(null),
                 ),
                 for (final filter in SearchFilter.values)
                   _Chip(
-                    label: filter.label,
+                    label: _filterLabel(l10n, filter),
                     selected: _filter == filter,
                     onSelected: () => _selectFilter(filter),
                   ),
               ],
             ),
           ),
-        Expanded(child: _buildBody()),
+        Expanded(child: _buildBody(l10n)),
       ],
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(AppLocalizations l10n) {
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -127,11 +136,11 @@ class _SearchScreenState extends State<SearchScreen>
     if (_error != null) {
       return _Empty(
         icon: Icons.cloud_off_rounded,
-        title: 'No se pudo buscar',
+        title: l10n.searchErrorTitle,
         detail: _error!,
         action: FilledButton.tonal(
           onPressed: () => _search(query: _lastQuery),
-          child: const Text('Reintentar'),
+          child: Text(l10n.retry),
         ),
       );
     }
@@ -141,10 +150,8 @@ class _SearchScreenState extends State<SearchScreen>
         icon: _lastQuery.isEmpty
             ? Icons.search_rounded
             : Icons.sentiment_dissatisfied_rounded,
-        title: _lastQuery.isEmpty ? 'Busca algo para empezar' : 'Sin resultados',
-        detail: _lastQuery.isEmpty
-            ? 'Canciones, artistas o álbumes de YouTube Music.'
-            : 'Prueba con otro término o quita el filtro.',
+        title: _lastQuery.isEmpty ? l10n.searchStartTitle : l10n.searchEmptyTitle,
+        detail: _lastQuery.isEmpty ? l10n.searchStartBody : l10n.searchEmptyBody,
       );
     }
 

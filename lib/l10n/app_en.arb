@@ -1,0 +1,55 @@
+{
+  "@@locale": "en",
+
+  "navSearch": "Search",
+  "navLibrary": "Library",
+
+  "themeTooltip": "Theme",
+  "themeTitle": "Theme",
+  "themeLight": "Light",
+  "themeDark": "Dark",
+  "themeSystem": "Follow the system",
+
+  "signIn": "Sign in",
+  "signOut": "Sign out",
+  "signOutBody": "The cookies stored on this device will be deleted.",
+  "cancel": "Cancel",
+  "retry": "Try again",
+
+  "searchHint": "Search songs or artists",
+  "filterAll": "All",
+  "filterSongs": "Songs",
+  "filterVideos": "Videos",
+  "searchStartTitle": "Search for something to begin",
+  "searchStartBody": "Songs, artists or albums from YouTube Music.",
+  "searchEmptyTitle": "No results",
+  "searchEmptyBody": "Try another term, or clear the filter.",
+  "searchErrorTitle": "Search failed",
+
+  "playbackFailed": "Could not play: {error}",
+  "@playbackFailed": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "nothingPlaying": "Nothing playing",
+
+  "libraryLikes": "Liked",
+  "libraryPlaylists": "Playlists",
+  "libraryHistory": "History",
+  "libraryEmptyLikes": "You haven't liked any songs yet",
+  "libraryEmptyPlaylists": "You have no saved playlists",
+  "libraryEmptyHistory": "You haven't listened to anything yet",
+  "libraryPlaylistEmpty": "This playlist is empty",
+  "librarySignedOutTitle": "Sign in to see your library",
+  "librarySignedOutBody": "Your likes, playlists and history from YouTube Music.",
+
+  "loginTitle": "Sign in",
+  "loginPasteTitle": "Paste your session cookie",
+  "loginStep1": "Open music.youtube.com in a desktop browser, already signed in.",
+  "loginStep2": "Press F12 and go to the Network tab.",
+  "loginStep3": "Reload the page and click any request in the list.",
+  "loginStep4": "Under Request Headers, copy the whole Cookie value.",
+  "loginStep5": "Paste it below.",
+  "loginSave": "Save session",
+  "loginNoSapisid": "I can't find the session cookie (SAPISID) in what you pasted. Make sure you copied the whole Cookie header.",
+  "loginStorageNote": "Stored encrypted on this device and sent nowhere but YouTube. To revoke it, sign out of your Google account from any browser."
+}

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_theme.dart';
 import '../../data/models/playlist.dart';
 import '../../data/models/song.dart';
+import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../auth/login_screen.dart';
 import '../shared/song_list_view.dart';
@@ -43,17 +45,18 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (!session.isSignedIn) return _SignedOut(onSignIn: _signIn);
 
     return DefaultTabController(
       length: 3,
       child: Column(
         children: [
-          const TabBar(
+          TabBar(
             tabs: [
-              Tab(text: 'Me gusta'),
-              Tab(text: 'Playlists'),
-              Tab(text: 'Historial'),
+              Tab(text: l10n.libraryLikes),
+              Tab(text: l10n.libraryPlaylists),
+              Tab(text: l10n.libraryHistory),
             ],
           ),
           Expanded(
@@ -61,17 +64,17 @@ class _LibraryScreenState extends State<LibraryScreen> {
               children: [
                 _Shelf<Song>(
                   load: innertube.likedSongs,
-                  empty: 'No has marcado ninguna canción',
+                  empty: l10n.libraryEmptyLikes,
                   build: (songs) => SongListView(songs: songs),
                 ),
                 _Shelf<Playlist>(
                   load: innertube.savedPlaylists,
-                  empty: 'No tienes playlists guardadas',
+                  empty: l10n.libraryEmptyPlaylists,
                   build: (playlists) => _PlaylistGrid(playlists: playlists),
                 ),
                 _Shelf<Song>(
                   load: innertube.history,
-                  empty: 'Todavía no has escuchado nada',
+                  empty: l10n.libraryEmptyHistory,
                   build: (songs) => SongListView(songs: songs),
                 ),
               ],
@@ -90,30 +93,36 @@ class _SignedOut extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.library_music_outlined, size: 56),
+            Icon(
+              Icons.library_music_outlined,
+              size: 56,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
             const SizedBox(height: 16),
             Text(
-              'Inicia sesión para ver tu biblioteca',
+              l10n.librarySignedOutTitle,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium,
+              style: theme.textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
             Text(
-              'Tus me gusta, playlists e historial de YouTube Music.',
+              l10n.librarySignedOutBody,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodySmall,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 24),
-            FilledButton(
-              onPressed: onSignIn,
-              child: const Text('Iniciar sesión'),
-            ),
+            FilledButton(onPressed: onSignIn, child: Text(l10n.signIn)),
           ],
         ),
       ),
@@ -188,6 +197,7 @@ class _Retry extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -196,7 +206,7 @@ class _Retry extends StatelessWidget {
           children: [
             Text(message, textAlign: TextAlign.center),
             const SizedBox(height: 16),
-            OutlinedButton(onPressed: onRetry, child: const Text('Reintentar')),
+            OutlinedButton(onPressed: onRetry, child: Text(l10n.retry)),
           ],
         ),
       ),
@@ -212,17 +222,18 @@ class _PlaylistGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GridView.builder(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: 200,
-        childAspectRatio: 0.72,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
+        childAspectRatio: 0.74,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
       ),
       itemCount: playlists.length,
       itemBuilder: (context, index) {
         final playlist = playlists[index];
         return InkWell(
+          borderRadius: BorderRadius.circular(AppTheme.radiusArtwork),
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute(
               builder: (_) => PlaylistScreen(playlist: playlist),
@@ -232,30 +243,21 @@ class _PlaylistGrid extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: playlist.thumbnailUrl == null
-                      ? const ColoredBox(
-                          color: Colors.white10,
-                          child: Center(child: Icon(Icons.queue_music)),
-                        )
-                      : Image.network(
-                          playlist.thumbnailUrl!,
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                          errorBuilder: (_, _, _) => const ColoredBox(
-                            color: Colors.white10,
-                            child: Center(child: Icon(Icons.queue_music)),
-                          ),
-                        ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) => Artwork(
+                    url: playlist.thumbnailUrl,
+                    size: constraints.maxWidth,
+                  ),
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               Text(
                 playlist.title,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodyMedium,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
               ),
             ],
           ),

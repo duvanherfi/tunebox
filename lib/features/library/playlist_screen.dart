@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../data/models/playlist.dart';
 import '../../data/models/song.dart';
 import '../../main.dart';
@@ -50,7 +51,9 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                 }
                 final songs = snapshot.data ?? const [];
                 if (songs.isEmpty) {
-                  return const Center(child: Text('Esta playlist está vacía'));
+                  return Center(
+                    child: Text(AppLocalizations.of(context)!.libraryPlaylistEmpty),
+                  );
                 }
                 return SongListView(songs: songs);
               },
