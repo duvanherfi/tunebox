@@ -8,6 +8,8 @@ import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../shared/song_menu.dart';
 import 'lyrics_view.dart';
+import 'playback_sheet.dart';
+import 'swipe_to_change.dart';
 import 'queue_sheet.dart';
 
 /// The player in its expanded state.
@@ -65,7 +67,7 @@ class _FullPlayerState extends State<FullPlayer> {
                                   song: playerService.currentSong,
                                 )
                               : Center(
-                                  child: _SwipeableArtwork(
+                                  child: _Cover(
                                     key: ValueKey(widget.item.id),
                                     url: art,
                                     size: MediaQuery.sizeOf(context).width - 96,
@@ -177,6 +179,7 @@ class _Handle extends StatelessWidget {
         SizedBox(
           width: 48,
           child: IconButton(
+            tooltip: AppLocalizations.of(context)!.tipMore,
             icon: const Icon(Icons.more_vert_rounded),
             onPressed: () {
               final song = playerService.currentSong;
@@ -274,6 +277,17 @@ class _QuickActions extends StatelessWidget {
             );
           },
         ),
+        ValueListenableBuilder<DateTime?>(
+          valueListenable: playerService.sleepAt,
+          builder: (context, sleeping, _) => _RoundAction(
+            icon: sleeping == null
+                ? Icons.tune_rounded
+                : Icons.bedtime_rounded,
+            tooltip: l10n.playbackControls,
+            selected: sleeping != null,
+            onPressed: () => showPlaybackSheet(context),
+          ),
+        ),
         ListenableBuilder(
           listenable: likes,
           builder: (context, _) {
@@ -334,91 +348,30 @@ class _RoundAction extends StatelessWidget {
   }
 }
 
-/// Artwork that changes track on a horizontal flick.
-///
-/// The card follows the finger and fades with distance, so the gesture reads as
-/// pushing the current track aside rather than pressing a hidden button.
-/// Horizontal only, which leaves vertical drags to the sheet that contains it.
-class _SwipeableArtwork extends StatefulWidget {
-  const _SwipeableArtwork({super.key, required this.url, required this.size});
+/// The cover, swipeable, and lifted off its own blurred background — without a
+/// shadow it dissolves into the wash it came from.
+class _Cover extends StatelessWidget {
+  const _Cover({super.key, required this.url, required this.size});
 
   final String? url;
   final double size;
 
   @override
-  State<_SwipeableArtwork> createState() => _SwipeableArtworkState();
-}
-
-class _SwipeableArtworkState extends State<_SwipeableArtwork> {
-  static const _flickVelocity = 400.0;
-
-  double _offset = 0;
-  bool _settling = false;
-
-  void _finish(double velocity) {
-    final width = widget.size;
-    final travelled = _offset.abs() > width * 0.25;
-    final flicked = velocity.abs() > _flickVelocity;
-
-    if (!travelled && !flicked) {
-      setState(() => _offset = 0);
-      return;
-    }
-
-    final forward = flicked ? velocity < 0 : _offset < 0;
-    setState(() {
-      _settling = true;
-      _offset = forward ? -width : width;
-    });
-
-    if (forward) {
-      playerService.skipToNext();
-    } else {
-      playerService.skipToPrevious();
-    }
-
-    // The incoming track rebuilds this widget with a new key, so the reset is
-    // only a safety net for when the queue has nowhere to go.
-    Future.delayed(const Duration(milliseconds: 220), () {
-      if (mounted) {
-        setState(() {
-          _settling = false;
-          _offset = 0;
-        });
-      }
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onHorizontalDragUpdate: (details) {
-        if (_settling) return;
-        setState(() => _offset += details.delta.dx);
-      },
-      onHorizontalDragEnd: (details) => _finish(details.primaryVelocity ?? 0),
-      child: AnimatedContainer(
-        duration: Duration(milliseconds: _settling ? 200 : 160),
-        curve: Curves.easeOutCubic,
-        transform: Matrix4.translationValues(_offset, 0, 0),
-        child: Opacity(
-          opacity: (1 - (_offset.abs() / widget.size)).clamp(0.3, 1.0),
-          child: DecoratedBox(
-            // A cover floating over its own blur needs an edge, or it dissolves
-            // into the background it came from.
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.45),
-                  blurRadius: 36,
-                  offset: const Offset(0, 14),
-                ),
-              ],
+    return SwipeToChangeTrack(
+      travel: size,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.45),
+              blurRadius: 36,
+              offset: const Offset(0, 14),
             ),
-            child: Artwork(url: widget.url, size: widget.size, radius: 24),
-          ),
+          ],
         ),
+        child: Artwork(url: url, size: size, radius: 24),
       ),
     );
   }
@@ -429,6 +382,8 @@ class _Controls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return StreamBuilder<PlaybackState>(
       stream: playerService.playbackState,
       builder: (context, snapshot) {
@@ -444,6 +399,7 @@ class _Controls extends StatelessWidget {
             const ShuffleButton(),
             IconButton(
               iconSize: 36,
+              tooltip: l10n.tipPrevious,
               icon: const Icon(Icons.skip_previous_rounded),
               onPressed: playerService.skipToPrevious,
             ),
@@ -455,6 +411,7 @@ class _Controls extends StatelessWidget {
                   ? const Center(child: CircularProgressIndicator())
                   : IconButton.filled(
                       iconSize: 38,
+                      tooltip: playing ? l10n.tipPause : l10n.tipPlay,
                       // A squircle rather than a circle: it is the biggest
                       // target on the screen and the shape should say so.
                       style: IconButton.styleFrom(
@@ -474,6 +431,7 @@ class _Controls extends StatelessWidget {
             const SizedBox(width: 4),
             IconButton(
               iconSize: 36,
+              tooltip: l10n.tipNext,
               icon: const Icon(Icons.skip_next_rounded),
               onPressed: playerService.skipToNext,
             ),

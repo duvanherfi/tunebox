@@ -2,6 +2,7 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 
 /// The player in its collapsed state: a bar showing what is on and the two
@@ -53,6 +54,14 @@ class MiniPlayerBar extends StatelessWidget {
                     ],
                   ),
                 ),
+                // Previous as well as next: the bar is where playback is
+                // controlled most of the time, and going back one track should
+                // not need the whole player opened for it.
+                IconButton(
+                  tooltip: AppLocalizations.of(context)!.tipPrevious,
+                  icon: const Icon(Icons.skip_previous_rounded),
+                  onPressed: playerService.skipToPrevious,
+                ),
                 StreamBuilder<PlaybackState>(
                   stream: playerService.playbackState,
                   builder: (context, snapshot) {
@@ -74,6 +83,9 @@ class MiniPlayerBar extends StatelessWidget {
                       );
                     }
                     return IconButton(
+                      tooltip: playing
+                          ? AppLocalizations.of(context)!.tipPause
+                          : AppLocalizations.of(context)!.tipPlay,
                       icon: Icon(
                         playing
                             ? Icons.pause_rounded
@@ -85,6 +97,7 @@ class MiniPlayerBar extends StatelessWidget {
                   },
                 ),
                 IconButton(
+                  tooltip: AppLocalizations.of(context)!.tipNext,
                   icon: const Icon(Icons.skip_next_rounded),
                   onPressed: playerService.skipToNext,
                 ),

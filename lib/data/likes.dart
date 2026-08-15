@@ -22,6 +22,10 @@ class Likes extends ChangeNotifier {
 
   bool isLiked(String videoId) => _liked.contains(videoId);
 
+  /// Whether liking is possible at all — it writes to an account, and without
+  /// one the control should not be offered anywhere, notification included.
+  bool get canLike => _innertube.session?.isSignedIn ?? false;
+
   /// Flips the heart at once, then tells YouTube. On failure it flips back —
   /// an icon that lies about what the account holds is worse than a stutter.
   Future<void> toggle(Song song) async {

@@ -131,6 +131,7 @@ class _SearchScreenState extends State<SearchScreen>
             trailing: [
               if (_controller.text.isNotEmpty)
                 IconButton(
+                  tooltip: l10n.tipClear,
                   icon: const Icon(Icons.close_rounded),
                   onPressed: () => setState(() {
                     _controller.clear();
@@ -278,6 +279,7 @@ class _Recents extends StatelessWidget {
               leading: const Icon(Icons.history_rounded),
               title: Text(query),
               trailing: IconButton(
+                tooltip: l10n.tipRemove,
                 icon: const Icon(Icons.close_rounded),
                 onPressed: () => recentSearches.remove(query),
               ),

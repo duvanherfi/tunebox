@@ -8,6 +8,7 @@ import '../../data/models/song.dart';
 import '../../data/play_history.dart';
 import '../../data/audio_cache.dart';
 import '../../data/downloads.dart';
+import '../../data/likes.dart';
 import '../../data/settings.dart';
 import '../innertube/innertube_client.dart';
 import '../scrobble/scrobbler.dart';
@@ -28,10 +29,16 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     this._downloads,
     this._cache,
     this._scrobbler,
+    this._likes,
     this._browseLabels,
   ) {
     _wirePlayerStreams();
     _settings.addListener(_applySettings);
+    // The heart in the shade is drawn from playback state, so a like made
+    // anywhere else has to republish it.
+    _likes.addListener(
+      () => playbackState.add(_transformState(_player.playbackEvent)),
+    );
     _applySettings();
     unawaited(_restoreEqualizer());
   }
@@ -42,6 +49,9 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   final Downloads _downloads;
   final AudioCache _cache;
   final Scrobbler _scrobbler;
+  final Likes _likes;
+
+  static const _likeAction = 'like';
 
   /// Names for the two shelves a car shows. Passed in rather than looked up,
   /// because this class runs without a widget tree and the translations live
@@ -163,12 +173,25 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   }
 
   PlaybackState _transformState(PlaybackEvent event) {
+    final song = currentSong;
+    final liked = song != null && _likes.isLiked(song.videoId);
+
     return PlaybackState(
       controls: [
         MediaControl.skipToPrevious,
         if (_player.playing) MediaControl.pause else MediaControl.play,
         MediaControl.skipToNext,
-        MediaControl.stop,
+        // Liking from the shade, where half of it happens. No stop button: the
+        // system already offers a way out of a media notification, and the one
+        // audio_service draws is a bare white square.
+        if (_likes.canLike)
+          MediaControl.custom(
+            androidIcon: liked
+                ? 'drawable/ic_favorite_filled'
+                : 'drawable/ic_favorite',
+            label: 'Like',
+            name: _likeAction,
+          ),
       ],
       systemActions: const {MediaAction.seek},
       androidCompactActionIndices: const [0, 1, 2],
@@ -409,7 +432,8 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   /// only show what this answers with — and it will not fetch anything: a car
   /// gets what is already on the device, which is downloads and what has been
   /// played, plus the liked songs the account already handed over.
-  static const _rootId = 'root';
+  /// The ids a car browses by. The root is audio_service's own constant rather
+  /// than a matching string, so the two cannot drift apart.
   static const _downloadsId = 'downloads';
   static const _historyId = 'history';
 
@@ -419,7 +443,7 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     Map<String, dynamic>? options,
   ]) async {
     switch (parentMediaId) {
-      case _rootId:
+      case AudioService.browsableRootId:
         return [
           MediaItem(
             id: _downloadsId,
@@ -432,6 +456,12 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
             playable: false,
           ),
         ];
+      case AudioService.recentRootId:
+        // What a car asks for the moment it connects, to offer "resume": the
+        // last thing played, and nothing else — this is a resume hint, not a
+        // shelf to browse.
+        final last = currentSong ?? _history.songs.firstOrNull;
+        return [if (last != null) _toMediaItem(last)];
       case _downloadsId:
         return _downloads.songs.map(_toMediaItem).toList();
       case _historyId:
@@ -452,6 +482,20 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     final index = source.indexWhere((song) => song.videoId == mediaId);
     if (index < 0) return;
     await setQueue(source, startIndex: index);
+  }
+
+  @override
+  Future<void> customAction(
+    String name, [
+    Map<String, dynamic>? extras,
+  ]) async {
+    if (name != _likeAction) return;
+    final song = currentSong;
+    if (song == null) return;
+    await _likes.toggle(song);
+    // The icon is drawn from the state, so the shade only changes once the
+    // account has actually taken the like.
+    playbackState.add(_transformState(_player.playbackEvent));
   }
 
   @override
@@ -526,6 +570,15 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
       await _player.seek(Duration.zero);
       return;
     }
+    await previousTrack();
+  }
+
+  /// Always the track before, with no rewind-first rule.
+  ///
+  /// That rule is right for a button pressed twice in a row and wrong for a
+  /// swipe: dragging a cover aside says "the other one", never "start this one
+  /// again".
+  Future<void> previousTrack() async {
     if (_index > 0) await _playIndex(_index - 1);
   }
 

@@ -174,5 +174,20 @@
   "searchRecent": "Búsquedas recientes",
   "searchRecentClear": "Borrar",
   "settingsStorageRefresh": "Recalcular",
-  "settingsStorageCache": "Caché"
+  "settingsStorageCache": "Caché",
+  "playbackControls": "Controles de reproducción",
+  "sleepCustom": "Personalizado",
+  "sleepRunning": "La música se pausará",
+  "sleepStart": "Iniciar",
+  "unitSeconds": "seg",
+  "unitMinutes": "min",
+  "unitHours": "horas",
+  "tipMore": "Más opciones",
+  "tipClear": "Borrar",
+  "tipPrevious": "Canción anterior",
+  "tipNext": "Canción siguiente",
+  "tipPlay": "Reproducir",
+  "tipPause": "Pausar",
+  "tipRemove": "Quitar",
+  "tipReorder": "Arrastra para reordenar"
 }

@@ -510,4 +510,49 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsStorageCache => 'Cache';
+
+  @override
+  String get playbackControls => 'Playback controls';
+
+  @override
+  String get sleepCustom => 'Custom';
+
+  @override
+  String get sleepRunning => 'The music will pause';
+
+  @override
+  String get sleepStart => 'Start';
+
+  @override
+  String get unitSeconds => 'sec';
+
+  @override
+  String get unitMinutes => 'min';
+
+  @override
+  String get unitHours => 'hours';
+
+  @override
+  String get tipMore => 'More';
+
+  @override
+  String get tipClear => 'Clear';
+
+  @override
+  String get tipPrevious => 'Previous track';
+
+  @override
+  String get tipNext => 'Next track';
+
+  @override
+  String get tipPlay => 'Play';
+
+  @override
+  String get tipPause => 'Pause';
+
+  @override
+  String get tipRemove => 'Remove';
+
+  @override
+  String get tipReorder => 'Drag to reorder';
 }

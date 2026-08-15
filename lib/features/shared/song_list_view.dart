@@ -168,6 +168,7 @@ class SongRow extends StatelessWidget {
               ),
             ],
             IconButton(
+              tooltip: AppLocalizations.of(context)!.tipMore,
               icon: const Icon(Icons.more_vert_rounded),
               onPressed: () => showSongMenu(context, song),
             ),

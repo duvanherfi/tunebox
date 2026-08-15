@@ -1009,6 +1009,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cache'**
   String get settingsStorageCache;
+
+  /// No description provided for @playbackControls.
+  ///
+  /// In en, this message translates to:
+  /// **'Playback controls'**
+  String get playbackControls;
+
+  /// No description provided for @sleepCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get sleepCustom;
+
+  /// No description provided for @sleepRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'The music will pause'**
+  String get sleepRunning;
+
+  /// No description provided for @sleepStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get sleepStart;
+
+  /// No description provided for @unitSeconds.
+  ///
+  /// In en, this message translates to:
+  /// **'sec'**
+  String get unitSeconds;
+
+  /// No description provided for @unitMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'min'**
+  String get unitMinutes;
+
+  /// No description provided for @unitHours.
+  ///
+  /// In en, this message translates to:
+  /// **'hours'**
+  String get unitHours;
+
+  /// No description provided for @tipMore.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get tipMore;
+
+  /// No description provided for @tipClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get tipClear;
+
+  /// No description provided for @tipPrevious.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous track'**
+  String get tipPrevious;
+
+  /// No description provided for @tipNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next track'**
+  String get tipNext;
+
+  /// No description provided for @tipPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Play'**
+  String get tipPlay;
+
+  /// No description provided for @tipPause.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause'**
+  String get tipPause;
+
+  /// No description provided for @tipRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get tipRemove;
+
+  /// No description provided for @tipReorder.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag to reorder'**
+  String get tipReorder;
 }
 
 class _AppLocalizationsDelegate

@@ -162,7 +162,10 @@ class _QueueRow extends StatelessWidget {
         // a queue row will mean the track menu soon enough.
         trailing: ReorderableDragStartListener(
           index: index,
-          child: const Icon(Icons.drag_handle_rounded),
+          child: Tooltip(
+            message: l10n.tipReorder,
+            child: const Icon(Icons.drag_handle_rounded),
+          ),
         ),
       ),
     );

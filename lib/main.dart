@@ -102,13 +102,31 @@ Future<void> main() async {
       downloads,
       audioCache,
       scrobbler,
+      likes,
       (downloads: l10n.libraryDownloads, history: l10n.libraryHistory),
     ),
-    config: const AudioServiceConfig(
+    config: AudioServiceConfig(
       androidNotificationChannelId: 'com.tunebox.tunebox.audio',
       androidNotificationChannelName: 'Reproducción',
       androidNotificationOngoing: true,
       androidStopForegroundOnPause: true,
+      // A flat silhouette, not the launcher icon: Android tints the status bar
+      // icon solid white and a full-colour one arrives as a smudge.
+      androidNotificationIcon: 'drawable/ic_notification',
+      // Covers arrive at 544 px and the shade draws them much smaller; keeping
+      // the full size costs memory on every track change for no visible gain.
+      artDownscaleWidth: 320,
+      artDownscaleHeight: 320,
+      // How a car should lay the browsing tree out: the two shelves as a list
+      // of categories, their tracks as a grid of covers. Without declaring
+      // support, Android Auto falls back to its plainest list for everything.
+      androidBrowsableRootExtras: const {
+        AndroidContentStyle.supportedKey: true,
+        AndroidContentStyle.browsableHintKey:
+            AndroidContentStyle.categoryListItemHintValue,
+        AndroidContentStyle.playableHintKey:
+            AndroidContentStyle.gridItemHintValue,
+      },
     ),
   );
 

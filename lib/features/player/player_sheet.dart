@@ -7,6 +7,7 @@ import '../../core/theme/app_theme.dart';
 import '../../main.dart';
 import 'full_player.dart';
 import 'mini_player.dart';
+import 'swipe_to_change.dart';
 
 /// The player, as one widget with two sizes rather than two screens.
 ///
@@ -140,7 +141,16 @@ class PlayerSheetState extends State<PlayerSheet>
                             opacity: barOpacity,
                             child: SizedBox(
                               height: collapsedHeight,
-                              child: MiniPlayerBar(item: item),
+                              // Swiping the bar changes track, the same way
+                              // swiping the cover does. This is the surface
+                              // that is on screen all day, so it is the one
+                              // the gesture is really for.
+                              child: SwipeToChangeTrack(
+                                key: ValueKey(item.id),
+                                travel: MediaQuery.sizeOf(context).width,
+                                fade: false,
+                                child: MiniPlayerBar(item: item),
+                              ),
                             ),
                           ),
                       ],

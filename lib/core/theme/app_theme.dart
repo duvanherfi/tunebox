@@ -88,20 +88,6 @@ class AppTheme {
         ),
       ),
 
-      navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: colors.surfaceContainer,
-        indicatorColor: colors.secondaryContainer,
-        elevation: 0,
-        height: 68,
-        labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
-        labelTextStyle: WidgetStatePropertyAll(
-          TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: colors.onSurface,
-          ),
-        ),
-      ),
 
       listTileTheme: const ListTileThemeData(
         contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),

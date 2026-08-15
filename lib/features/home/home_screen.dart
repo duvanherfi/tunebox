@@ -6,6 +6,8 @@ import '../../main.dart';
 import '../account/account_sheet.dart';
 import '../browse/explore_screen.dart';
 import '../library/library_screen.dart';
+import '../shared/measured.dart';
+import 'floating_nav.dart';
 import '../player/player_sheet.dart';
 import '../search/search_screen.dart';
 import 'home_feed_screen.dart';
@@ -23,7 +25,12 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  static const _navHeight = 80.0;
+  /// Space between the floating bar and the screen's bottom edge.
+  static const _navGap = 10.0;
+
+  /// What the floating bar occupies in total: its own height, the gesture inset
+  /// under it and the gap. A starting guess only — the first frame corrects it.
+  double _navHeight = 92;
 
   int _index = 0;
 
@@ -46,7 +53,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final bottomSafe = MediaQuery.paddingOf(context).bottom;
 
     // The header lives in the body rather than in the Scaffold, so the player
     // can rise over it: a full-screen now-playing view with the app's title
@@ -54,10 +60,10 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // Padded so the collapsed player and the navigation never sit on top
-          // of the last row of a list — but only reserving the player's height
-          // once there is a player, since the sheet draws nothing until a track
-          // is loaded and the gap would otherwise show as dead space.
+          // Padded so the floating navigation and the collapsed player never
+          // sit on top of the last row of a list — and only by the player's
+          // height once there is a player, since the sheet draws nothing until
+          // a track is loaded.
           StreamBuilder<MediaItem?>(
             stream: playerService.mediaItem,
             builder: (context, snapshot) {
@@ -65,9 +71,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ? 0.0
                   : PlayerSheetState.collapsedHeight;
               return Padding(
-                padding: EdgeInsets.only(
-                  bottom: _navHeight + playerHeight + bottomSafe,
-                ),
+                padding: EdgeInsets.only(bottom: _navHeight + playerHeight),
                 child: Column(
                   children: [
                     AppBar(
@@ -101,36 +105,48 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
           Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: NavigationBar(
-              selectedIndex: _index,
-              onDestinationSelected: (index) => setState(() => _index = index),
-              destinations: [
-                NavigationDestination(
-                  icon: const Icon(Icons.home_outlined),
-                  selectedIcon: const Icon(Icons.home_rounded),
-                  label: l10n.navHome,
-                ),
-                NavigationDestination(
-                  icon: const Icon(Icons.explore_outlined),
-                  selectedIcon: const Icon(Icons.explore_rounded),
-                  label: l10n.navExplore,
-                ),
-                NavigationDestination(
-                  icon: const Icon(Icons.search_rounded),
-                  label: l10n.navSearch,
-                ),
-                NavigationDestination(
-                  icon: const Icon(Icons.library_music_outlined),
-                  selectedIcon: const Icon(Icons.library_music_rounded),
-                  label: l10n.navLibrary,
-                ),
-              ],
+            left: 16,
+            right: 16,
+            bottom: MediaQuery.paddingOf(context).bottom + 10,
+            child: Measured(
+              // What it actually measures, so the content above it is padded by
+              // exactly that and never by a guess.
+              onSize: (size) {
+                final total =
+                    size.height +
+                    MediaQuery.paddingOf(context).bottom +
+                    _navGap;
+                if (total != _navHeight) setState(() => _navHeight = total);
+              },
+              child: FloatingNav(
+                index: _index,
+                onSelected: (index) => setState(() => _index = index),
+                destinations: [
+                  NavDestination(
+                    icon: Icons.home_outlined,
+                    selectedIcon: Icons.home_rounded,
+                    label: l10n.navHome,
+                  ),
+                  NavDestination(
+                    icon: Icons.explore_outlined,
+                    selectedIcon: Icons.explore_rounded,
+                    label: l10n.navExplore,
+                  ),
+                  NavDestination(
+                    icon: Icons.search_outlined,
+                    selectedIcon: Icons.search_rounded,
+                    label: l10n.navSearch,
+                  ),
+                  NavDestination(
+                    icon: Icons.library_music_outlined,
+                    selectedIcon: Icons.library_music_rounded,
+                    label: l10n.navLibrary,
+                  ),
+                ],
+              ),
             ),
           ),
-          PlayerSheet(bottomInset: _navHeight + bottomSafe),
+          PlayerSheet(bottomInset: _navHeight),
         ],
       ),
     );

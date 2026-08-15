@@ -5,6 +5,7 @@ import 'package:just_audio/just_audio.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../l10n/app_localizations.dart';
+import '../player/playback_sheet.dart';
 import '../../main.dart';
 
 /// Everything about how the music sounds and how long it keeps sounding.
@@ -48,7 +49,7 @@ class SettingsScreen extends StatelessWidget {
               value: settings.equalizerEnabled,
               onChanged: settings.setEqualizerEnabled,
             ),
-            if (settings.equalizerEnabled) const _EqualizerBands(),
+            if (settings.equalizerEnabled) const EqualizerBands(),
             _Label(l10n.settingsStorage),
             const _StorageSummary(),
             SwitchListTile(
@@ -62,7 +63,7 @@ class SettingsScreen extends StatelessWidget {
             _Label(l10n.settingsBackup),
             const _Backups(),
             _Label(l10n.settingsSleep),
-            const _SleepTimer(),
+            const SleepTimerControls(),
           ],
         ),
       ),
@@ -97,8 +98,8 @@ class _SpeedSlider extends StatelessWidget {
 ///
 /// How many there are and where they sit is decided by the hardware, so the
 /// sliders are built from what it reports rather than from a fixed list.
-class _EqualizerBands extends StatelessWidget {
-  const _EqualizerBands();
+class EqualizerBands extends StatelessWidget {
+  const EqualizerBands({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -433,61 +434,6 @@ class _BackupsState extends State<_Backups> {
           onTap: _restore,
         ),
       ],
-    );
-  }
-}
-
-class _SleepTimer extends StatelessWidget {
-  const _SleepTimer();
-
-  static const _choices = [
-    Duration(minutes: 15),
-    Duration(minutes: 30),
-    Duration(minutes: 60),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-
-    return ValueListenableBuilder<DateTime?>(
-      valueListenable: playerService.sleepAt,
-      builder: (context, endsAt, _) {
-        final remaining = endsAt?.difference(DateTime.now());
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-              child: Wrap(
-                spacing: 8,
-                children: [
-                  for (final choice in _choices)
-                    ChoiceChip(
-                      label: Text(l10n.settingsSleepMinutes(choice.inMinutes)),
-                      selected: false,
-                      onSelected: (_) => playerService.sleepAfter(choice),
-                    ),
-                ],
-              ),
-            ),
-            if (remaining != null && !remaining.isNegative)
-              ListTile(
-                leading: const Icon(Icons.bedtime_rounded),
-                title: Text(
-                  l10n.settingsSleepPending(remaining.inMinutes + 1),
-                  style: TextStyle(color: theme.colorScheme.primary),
-                ),
-                trailing: TextButton(
-                  onPressed: () => playerService.sleepAfter(null),
-                  child: Text(l10n.cancel),
-                ),
-              ),
-          ],
-        );
-      },
     );
   }
 }
