@@ -155,11 +155,18 @@ List<Playlist> parsePlaylists(Map<String, dynamic> json) {
   final seen = <String>{};
 
   for (final item in findAll(json, 'musicTwoRowItemRenderer')) {
-    final browseId = readPath(item, [
-      'navigationEndpoint',
-      'browseEndpoint',
-      'browseId',
-    ]);
+    final endpoint = readPath(item, ['navigationEndpoint']);
+
+    // A card opens its collection either by browsing it or by starting its
+    // radio. Personalised mixes only ever offer the second, so reading nothing
+    // but browse endpoints drops precisely the rows a signed-in feed is made
+    // of. `VL` is the prefix that turns a playlist id into a browsable one.
+    var browseId = readPath(endpoint, ['browseEndpoint', 'browseId']);
+    if (browseId is! String) {
+      final playlistId =
+          readPath(endpoint, ['watchPlaylistEndpoint', 'playlistId']);
+      if (playlistId is String) browseId = 'VL$playlistId';
+    }
     if (browseId is! String || !seen.add(browseId)) continue;
 
     final title = _readRuns(readPath(item, ['title']));
@@ -182,11 +189,47 @@ List<Playlist> parsePlaylists(Map<String, dynamic> json) {
   return playlists;
 }
 
+/// Extracts single tracks rendered as grid cards.
+///
+/// The home feed shows songs the same way it shows albums — as a cover with a
+/// title under it — so a track can arrive in the card renderer rather than the
+/// list-row one. What tells them apart is the endpoint: a card that starts a
+/// video is a song, whatever it looks like.
+List<Song> parseCardSongs(Map<String, dynamic> json) {
+  final songs = <Song>[];
+  final seen = <String>{};
+
+  for (final item in findAll(json, 'musicTwoRowItemRenderer')) {
+    final videoId =
+        readPath(item, ['navigationEndpoint', 'watchEndpoint', 'videoId']);
+    if (videoId is! String || !seen.add(videoId)) continue;
+
+    final title = _readRuns(readPath(item, ['title']));
+    if (title.isEmpty) continue;
+
+    final thumbnails = findFirst(item, 'thumbnails');
+    String? thumbnailUrl;
+    if (thumbnails is List && thumbnails.isNotEmpty) {
+      thumbnailUrl = readPath(thumbnails.last, ['url']) as String?;
+    }
+
+    songs.add(Song(
+      videoId: videoId,
+      title: title,
+      subtitle: _readRuns(readPath(item, ['subtitle'])),
+      thumbnailUrl: thumbnailUrl,
+    ));
+  }
+
+  return songs;
+}
+
 /// Splits a browse response into its titled rows.
 ///
 /// The home feed is a list of carousels, each with a heading and a run of
-/// cards. Shelves whose cards yield nothing openable are dropped rather than
-/// rendered as an empty row with a title over it.
+/// cards. Every way a carousel can carry something playable is read, because
+/// which one it uses depends on who is asking — and a row is dropped only when
+/// all of them come back empty, rather than rendered as a title over nothing.
 List<Shelf> parseShelves(Map<String, dynamic> json) {
   final shelves = <Shelf>[];
 
@@ -198,14 +241,18 @@ List<Shelf> parseShelves(Map<String, dynamic> json) {
         .where((text) => text.trim().isNotEmpty);
     if (headings.isEmpty) continue;
 
-    final playlists = parsePlaylists(
-      carousel is Map<String, dynamic>
-          ? carousel
-          : <String, dynamic>{'contents': carousel},
-    );
-    if (playlists.isEmpty) continue;
+    final contents = carousel is Map<String, dynamic>
+        ? carousel
+        : <String, dynamic>{'contents': carousel};
 
-    shelves.add(Shelf(title: headings.first, playlists: playlists));
+    final shelf = Shelf(
+      title: headings.first,
+      playlists: parsePlaylists(contents),
+      songs: [...parseSongList(contents), ...parseCardSongs(contents)],
+    );
+    if (shelf.isEmpty) continue;
+
+    shelves.add(shelf);
   }
 
   return shelves;

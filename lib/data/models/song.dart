@@ -29,6 +29,27 @@ class Song {
     return url.replaceAll(RegExp(r'w\d+-h\d+'), 'w544-h544');
   }
 
+  /// Stored form, for the on-device play history. Only what a row needs to be
+  /// drawn and played again; everything else is fetched fresh anyway.
+  Map<String, Object?> toJson() => {
+        'videoId': videoId,
+        'title': title,
+        'subtitle': subtitle,
+        'thumbnailUrl': thumbnailUrl,
+        'durationMs': duration?.inMilliseconds,
+      };
+
+  factory Song.fromJson(Map<String, dynamic> json) {
+    final durationMs = json['durationMs'];
+    return Song(
+      videoId: json['videoId'] as String,
+      title: json['title'] as String? ?? '',
+      subtitle: json['subtitle'] as String? ?? '',
+      thumbnailUrl: json['thumbnailUrl'] as String?,
+      duration: durationMs is int ? Duration(milliseconds: durationMs) : null,
+    );
+  }
+
   @override
   bool operator ==(Object other) => other is Song && other.videoId == videoId;
 
@@ -43,11 +64,32 @@ class AudioStream {
     required this.bitrate,
     required this.mimeType,
     this.userAgent = '',
+    this.trackingUrl,
+    this.watchtimeUrl,
+    this.cpn = '',
   });
 
   final String url;
   final int bitrate;
   final String mimeType;
+
+  /// Where to report that this track started, and where to report how much of
+  /// it was heard.
+  ///
+  /// YouTube counts a play only when the client says so, which is how its own
+  /// apps fill a listening history. Pinging these signed in is what puts a
+  /// track into the account's history — and therefore into the History tab,
+  /// which reads that same history back.
+  final String? trackingUrl;
+  final String? watchtimeUrl;
+
+  /// Client playback nonce: the identifier tying the audio request and the
+  /// reports about it into one listen.
+  ///
+  /// It has to be the same string in both, and it has to travel on the media
+  /// URL as well, or the reports describe a playback the server never saw and
+  /// are discarded — which is exactly how a play goes uncounted.
+  final String cpn;
 
   /// Identity of the client this URL was issued to. Googlevideo can hold a URL
   /// to the client that asked for it, so the bytes are fetched wearing the same

@@ -197,3 +197,38 @@ para el descifrado) en vez de extraer con expresiones regulares.
 
 Un evaluador de JavaScript es imprescindible para descifrar. En la app ya
 existe: el WebView del PoToken.
+
+## Historial: lo que se reporta y lo que YouTube hace con ello
+
+La respuesta de `player` trae `playbackTracking.videostatsPlaybackUrl` y
+`videostatsWatchtimeUrl`. Es el mecanismo con el que los clientes oficiales
+cuentan una escucha, así que se implementó tal cual:
+
+- El `cpn` (16 caracteres del alfabeto `A-Za-z0-9-_`) se genera al resolver el
+  stream, viaja en la URL de `videoplayback` y en los dos pings. Reproducir
+  sigue funcionando con el parámetro añadido.
+- Ping de `playback` al empezar; ping de `watchtime` con `st=0&et=<segundos>`
+  a los 30 s, cancelado si se cambia de canción antes.
+- Sólo cookies en la cabecera: `s.youtube.com` es una baliza, no una API, y las
+  cabeceras firmadas del resto del cliente apuntan a otro origen.
+
+**Medición:** ambos pings responden **HTTP 204** — que es lo que responde una
+baliza pase lo que pase — y **ninguna reproducción apareció en
+`FEmusic_history`**, comprobado con cuatro pistas distintas, reinicios de app y
+esperas de varios minutos. La lista devuelta no cambió ni un elemento en media
+hora. Con el cliente que sirve el audio (VISIONOS, o iOS: los clientes MUSIC se
+probaron primero estando la sesión iniciada y no entregaron stream) la escucha
+no se atribuye a la cuenta, o no a la superficie de YouTube Music.
+
+Los pings se dejan puestos: son correctos, cuestan una petición y no rompen
+nada si algún día YouTube los acepta. **El historial que la app muestra es
+propio**, guardado en el dispositivo (`PlayHistory`) y mezclado por encima del
+de la cuenta. Es lo mismo que hacen SimpMusic y OpenTune, y funciona sin sesión.
+
+### Trampa de `just_audio` que ocultó todo esto
+
+`AudioPlayer.play()` devuelve un futuro que se completa cuando la reproducción
+**termina**, no cuando empieza. Con `await _player.play()` todo lo que venía
+después — los pings, el registro local — se ejecutaba al acabar la canción, y
+`setQueue` no devolvía el control a la interfaz hasta entonces. Sin instrumentar
+no se ve: la música suena igual.

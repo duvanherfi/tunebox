@@ -1,3 +1,5 @@
+import 'song.dart';
+
 /// A playlist, album or any other browsable collection of tracks.
 class Playlist {
   const Playlist({
@@ -32,10 +34,22 @@ class Account {
   final String? photoUrl;
 }
 
-/// A titled row of collections, as the home feed is built from.
+/// A titled row of the home feed.
+///
+/// A row holds collections or tracks, not both in practice: YouTube fills the
+/// front page with playlist covers for a stranger and with individual songs —
+/// "listen again", "quick picks" — once it knows who is asking. Modelling both
+/// is what keeps the signed-in feed from arriving empty.
 class Shelf {
-  const Shelf({required this.title, required this.playlists});
+  const Shelf({
+    required this.title,
+    this.playlists = const [],
+    this.songs = const [],
+  });
 
   final String title;
   final List<Playlist> playlists;
+  final List<Song> songs;
+
+  bool get isEmpty => playlists.isEmpty && songs.isEmpty;
 }

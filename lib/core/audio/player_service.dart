@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../../data/models/song.dart';
+import '../../data/play_history.dart';
 import '../innertube/innertube_client.dart';
 import 'stream_proxy.dart';
 
@@ -13,16 +16,22 @@ import 'stream_proxy.dart';
 /// expire within minutes, so a queue of pre-resolved URLs would rot while the
 /// user listened to the first track.
 class PlayerService extends BaseAudioHandler with SeekHandler {
-  PlayerService(this._innertube) {
+  PlayerService(this._innertube, this._history) {
     _wirePlayerStreams();
   }
 
   final InnertubeClient _innertube;
+  final PlayHistory _history;
   final _player = AudioPlayer();
   final _proxy = StreamProxy();
 
   List<Song> _songs = const [];
   int _index = 0;
+
+  /// Pending confirmation that the current track was really listened to.
+  /// Cancelled whenever the track changes, so skipping past something never
+  /// writes it into the account's history.
+  Timer? _watchtime;
 
   Song? get currentSong =>
       _index >= 0 && _index < _songs.length ? _songs[_index] : null;
@@ -89,6 +98,7 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   }
 
   Future<void> _playIndex(int index) async {
+    _watchtime?.cancel();
     if (index < 0 || index >= _songs.length) {
       await stop();
       return;
@@ -115,7 +125,21 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
       mediaItem.add(_toMediaItem(song).copyWith(duration: actual));
     }
 
-    await _player.play();
+    // Deliberately not awaited: just_audio's play() completes when playback
+    // *stops*, not when it starts, so waiting on it would hold everything below
+    // — and the caller — until the track ended.
+    unawaited(_player.play());
+
+    // Recorded once the stream is open rather than on tap, so a track that
+    // never resolved does not appear in a history of things that played. The
+    // account is told too — and confirmed a while later, once enough of the
+    // track has been heard to call it a listen.
+    unawaited(_history.record(song));
+    unawaited(_innertube.reportPlayback(stream));
+    _watchtime = Timer(
+      const Duration(seconds: 30),
+      () => unawaited(_innertube.reportWatchtime(stream, _player.position)),
+    );
   }
 
   @override
@@ -148,6 +172,7 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> stop() async {
+    _watchtime?.cancel();
     await _player.stop();
     playbackState.add(playbackState.value.copyWith(
       processingState: AudioProcessingState.idle,

@@ -74,6 +74,78 @@ void main() {
     });
   });
 
+  group('parseShelves', () {
+    Map<String, dynamic> carousel(String title, List<Object> items) => {
+          'musicCarouselShelfRenderer': {
+            'header': {
+              'musicCarouselShelfBasicHeaderRenderer': {
+                'title': {
+                  'runs': [
+                    {'text': title},
+                  ],
+                },
+              },
+            },
+            'contents': items,
+          },
+        };
+
+    Map<String, dynamic> card(String title, Map<String, Object> endpoint) => {
+          'musicTwoRowItemRenderer': {
+            'title': {
+              'runs': [
+                {'text': title},
+              ],
+            },
+            'navigationEndpoint': endpoint,
+          },
+        };
+
+    test('reads mixes, which only ever offer a watch playlist endpoint', () {
+      final shelves = parseShelves({
+        'contents': [
+          carousel('Mixed for you', [
+            card('My Supermix', {
+              'watchPlaylistEndpoint': {'playlistId': 'RDTMAK5uy'},
+            }),
+          ]),
+        ],
+      });
+
+      expect(shelves, hasLength(1));
+      expect(shelves.single.playlists.single.browseId, 'VLRDTMAK5uy');
+    });
+
+    test('reads tracks that arrive as cards rather than list rows', () {
+      final shelves = parseShelves({
+        'contents': [
+          carousel('Listen again', [
+            card('Glory Box', {
+              'watchEndpoint': {'videoId': 'abc123'},
+            }),
+          ]),
+        ],
+      });
+
+      expect(shelves.single.playlists, isEmpty);
+      expect(shelves.single.songs.single.videoId, 'abc123');
+    });
+
+    test('drops a row with a heading but nothing playable under it', () {
+      final shelves = parseShelves({
+        'contents': [
+          carousel('Empty', [
+            card('An artist', {
+              'browseEndpoint': <String, Object>{},
+            }),
+          ]),
+        ],
+      });
+
+      expect(shelves, isEmpty);
+    });
+  });
+
   group('readPath', () {
     test('returns null instead of throwing on a missing hop', () {
       expect(readPath(const {'a': 1}, ['b', 'c']), isNull);

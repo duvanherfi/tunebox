@@ -88,8 +88,23 @@ class _ShelfRow extends StatelessWidget {
 
   static const _cardWidth = 156.0;
 
+  Future<void> _play(BuildContext context, int index) async {
+    try {
+      await playerService.setQueue(shelf.songs, startIndex: index);
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context)!.playbackFailed(''))),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    // A row is one or the other: tracks when the feed knows the listener,
+    // covers when it does not.
+    final songs = shelf.songs;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -100,12 +115,26 @@ class _ShelfRow extends StatelessWidget {
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: shelf.playlists.length,
+            itemCount: songs.isNotEmpty ? songs.length : shelf.playlists.length,
             separatorBuilder: (_, _) => const SizedBox(width: 12),
-            itemBuilder: (context, index) => _PlaylistCard(
-              playlist: shelf.playlists[index],
-              width: _cardWidth,
-            ),
+            itemBuilder: (context, index) => songs.isNotEmpty
+                ? _Card(
+                    title: songs[index].title,
+                    thumbnailUrl: songs[index].thumbnailUrl,
+                    width: _cardWidth,
+                    onTap: () => _play(context, index),
+                  )
+                : _Card(
+                    title: shelf.playlists[index].title,
+                    thumbnailUrl: shelf.playlists[index].thumbnailUrl,
+                    width: _cardWidth,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            PlaylistScreen(playlist: shelf.playlists[index]),
+                      ),
+                    ),
+                  ),
           ),
         ),
       ],
@@ -113,11 +142,19 @@ class _ShelfRow extends StatelessWidget {
   }
 }
 
-class _PlaylistCard extends StatelessWidget {
-  const _PlaylistCard({required this.playlist, required this.width});
+/// One cover with its title, whether it opens a collection or starts a track.
+class _Card extends StatelessWidget {
+  const _Card({
+    required this.title,
+    required this.thumbnailUrl,
+    required this.width,
+    required this.onTap,
+  });
 
-  final Playlist playlist;
+  final String title;
+  final String? thumbnailUrl;
   final double width;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -127,18 +164,14 @@ class _PlaylistCard extends StatelessWidget {
       width: width,
       child: InkWell(
         borderRadius: BorderRadius.circular(AppTheme.radiusArtwork),
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => PlaylistScreen(playlist: playlist),
-          ),
-        ),
+        onTap: onTap,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Artwork(url: playlist.thumbnailUrl, size: width),
+            Artwork(url: thumbnailUrl, size: width),
             const SizedBox(height: 8),
             Text(
-              playlist.title,
+              title,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.bodyMedium?.copyWith(

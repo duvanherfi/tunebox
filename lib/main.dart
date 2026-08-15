@@ -8,6 +8,7 @@ import 'core/auth/session.dart';
 import 'core/innertube/innertube_client.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
+import 'data/play_history.dart';
 import 'features/home/home_screen.dart';
 import 'l10n/app_localizations.dart';
 
@@ -19,6 +20,7 @@ late final PlayerService playerService;
 late final InnertubeClient innertube;
 late final Session session;
 late final ThemeController themeController;
+late final PlayHistory playHistory;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,6 +34,11 @@ Future<void> main() async {
   themeController = ThemeController();
   await themeController.load();
 
+  // Loaded up front so the History tab can show what this device played
+  // without waiting on the network.
+  playHistory = PlayHistory();
+  await playHistory.load();
+
   // Built from the device locale so search results come back in the same
   // language the interface is drawn in.
   final locale = PlatformDispatcher.instance.locale;
@@ -41,7 +48,7 @@ Future<void> main() async {
     gl: locale.countryCode ?? 'US',
   );
   playerService = await AudioService.init(
-    builder: () => PlayerService(innertube),
+    builder: () => PlayerService(innertube, playHistory),
     config: const AudioServiceConfig(
       androidNotificationChannelId: 'com.tunebox.tunebox.audio',
       androidNotificationChannelName: 'Reproducción',

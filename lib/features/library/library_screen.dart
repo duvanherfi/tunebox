@@ -37,6 +37,24 @@ class _LibraryScreenState extends State<LibraryScreen> {
     if (mounted) setState(() {});
   }
 
+  /// What was played here, then what the account remembers.
+  ///
+  /// Two sources because they answer different questions. The device knows what
+  /// this app just played, instantly and exactly; the account knows everything
+  /// heard anywhere else, but writes on its own schedule. Showing the local
+  /// plays first means a track appears in History the moment it starts, and the
+  /// rest of a listening life is still there underneath.
+  Future<List<Song>> _history() async {
+    final local = playHistory.songs;
+    final seen = local.map((song) => song.videoId).toSet();
+    try {
+      final remote = await innertube.history();
+      return [...local, ...remote.where((song) => !seen.contains(song.videoId))];
+    } catch (_) {
+      return local; // A history that only reaches back to this device still is one.
+    }
+  }
+
   Future<void> _signIn() async {
     await Navigator.of(context).push<bool>(
       MaterialPageRoute(builder: (_) => LoginScreen(session: session)),
@@ -73,7 +91,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   build: (playlists) => _PlaylistGrid(playlists: playlists),
                 ),
                 _Shelf<Song>(
-                  load: innertube.history,
+                  load: _history,
                   empty: l10n.libraryEmptyHistory,
                   build: (songs) => SongListView(songs: songs),
                 ),

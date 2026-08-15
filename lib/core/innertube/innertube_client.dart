@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:http/http.dart' as http;
 
@@ -306,6 +307,74 @@ class InnertubeClient {
   Future<List<Shelf>> homeFeed() async =>
       parseShelves(await browse('FEmusic_home'));
 
+  /// Tells YouTube a track started, so it lands in the account's history.
+  ///
+  /// Signed out this is pointless and skipped; signed in it is what makes the
+  /// History tab fill up, since that tab reads back the very history this
+  /// writes to. Failures are swallowed: a play that was not counted is not a
+  /// reason to interrupt the music.
+  Future<void> reportPlayback(AudioStream stream) =>
+      _ping(stream, stream.trackingUrl, const {});
+
+  /// Tells YouTube how much of the track was actually heard.
+  ///
+  /// The start ping alone does not settle it — a listen that stops immediately
+  /// is not one — so the history entry is confirmed by reporting elapsed time
+  /// once enough of the track has gone by.
+  Future<void> reportWatchtime(AudioStream stream, Duration position) {
+    final seconds = position.inMilliseconds / 1000;
+    return _ping(stream, stream.watchtimeUrl, {
+      'st': '0',
+      'et': seconds.toStringAsFixed(3),
+      'state': 'playing',
+    });
+  }
+
+  Future<void> _ping(
+    AudioStream stream,
+    String? baseUrl,
+    Map<String, String> extra,
+  ) async {
+    if (baseUrl == null || session?.isSignedIn != true) return;
+    try {
+      // The base URL already carries the track and the session; the nonce and
+      // the format version are the player's to add. Merged into the existing
+      // query rather than appended, so nothing is sent twice.
+      final base = Uri.parse(baseUrl);
+      final ping = base.replace(queryParameters: {
+        ...base.queryParameters,
+        'ver': '2',
+        'cpn': stream.cpn,
+        ...extra,
+      });
+      await _http.get(
+        ping,
+        headers: {
+          // The same identity that was handed the stream: a report from a
+          // client the server never issued one to describes nothing it knows.
+          'User-Agent': stream.userAgent,
+          // Cookies alone, deliberately. The stats endpoint is a beacon, not an
+          // API: the signed API headers the rest of this file sends are scoped
+          // to another origin and only make the request look wrong.
+          if (session?.cookieHeader != null) 'Cookie': session!.cookieHeader!,
+        },
+      );
+    } catch (_) {
+      // Nothing to do about it, and nothing worth telling the listener.
+    }
+  }
+
+  static final _random = Random();
+
+  static String _playbackNonce() {
+    const alphabet =
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+    return List.generate(
+      16,
+      (_) => alphabet[_random.nextInt(alphabet.length)],
+    ).join();
+  }
+
   /// Who is signed in, for the account panel to show.
   ///
   /// Returns null rather than throwing when signed out or when the shape
@@ -365,6 +434,21 @@ class InnertubeClient {
     return 'VL$id';
   }
 
+  /// The order the stream clients are tried in for this listener.
+  ///
+  /// Signed in, the YouTube Music identities go first. A play is filed under
+  /// the client that was served the audio, and only a music client's plays
+  /// reach the listening history this app reads back — a stream fetched as a
+  /// headset or a phone's main YouTube app scrobbles somewhere else entirely.
+  /// Signed out none of that matters and the order is pure availability.
+  List<_ClientProfile> get _clientOrder {
+    if (session?.isSignedIn != true) return _streamClients;
+    return [
+      ..._streamClients.where((client) => client.name.endsWith('MUSIC')),
+      ..._streamClients.where((client) => !client.name.endsWith('MUSIC')),
+    ];
+  }
+
   /// Resolves the highest-bitrate audio stream for a track.
   ///
   /// The returned URL is signed and expires within a few minutes, so it is
@@ -378,7 +462,7 @@ class InnertubeClient {
     // serves the track a second later, so treating one failure as a verdict
     // throws away streams that were available.
     for (var pass = 0; pass < passes; pass++) {
-      for (final client in _streamClients) {
+      for (final client in _clientOrder) {
         final Map<String, dynamic> json;
         try {
           json = await _post(
@@ -407,11 +491,27 @@ class InnertubeClient {
         final stream = parseBestAudioStream(json);
         if (stream == null) continue;
 
+        // Minted here rather than at report time so the audio request and the
+        // reports about it carry the same nonce, which is what lets the server
+        // recognise them as one listen.
+        final cpn = _playbackNonce();
+
         final candidate = AudioStream(
-          url: stream.url,
+          url: '${stream.url}&cpn=$cpn',
           bitrate: stream.bitrate,
           mimeType: stream.mimeType,
           userAgent: client.userAgent,
+          cpn: cpn,
+          trackingUrl: readPath(json, [
+            'playbackTracking',
+            'videostatsPlaybackUrl',
+            'baseUrl',
+          ]) as String?,
+          watchtimeUrl: readPath(json, [
+            'playbackTracking',
+            'videostatsWatchtimeUrl',
+            'baseUrl',
+          ]) as String?,
         );
         if (await _servesWholeTrack(candidate)) return candidate;
       }
