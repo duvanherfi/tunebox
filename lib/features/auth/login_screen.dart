@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../core/auth/session.dart';
 
-/// Signs in through a real Google login page and keeps the resulting cookies.
+/// Signs in by pasting the session cookie from a desktop browser.
 ///
-/// Google refuses sign-in from embedded browsers, answering "this browser or
-/// app may not be secure", so the view presents itself with a desktop browser
-/// user agent. That is also why the flow targets the plain web login rather
-/// than an OAuth consent screen, which is blocked far more aggressively.
+/// Two other routes were built and measured before settling here. An embedded
+/// WebView carrying Google's login page is blocked on purpose — Google answers
+/// "this browser or app may not be secure" at the credential step. The
+/// device-code flow television apps use does authenticate, but its token is
+/// refused by the music endpoints and the Data API is disabled on the project
+/// those credentials belong to, so it returns an empty library.
+///
+/// Pasting the cookie is unglamorous and takes a minute, but it is the one
+/// route that reaches the real library, and nothing Google ships can quietly
+/// break it.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key, required this.session});
 
@@ -19,60 +24,120 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  static const _desktopUserAgent =
-      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:130.0) '
-      'Gecko/20100101 Firefox/130.0';
-
-  late final WebViewController _controller;
-  bool _capturing = false;
+  final _controller = TextEditingController();
+  String? _error;
+  bool _saving = false;
 
   @override
-  void initState() {
-    super.initState();
-    _controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setUserAgent(_desktopUserAgent)
-      ..setNavigationDelegate(
-        NavigationDelegate(onPageFinished: (url) => _tryCapture(url)),
-      )
-      ..loadRequest(Uri.parse(
-        'https://accounts.google.com/ServiceLogin'
-        '?service=youtube&continue=https%3A%2F%2Fmusic.youtube.com%2F',
-      ));
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
-  /// Reads the session cookies once the browser lands back on YouTube Music.
-  ///
-  /// `document.cookie` is enough because the cookie the API needs is the same
-  /// one YouTube's own JavaScript reads to sign its requests, so it is
-  /// deliberately not HttpOnly.
-  Future<void> _tryCapture(String url) async {
-    if (_capturing || !url.contains('music.youtube.com')) return;
-    _capturing = true;
+  Future<void> _save() async {
+    final pasted = _controller.text.trim();
 
-    try {
-      final raw = await _controller.runJavaScriptReturningResult(
-        'document.cookie',
-      );
-      final cookies = raw.toString().replaceAll(RegExp(r'^"|"$'), '');
-
-      if (Session.sapisidOf(cookies) == null) {
-        _capturing = false;
-        return; // Landed on YouTube Music but not signed in yet.
-      }
-
-      await widget.session.signIn(cookies);
-      if (mounted) Navigator.of(context).pop(true);
-    } catch (_) {
-      _capturing = false;
+    // Checked before storing: a cookie string without this value cannot sign
+    // anything, and failing here is far clearer than an empty library later.
+    if (Session.sapisidOf(pasted) == null) {
+      setState(() => _error = 'No encuentro la cookie de sesión (SAPISID) en '
+          'lo que pegaste. Asegúrate de copiar la cabecera Cookie completa.');
+      return;
     }
+
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+
+    await widget.session.signIn(pasted);
+    if (mounted) Navigator.of(context).pop(true);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Iniciar sesión')),
-      body: WebViewWidget(controller: _controller),
+      body: ListView(
+        padding: const EdgeInsets.all(24),
+        children: [
+          Text(
+            'Pega tu cookie de sesión',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 16),
+          const _Steps(),
+          const SizedBox(height: 24),
+          TextField(
+            controller: _controller,
+            maxLines: 6,
+            minLines: 4,
+            autocorrect: false,
+            enableSuggestions: false,
+            style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+            decoration: InputDecoration(
+              hintText: 'VISITOR_INFO1_LIVE=…; SAPISID=…; …',
+              errorText: _error,
+              border: const OutlineInputBorder(),
+              alignLabelWithHint: true,
+            ),
+          ),
+          const SizedBox(height: 20),
+          FilledButton(
+            onPressed: _saving ? null : _save,
+            child: _saving
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Guardar sesión'),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Se guarda cifrada en este dispositivo y no se envía a ningún sitio '
+            'salvo a YouTube. Para revocarla, cierra sesión en tu cuenta de '
+            'Google desde cualquier navegador.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Steps extends StatelessWidget {
+  const _Steps();
+
+  static const _steps = [
+    'Abre music.youtube.com en el navegador del ordenador, con tu sesión ya iniciada.',
+    'Pulsa F12 y ve a la pestaña Network (Red).',
+    'Recarga la página y haz clic en cualquier petición de la lista.',
+    'En Request Headers, copia el valor completo de Cookie.',
+    'Pégalo aquí abajo.',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final style = Theme.of(context).textTheme.bodyMedium;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var i = 0; i < _steps.length; i++)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 22,
+                  child: Text('${i + 1}.', style: style),
+                ),
+                Expanded(child: Text(_steps[i], style: style)),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }
