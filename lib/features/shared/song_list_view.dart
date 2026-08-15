@@ -1,9 +1,14 @@
+import 'dart:async';
+
+import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../data/models/song.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
+import 'playing_bars.dart';
 import 'song_menu.dart';
 
 /// Renders tracks and starts playback on tap.
@@ -49,6 +54,9 @@ class SongRow extends StatelessWidget {
   final bool numbered;
 
   Future<void> _play(BuildContext context) async {
+    // A tap that starts a track resolves over the network before anything
+    // moves on screen; the tick is the acknowledgement in the meantime.
+    unawaited(HapticFeedback.selectionClick());
     try {
       await playerService.setQueue(songs, startIndex: index);
     } catch (error) {
@@ -66,6 +74,21 @@ class SongRow extends StatelessWidget {
     final theme = Theme.of(context);
     final song = songs[index];
 
+    return StreamBuilder<MediaItem?>(
+      stream: playerService.mediaItem,
+      builder: (context, snapshot) {
+        final current = snapshot.data?.id == song.videoId;
+        return _row(context, theme, song, current);
+      },
+    );
+  }
+
+  Widget _row(
+    BuildContext context,
+    ThemeData theme,
+    Song song,
+    bool current,
+  ) {
     return InkWell(
       onTap: () => _play(context),
       // Both ways in, because both are habits: the long press comes from the
@@ -76,7 +99,22 @@ class SongRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Row(
           children: [
-            if (numbered)
+            if (current)
+              // The mark goes where the artwork was: same footprint, so rows
+              // do not shift as the queue moves through them.
+              SizedBox(
+                width: 44,
+                child: Center(
+                  child: StreamBuilder<PlaybackState>(
+                    stream: playerService.playbackState,
+                    builder: (context, state) => PlayingBars(
+                      playing: state.data?.playing ?? false,
+                      size: 18,
+                    ),
+                  ),
+                ),
+              )
+            else if (numbered)
               SizedBox(
                 width: 44,
                 child: Text(
@@ -102,6 +140,7 @@ class SongRow extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodyLarge?.copyWith(
                       fontWeight: FontWeight.w600,
+                      color: current ? theme.colorScheme.primary : null,
                     ),
                   ),
                   const SizedBox(height: 2),

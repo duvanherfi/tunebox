@@ -453,6 +453,24 @@ List<Playlist> parseArtistRows(Map<String, dynamic> json) {
   return artists;
 }
 
+/// What YouTube would finish the query with.
+///
+/// Suggestions arrive as rich text so parts of them can be shown in bold — the
+/// part you have not typed yet. The app wants the whole line, so the runs are
+/// joined and the styling ignored.
+List<String> parseSearchSuggestions(Map<String, dynamic> json) {
+  final suggestions = <String>[];
+  final seen = <String>{};
+
+  for (final item in findAll(json, 'searchSuggestionRenderer')) {
+    final text = _readRuns(readPath(item, ['suggestion']));
+    if (text.isEmpty || !seen.add(text)) continue;
+    suggestions.add(text);
+  }
+
+  return suggestions;
+}
+
 /// The mood and genre buttons of the explore page.
 ///
 /// Each is a browse id plus opaque params; neither means anything without the

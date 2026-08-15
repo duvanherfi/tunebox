@@ -6,6 +6,7 @@ import '../../data/models/playlist.dart';
 import '../../data/models/song.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
+import '../shared/skeleton.dart';
 import '../shared/song_list_view.dart';
 
 /// One record, in its running order.
@@ -35,7 +36,7 @@ class _AlbumScreenState extends State<AlbumScreen> {
         future: _page,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
+            return const SongListSkeleton();
           }
           if (snapshot.hasError) {
             return Center(

@@ -431,6 +431,25 @@ class InnertubeClient {
   Future<List<Song>> history() async =>
       parseSongList(await browse('FEmusic_history'));
 
+  /// What YouTube would finish a half-typed query with.
+  ///
+  /// Empty on any failure rather than throwing: suggestions are a convenience
+  /// offered while someone is typing, and a keyboard is no place for an error.
+  Future<List<String>> searchSuggestions(String input) async {
+    if (input.trim().isEmpty) return const [];
+    try {
+      final json = await _post(
+        _musicBase,
+        'music/get_search_suggestions',
+        _webRemix,
+        {'input': input},
+      );
+      return parseSearchSuggestions(json);
+    } catch (_) {
+      return const [];
+    }
+  }
+
   /// Records released this week, as YouTube's explore page lists them.
   Future<List<Shelf>> newReleases() async =>
       parseShelves(await browse('FEmusic_new_releases'));

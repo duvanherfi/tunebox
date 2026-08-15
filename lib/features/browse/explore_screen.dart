@@ -4,6 +4,7 @@ import '../../data/models/playlist.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../shared/shelf_row.dart';
+import '../shared/skeleton.dart';
 
 /// Where you go when you do not know what you want to hear.
 ///
@@ -71,7 +72,7 @@ class _Shelves extends StatelessWidget {
       future: future,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
+          return const ShelfSkeleton();
         }
         if (snapshot.hasError) {
           return _Empty(text: '${snapshot.error}');

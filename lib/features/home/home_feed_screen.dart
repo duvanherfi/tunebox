@@ -4,6 +4,7 @@ import '../../data/models/playlist.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../shared/shelf_row.dart';
+import '../shared/skeleton.dart';
 
 /// What the app opens on: rows of collections from YouTube Music's front page.
 ///
@@ -36,7 +37,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
       future: _future,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
+          return const ShelfSkeleton(rows: 3);
         }
 
         if (snapshot.hasError) {

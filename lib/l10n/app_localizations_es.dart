@@ -500,4 +500,10 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get menuUnliked => 'Quitada de Me gusta';
+
+  @override
+  String get searchRecent => 'Búsquedas recientes';
+
+  @override
+  String get searchRecentClear => 'Borrar';
 }

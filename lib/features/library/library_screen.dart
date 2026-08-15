@@ -6,6 +6,7 @@ import '../../data/models/song.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../auth/login_screen.dart';
+import '../shared/skeleton.dart';
 import '../shared/song_list_view.dart';
 import 'playlist_screen.dart';
 
@@ -231,7 +232,7 @@ class _ShelfState<T> extends State<_Shelf<T>>
       future: _future,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
+          return const SongListSkeleton();
         }
         if (snapshot.hasError) {
           return _Retry(

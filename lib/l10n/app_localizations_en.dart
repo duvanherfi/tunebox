@@ -498,4 +498,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get menuUnliked => 'Removed from liked songs';
+
+  @override
+  String get searchRecent => 'Recent searches';
+
+  @override
+  String get searchRecentClear => 'Clear';
 }

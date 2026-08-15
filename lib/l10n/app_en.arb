@@ -170,5 +170,7 @@
   "settingsBackupNone": "There are no copies on this device yet.",
   "@settingsBackupWritten": {"placeholders": {"path": {"type": "String"}}},
   "menuUnlike": "Remove from liked songs",
-  "menuUnliked": "Removed from liked songs"
+  "menuUnliked": "Removed from liked songs",
+  "searchRecent": "Recent searches",
+  "searchRecentClear": "Clear"
 }

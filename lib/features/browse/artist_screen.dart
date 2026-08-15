@@ -5,6 +5,7 @@ import '../../data/models/playlist.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../shared/shelf_row.dart';
+import '../shared/skeleton.dart';
 import '../shared/song_list_view.dart';
 import 'album_screen.dart';
 
@@ -36,7 +37,7 @@ class _ArtistScreenState extends State<ArtistScreen> {
         future: _page,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
+            return const SongListSkeleton();
           }
           if (snapshot.hasError) {
             return Center(

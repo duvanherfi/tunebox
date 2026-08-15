@@ -16,6 +16,7 @@ import 'data/backup.dart';
 import 'data/downloads.dart';
 import 'data/likes.dart';
 import 'data/play_history.dart';
+import 'data/recent_searches.dart';
 import 'data/settings.dart';
 import 'features/home/home_screen.dart';
 import 'l10n/app_localizations.dart';
@@ -35,6 +36,7 @@ late final AudioCache audioCache;
 late final Scrobbler scrobbler;
 late final Backup backup;
 late final Likes likes;
+late final RecentSearches recentSearches;
 final LyricsClient lyricsClient = LyricsClient();
 
 Future<void> main() async {
@@ -88,6 +90,9 @@ Future<void> main() async {
   );
 
   likes = Likes(innertube);
+
+  recentSearches = RecentSearches();
+  await recentSearches.load();
 
   playerService = await AudioService.init(
     builder: () => PlayerService(
