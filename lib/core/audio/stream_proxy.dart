@@ -57,7 +57,10 @@ class StreamProxy {
   }
 
   /// Wraps an origin URL into one this proxy serves.
-  Uri wrap(String originUrl) {
+  ///
+  /// The user agent travels with it so every chunk is fetched as the same
+  /// client that was issued the URL.
+  Uri wrap(String originUrl, {String userAgent = ''}) {
     final server = _server;
     if (server == null) {
       throw StateError('StreamProxy.start() must be awaited before wrap()');
@@ -67,7 +70,11 @@ class StreamProxy {
       host: server.address.address,
       port: server.port,
       path: '/stream',
-      queryParameters: {'u': base64Url.encode(utf8.encode(originUrl))},
+      queryParameters: {
+        'u': base64Url.encode(utf8.encode(originUrl)),
+        if (userAgent.isNotEmpty)
+          'a': base64Url.encode(utf8.encode(userAgent)),
+      },
     );
   }
 
@@ -75,10 +82,14 @@ class StreamProxy {
     HttpClient client,
     Uri origin,
     int start,
-    int end,
-  ) async {
+    int end, {
+    String userAgent = '',
+  }) async {
     final request = await client.getUrl(origin);
     request.headers.set(HttpHeaders.rangeHeader, 'bytes=$start-$end');
+    if (userAgent.isNotEmpty) {
+      request.headers.set(HttpHeaders.userAgentHeader, userAgent);
+    }
     return request.close();
   }
 
@@ -91,6 +102,9 @@ class StreamProxy {
     }
 
     final origin = Uri.parse(utf8.decode(base64Url.decode(encoded)));
+    final agentParam = request.uri.queryParameters['a'];
+    final userAgent =
+        agentParam == null ? '' : utf8.decode(base64Url.decode(agentParam));
     final client = HttpClient();
     final requested = _RangeSpec.parse(
       request.headers.value(HttpHeaders.rangeHeader),
@@ -104,7 +118,8 @@ class StreamProxy {
         start + _chunkSize - 1,
         requested?.end ?? (start + _chunkSize - 1),
       );
-      final first = await _fetchChunk(client, origin, start, firstEnd);
+      final first =
+          await _fetchChunk(client, origin, start, firstEnd, userAgent: userAgent);
 
       if (first.statusCode != HttpStatus.partialContent &&
           first.statusCode != HttpStatus.ok) {
@@ -151,6 +166,7 @@ class StreamProxy {
           origin,
           position,
           min(position + _chunkSize - 1, end),
+          userAgent: userAgent,
         );
         if (chunk.statusCode != HttpStatus.partialContent &&
             chunk.statusCode != HttpStatus.ok) {

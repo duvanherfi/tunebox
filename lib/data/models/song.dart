@@ -42,9 +42,15 @@ class AudioStream {
     required this.url,
     required this.bitrate,
     required this.mimeType,
+    this.userAgent = '',
   });
 
   final String url;
   final int bitrate;
   final String mimeType;
+
+  /// Identity of the client this URL was issued to. Googlevideo can hold a URL
+  /// to the client that asked for it, so the bytes are fetched wearing the same
+  /// face that resolved them.
+  final String userAgent;
 }

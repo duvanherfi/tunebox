@@ -45,21 +45,123 @@ const _webRemix = _ClientProfile(
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
 );
 
-/// Audio stream resolution. The iOS client is the one that still returns
-/// ready-to-play URLs with no signature cipher and no proof-of-origin token,
-/// which is what keeps playback a single request instead of a JS interpreter.
-const _ios = _ClientProfile(
-  name: 'IOS',
-  version: '20.10.4',
-  userAgent:
-      'com.google.ios.youtube/20.10.4 (iPhone16,2; U; CPU iOS 18_3_2 like Mac OS X)',
-  extra: {
-    'deviceMake': 'Apple',
-    'deviceModel': 'iPhone16,2',
-    'osName': 'iPhone',
-    'osVersion': '18.3.2.22D82',
-  },
-);
+/// Clients tried, in order, when resolving audio.
+///
+/// No single client works reliably. YouTube refuses most of them most of the
+/// time — usually with "sign in to confirm you're not a bot" — and which one
+/// answers varies by track, by moment and by network. Worse, the refusals are
+/// not deterministic: a client that fails once may succeed seconds later, so a
+/// single failed probe proves nothing and the list is walked more than once.
+///
+/// The order below puts the identities that have actually served full streams
+/// first. VisionOS leads because it is the one that currently survives most
+/// often, which is exactly the kind of fact that will stop being true without
+/// warning — hence the list rather than a choice.
+const _streamClients = <_ClientProfile>[
+  _ClientProfile(
+    name: 'VISIONOS',
+    version: '0.1',
+    userAgent:
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 '
+        '(KHTML, like Gecko) Version/18.0 Safari/605.1.15',
+    extra: {
+      'deviceMake': 'Apple',
+      'deviceModel': 'RealityDevice14,1',
+      'osName': 'visionOS',
+      'osVersion': '1.3.21O771',
+    },
+  ),
+  _ClientProfile(
+    name: 'IOS',
+    version: '19.29.1',
+    userAgent:
+        'com.google.ios.youtube/19.29.1 (iPhone16,2; U; CPU iOS 17_5_1 like Mac OS X;)',
+    extra: {
+      'deviceMake': 'Apple',
+      'deviceModel': 'iPhone16,2',
+      'osName': 'iOS',
+      'osVersion': '17.5.1.21F90',
+    },
+  ),
+  _ClientProfile(
+    name: 'IOS',
+    version: '19.22.3',
+    userAgent:
+        'com.google.ios.youtube/19.22.3 (iPad7,6; U; CPU iPadOS 17_7_10 like Mac OS X; en-US)',
+    extra: {
+      'deviceMake': 'Apple',
+      'deviceModel': 'iPad7,6',
+      'osName': 'iPadOS',
+      'osVersion': '17.7.10.21H450',
+    },
+  ),
+  _ClientProfile(
+    name: 'ANDROID_VR',
+    version: '1.37',
+    userAgent:
+        'com.google.android.apps.youtube.vr.oculus/1.37 (Linux; U; Android 12; '
+        'en_US; Quest 3; Build/SQ3A.220605.009.A1; Cronet/107.0.5284.2)',
+    extra: {
+      'deviceMake': 'Oculus',
+      'deviceModel': 'Quest 3',
+      'osName': 'Android',
+      'osVersion': '12',
+      'androidSdkVersion': 32,
+    },
+  ),
+  _ClientProfile(
+    name: 'ANDROID_VR',
+    version: '1.61.48',
+    userAgent:
+        'com.google.android.apps.youtube.vr.oculus/1.61.48 (Linux; U; Android 12; '
+        'en_US; Quest 3; Build/SQ3A.220605.009.A1; Cronet/132.0.6808.3)',
+    extra: {
+      'deviceMake': 'Oculus',
+      'deviceModel': 'Quest 3',
+      'osName': 'Android',
+      'osVersion': '12',
+      'androidSdkVersion': 32,
+    },
+  ),
+  _ClientProfile(
+    name: 'ANDROID_TESTSUITE',
+    version: '1.9',
+    userAgent:
+        'com.google.android.youtube/1.9 (Linux; U; Android 15; en_US; '
+        'Pixel 9 Pro; Build/AP4A.250205.002) gzip',
+    extra: {
+      'osName': 'Android',
+      'osVersion': '15',
+      'androidSdkVersion': 35,
+    },
+  ),
+  _ClientProfile(
+    name: 'IOS_MUSIC',
+    version: '7.27.0',
+    userAgent:
+        'com.google.ios.youtubemusic/7.27.0 (iPhone16,2; U; CPU iOS 17_5_1 like Mac OS X;)',
+    extra: {
+      'deviceMake': 'Apple',
+      'deviceModel': 'iPhone16,2',
+      'osName': 'iOS',
+      'osVersion': '17.5.1.21F90',
+    },
+  ),
+  _ClientProfile(
+    name: 'ANDROID_MUSIC',
+    version: '7.27.52',
+    userAgent:
+        'com.google.android.apps.youtube.music/7.27.52 (Linux; U; Android 15; '
+        'en_US; Pixel 9 Pro; Build/AP4A.250205.002; Cronet/132.0.6834.79) gzip',
+    extra: {
+      'deviceMake': 'Google',
+      'deviceModel': 'Pixel 9 Pro',
+      'osName': 'Android',
+      'osVersion': '15',
+      'androidSdkVersion': 35,
+    },
+  ),
+];
 
 class InnertubeException implements Exception {
   InnertubeException(this.message);
@@ -98,18 +200,25 @@ class InnertubeClient {
     String base,
     String endpoint,
     _ClientProfile profile,
-    Map<String, Object?> body,
-  ) async {
+    Map<String, Object?> body, {
+    String? visitorData,
+  }) async {
     final response = await _http.post(
       Uri.parse('$base/$endpoint?prettyPrint=false'),
       headers: {
         'Content-Type': 'application/json',
         'User-Agent': profile.userAgent,
         'Origin': 'https://music.youtube.com',
+        if (visitorData != null) 'X-Goog-Visitor-Id': visitorData,
         ...authHeaders(),
       },
       body: jsonEncode({
-        'context': {'client': profile.context(hl, gl)},
+        'context': {
+          'client': {
+            ...profile.context(hl, gl),
+            if (visitorData != null) 'visitorData': visitorData,
+          },
+        },
         ...body,
       }),
     );
@@ -129,6 +238,29 @@ class InnertubeClient {
     final json = await _post(_musicBase, 'search', _webRemix, {'query': query});
     return parseSearchResults(json);
   }
+
+  /// The visitor identity YouTube assigns this client, fetched once and reused.
+  ///
+  /// This is the difference between a track that plays and one that does not.
+  /// Asking the player endpoint without it answers UNPLAYABLE every time;
+  /// carrying it answers OK every time — measured 0/5 against 5/5. An anonymous
+  /// request with no identity at all looks more suspicious to YouTube than one
+  /// with a plain visitor id, so the cheapest fix is simply to have one.
+  Future<String?> visitorData() async {
+    if (_visitorData != null) return _visitorData;
+    try {
+      final json = await _post(_musicBase, 'browse', _webRemix, {
+        'browseId': 'FEmusic_home',
+      });
+      _visitorData =
+          readPath(json, ['responseContext', 'visitorData']) as String?;
+    } catch (_) {
+      // Playback can still be attempted without it; it just rarely works.
+    }
+    return _visitorData;
+  }
+
+  String? _visitorData;
 
   /// Raw browse call. Every library surface is the same endpoint with a
   /// different id, so the typed helpers below are thin wrappers.
@@ -158,24 +290,88 @@ class InnertubeClient {
   ///
   /// The returned URL is signed and expires within a few minutes, so it is
   /// fetched at playback time and never cached.
-  Future<AudioStream> resolveStream(String videoId) async {
-    final json = await _post(_base, 'player', _ios, {
-      'videoId': videoId,
-      'contentCheckOk': true,
-      'racyCheckOk': true,
-    });
+  Future<AudioStream> resolveStream(String videoId, {int passes = 2}) async {
+    String? lastReason;
+    final visitor = await visitorData();
 
-    final status = readPath(json, ['playabilityStatus', 'status']) as String?;
-    if (status != null && status != 'OK') {
-      final reason = readPath(json, ['playabilityStatus', 'reason']) as String?;
-      throw InnertubeException(reason ?? 'No reproducible ($status)');
+    // Walked more than once on purpose. Refusals are not deterministic: the
+    // same client that answers "sign in to confirm you're not a bot" often
+    // serves the track a second later, so treating one failure as a verdict
+    // throws away streams that were available.
+    for (var pass = 0; pass < passes; pass++) {
+      for (final client in _streamClients) {
+        final Map<String, dynamic> json;
+        try {
+          json = await _post(
+            _base,
+            'player',
+            client,
+            {
+              'videoId': videoId,
+              'contentCheckOk': true,
+              'racyCheckOk': true,
+            },
+            visitorData: visitor,
+          );
+        } catch (_) {
+          continue; // A rejected request is just another client to skip.
+        }
+
+        final status = readPath(json, ['playabilityStatus', 'status']);
+        if (status != 'OK') {
+          lastReason =
+              readPath(json, ['playabilityStatus', 'reason']) as String? ??
+                  lastReason;
+          continue;
+        }
+
+        final stream = parseBestAudioStream(json);
+        if (stream == null) continue;
+
+        final candidate = AudioStream(
+          url: stream.url,
+          bitrate: stream.bitrate,
+          mimeType: stream.mimeType,
+          userAgent: client.userAgent,
+        );
+        if (await _servesWholeTrack(candidate)) return candidate;
+      }
     }
 
-    final stream = parseBestAudioStream(json);
-    if (stream == null) {
-      throw InnertubeException('Sin pistas de audio disponibles');
+    throw InnertubeException(
+      lastReason ?? 'Ningún cliente entregó un stream reproducible',
+    );
+  }
+
+  /// Rejects a stream that would die partway through.
+  ///
+  /// Some clients hand out a URL that serves an opening megabyte and then
+  /// refuses everything after it, which reaches the listener as a track that
+  /// stops around the one minute mark. Probing past that point costs three
+  /// tiny requests and turns a broken playback into a skipped client.
+  Future<bool> _servesWholeTrack(AudioStream stream) async {
+    const probes = [
+      'bytes=0-0',
+      'bytes=262144-262145',
+      'bytes=1048576-1048577',
+    ];
+
+    for (final range in probes) {
+      try {
+        final response = await _http.get(
+          Uri.parse(stream.url),
+          headers: {'Range': range, 'User-Agent': stream.userAgent},
+        );
+        // 416 means the track is simply shorter than the probe, which is fine.
+        if (response.statusCode == 416) continue;
+        if (response.statusCode < 200 || response.statusCode > 399) {
+          return false;
+        }
+      } catch (_) {
+        return false;
+      }
     }
-    return stream;
+    return true;
   }
 
   void dispose() => _http.close();

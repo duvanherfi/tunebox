@@ -100,11 +100,13 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     final stream = await _innertube.resolveStream(song.videoId);
 
     // Routed through the proxy so the request carries a Range header, which
-    // googlevideo requires; see StreamProxy for why ExoPlayer cannot do this
-    // on its own. No user agent is set anywhere: the signed URL is verified to
-    // serve any client, so spoofing one would only add a header.
+    // googlevideo requires and ExoPlayer omits on its first request. The user
+    // agent travels along because the URL was issued to one particular client
+    // and is fetched wearing that same identity.
     await _proxy.start();
-    await _player.setUrl(_proxy.wrap(stream.url).toString());
+    await _player.setUrl(
+      _proxy.wrap(stream.url, userAgent: stream.userAgent).toString(),
+    );
 
     // The player knows the real duration once the stream is open; the search
     // listing's value is only an estimate.
