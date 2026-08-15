@@ -104,6 +104,12 @@ abstract class AppLocalizations {
   /// **'Search'**
   String get navSearch;
 
+  /// No description provided for @navHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get navHome;
+
   /// No description provided for @navLibrary.
   ///
   /// In en, this message translates to:
@@ -349,6 +355,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Stored encrypted on this device and sent nowhere but YouTube. To revoke it, sign out of your Google account from any browser.'**
   String get loginStorageNote;
+
+  /// No description provided for @homeErrorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load the home feed'**
+  String get homeErrorTitle;
+
+  /// No description provided for @homeEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing here yet'**
+  String get homeEmptyTitle;
+
+  /// No description provided for @homeEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube Music has nothing to show for this device right now.'**
+  String get homeEmptyBody;
 }
 
 class _AppLocalizationsDelegate

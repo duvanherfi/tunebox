@@ -12,6 +12,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get navSearch => 'Buscar';
 
   @override
+  String get navHome => 'Inicio';
+
+  @override
   String get navLibrary => 'Biblioteca';
 
   @override
@@ -143,4 +146,14 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get loginStorageNote =>
       'Se guarda cifrada en este dispositivo y no se envía a ningún sitio salvo a YouTube. Para revocarla, cierra sesión en tu cuenta de Google desde cualquier navegador.';
+
+  @override
+  String get homeErrorTitle => 'No se pudo cargar el inicio';
+
+  @override
+  String get homeEmptyTitle => 'Todavía no hay nada';
+
+  @override
+  String get homeEmptyBody =>
+      'YouTube Music no tiene nada que mostrar para este dispositivo ahora mismo.';
 }

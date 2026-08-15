@@ -1,21 +1,18 @@
 {
   "@@locale": "en",
-
   "navSearch": "Search",
+  "navHome": "Home",
   "navLibrary": "Library",
-
   "themeTooltip": "Theme",
   "themeTitle": "Theme",
   "themeLight": "Light",
   "themeDark": "Dark",
   "themeSystem": "Follow the system",
-
   "signIn": "Sign in",
   "signOut": "Sign out",
   "signOutBody": "The cookies stored on this device will be deleted.",
   "cancel": "Cancel",
   "retry": "Try again",
-
   "searchHint": "Search songs or artists",
   "filterAll": "All",
   "filterSongs": "Songs",
@@ -25,13 +22,15 @@
   "searchEmptyTitle": "No results",
   "searchEmptyBody": "Try another term, or clear the filter.",
   "searchErrorTitle": "Search failed",
-
   "playbackFailed": "Could not play: {error}",
   "@playbackFailed": {
-    "placeholders": { "error": { "type": "String" } }
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "nothingPlaying": "Nothing playing",
-
   "libraryLikes": "Liked",
   "libraryPlaylists": "Playlists",
   "libraryHistory": "History",
@@ -41,7 +40,6 @@
   "libraryPlaylistEmpty": "This playlist is empty",
   "librarySignedOutTitle": "Sign in to see your library",
   "librarySignedOutBody": "Your likes, playlists and history from YouTube Music.",
-
   "loginTitle": "Sign in",
   "loginPasteTitle": "Paste your session cookie",
   "loginStep1": "Open music.youtube.com in a desktop browser, already signed in.",
@@ -51,5 +49,8 @@
   "loginStep5": "Paste it below.",
   "loginSave": "Save session",
   "loginNoSapisid": "I can't find the session cookie (SAPISID) in what you pasted. Make sure you copied the whole Cookie header.",
-  "loginStorageNote": "Stored encrypted on this device and sent nowhere but YouTube. To revoke it, sign out of your Google account from any browser."
+  "loginStorageNote": "Stored encrypted on this device and sent nowhere but YouTube. To revoke it, sign out of your Google account from any browser.",
+  "homeErrorTitle": "Couldn't load the home feed",
+  "homeEmptyTitle": "Nothing here yet",
+  "homeEmptyBody": "YouTube Music has nothing to show for this device right now."
 }

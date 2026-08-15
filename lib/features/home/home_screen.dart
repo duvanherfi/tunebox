@@ -8,6 +8,7 @@ import '../auth/login_screen.dart';
 import '../library/library_screen.dart';
 import '../player/player_sheet.dart';
 import '../search/search_screen.dart';
+import 'home_feed_screen.dart';
 
 /// Shell holding the two top-level surfaces, the navigation, and the player.
 ///
@@ -170,7 +171,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: IndexedStack(
                   index: _index,
-                  children: const [SearchScreen(), LibraryScreen()],
+                  children: const [
+                    HomeFeedScreen(),
+                    SearchScreen(),
+                    LibraryScreen(),
+                  ],
                 ),
               );
             },
@@ -183,6 +188,11 @@ class _HomeScreenState extends State<HomeScreen> {
               selectedIndex: _index,
               onDestinationSelected: (index) => setState(() => _index = index),
               destinations: [
+                NavigationDestination(
+                  icon: const Icon(Icons.home_outlined),
+                  selectedIcon: const Icon(Icons.home_rounded),
+                  label: l10n.navHome,
+                ),
                 NavigationDestination(
                   icon: const Icon(Icons.search_rounded),
                   label: l10n.navSearch,

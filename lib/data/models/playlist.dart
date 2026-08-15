@@ -22,3 +22,11 @@ class Playlist {
   @override
   int get hashCode => browseId.hashCode;
 }
+
+/// A titled row of collections, as the home feed is built from.
+class Shelf {
+  const Shelf({required this.title, required this.playlists});
+
+  final String title;
+  final List<Playlist> playlists;
+}

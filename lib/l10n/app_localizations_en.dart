@@ -12,6 +12,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navSearch => 'Search';
 
   @override
+  String get navHome => 'Home';
+
+  @override
   String get navLibrary => 'Library';
 
   @override
@@ -141,4 +144,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get loginStorageNote =>
       'Stored encrypted on this device and sent nowhere but YouTube. To revoke it, sign out of your Google account from any browser.';
+
+  @override
+  String get homeErrorTitle => 'Couldn\'t load the home feed';
+
+  @override
+  String get homeEmptyTitle => 'Nothing here yet';
+
+  @override
+  String get homeEmptyBody =>
+      'YouTube Music has nothing to show for this device right now.';
 }

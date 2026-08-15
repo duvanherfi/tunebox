@@ -182,6 +182,35 @@ List<Playlist> parsePlaylists(Map<String, dynamic> json) {
   return playlists;
 }
 
+/// Splits a browse response into its titled rows.
+///
+/// The home feed is a list of carousels, each with a heading and a run of
+/// cards. Shelves whose cards yield nothing openable are dropped rather than
+/// rendered as an empty row with a title over it.
+List<Shelf> parseShelves(Map<String, dynamic> json) {
+  final shelves = <Shelf>[];
+
+  for (final carousel in findAll(json, 'musicCarouselShelfRenderer')) {
+    final headings = findAll(carousel, 'runs')
+        .whereType<List>()
+        .map((runs) => runs.isEmpty ? null : readPath(runs.first, ['text']))
+        .whereType<String>()
+        .where((text) => text.trim().isNotEmpty);
+    if (headings.isEmpty) continue;
+
+    final playlists = parsePlaylists(
+      carousel is Map<String, dynamic>
+          ? carousel
+          : <String, dynamic>{'contents': carousel},
+    );
+    if (playlists.isEmpty) continue;
+
+    shelves.add(Shelf(title: headings.first, playlists: playlists));
+  }
+
+  return shelves;
+}
+
 /// Picks the best audio-only stream from a player response.
 ///
 /// Only formats carrying a ready `url` are considered; anything behind a

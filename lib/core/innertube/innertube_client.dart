@@ -297,6 +297,15 @@ class InnertubeClient {
   Future<Map<String, dynamic>> browse(String browseId) =>
       _post(_musicBase, 'browse', _webRemix, {'browseId': browseId});
 
+  /// What the app shows on opening: whatever YouTube Music puts on its front
+  /// page for this client.
+  ///
+  /// Signed out this is a couple of rows of playlists rather than songs, which
+  /// is not a limitation to work around — recommendations need a listening
+  /// history, and without one there is nothing personal to recommend.
+  Future<List<Shelf>> homeFeed() async =>
+      parseShelves(await browse('FEmusic_home'));
+
   /// Songs the account has liked.
   Future<List<Song>> likedSongs() async =>
       parseSongList(await browse('FEmusic_liked_videos'));
@@ -312,8 +321,14 @@ class InnertubeClient {
   /// Tracks inside a playlist. InnerTube addresses playlist contents by
   /// prefixing the playlist id with `VL`.
   Future<List<Song>> playlistSongs(String playlistId) async {
-    final id = playlistId.startsWith('VL') ? playlistId : 'VL$playlistId';
-    return parseSongList(await browse(id));
+    return parseSongList(await browse(_asBrowseId(playlistId)));
+  }
+
+  /// Albums are addressed directly; playlists need a `VL` prefix. Prefixing an
+  /// album id would ask for a playlist that does not exist.
+  static String _asBrowseId(String id) {
+    if (id.startsWith('VL') || id.startsWith('MPRE')) return id;
+    return 'VL$id';
   }
 
   /// Resolves the highest-bitrate audio stream for a track.

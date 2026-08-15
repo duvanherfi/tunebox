@@ -1,21 +1,18 @@
 {
   "@@locale": "es",
-
   "navSearch": "Buscar",
+  "navHome": "Inicio",
   "navLibrary": "Biblioteca",
-
   "themeTooltip": "Tema",
   "themeTitle": "Tema",
   "themeLight": "Claro",
   "themeDark": "Oscuro",
   "themeSystem": "Según el sistema",
-
   "signIn": "Iniciar sesión",
   "signOut": "Cerrar sesión",
   "signOutBody": "Se borrarán las cookies guardadas en este dispositivo.",
   "cancel": "Cancelar",
   "retry": "Reintentar",
-
   "searchHint": "Buscar canciones o artistas",
   "filterAll": "Todo",
   "filterSongs": "Canciones",
@@ -25,13 +22,15 @@
   "searchEmptyTitle": "Sin resultados",
   "searchEmptyBody": "Prueba con otro término o quita el filtro.",
   "searchErrorTitle": "No se pudo buscar",
-
   "playbackFailed": "No se pudo reproducir: {error}",
   "@playbackFailed": {
-    "placeholders": { "error": { "type": "String" } }
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "nothingPlaying": "Nada sonando",
-
   "libraryLikes": "Me gusta",
   "libraryPlaylists": "Playlists",
   "libraryHistory": "Historial",
@@ -41,7 +40,6 @@
   "libraryPlaylistEmpty": "Esta playlist está vacía",
   "librarySignedOutTitle": "Inicia sesión para ver tu biblioteca",
   "librarySignedOutBody": "Tus me gusta, playlists e historial de YouTube Music.",
-
   "loginTitle": "Iniciar sesión",
   "loginPasteTitle": "Pega tu cookie de sesión",
   "loginStep1": "Abre music.youtube.com en el navegador del ordenador, con tu sesión ya iniciada.",
@@ -51,5 +49,8 @@
   "loginStep5": "Pégalo aquí abajo.",
   "loginSave": "Guardar sesión",
   "loginNoSapisid": "No encuentro la cookie de sesión (SAPISID) en lo que pegaste. Asegúrate de copiar la cabecera Cookie completa.",
-  "loginStorageNote": "Se guarda cifrada en este dispositivo y no se envía a ningún sitio salvo a YouTube. Para revocarla, cierra sesión en tu cuenta de Google desde cualquier navegador."
+  "loginStorageNote": "Se guarda cifrada en este dispositivo y no se envía a ningún sitio salvo a YouTube. Para revocarla, cierra sesión en tu cuenta de Google desde cualquier navegador.",
+  "homeErrorTitle": "No se pudo cargar el inicio",
+  "homeEmptyTitle": "Todavía no hay nada",
+  "homeEmptyBody": "YouTube Music no tiene nada que mostrar para este dispositivo ahora mismo."
 }
