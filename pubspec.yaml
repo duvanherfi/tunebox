@@ -50,6 +50,8 @@ dependencies:
   path_provider:
   share_plus:
   wakelock_plus:
+  # Pinned: 14.x ships a Gradle script that our toolchain refuses to compile.
+  permission_handler: ^11.3.1
 
 dev_dependencies:
   flutter_test:

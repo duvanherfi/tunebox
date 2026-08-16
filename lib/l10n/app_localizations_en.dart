@@ -703,4 +703,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get paletteHoldToRemove => 'Tap to change, hold to remove';
+
+  @override
+  String get libraryDevice => 'On the phone';
+
+  @override
+  String get libraryDeviceEmpty => 'Music stored on this phone shows up here.';
+
+  @override
+  String get libraryDeviceScan => 'Look for music';
+
+  @override
+  String get libraryDeviceDenied =>
+      'Without access to your audio there is nothing to look through.';
 }

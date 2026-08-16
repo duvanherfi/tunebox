@@ -238,5 +238,9 @@
   "paletteReset": "Back to the app's own colour",
   "themeCustomise": "Customise",
   "paletteGradientColours": "Gradient colours",
-  "paletteHoldToRemove": "Tap to change, hold to remove"
+  "paletteHoldToRemove": "Tap to change, hold to remove",
+  "libraryDevice": "On the phone",
+  "libraryDeviceEmpty": "Music stored on this phone shows up here.",
+  "libraryDeviceScan": "Look for music",
+  "libraryDeviceDenied": "Without access to your audio there is nothing to look through."
 }

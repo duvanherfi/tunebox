@@ -705,4 +705,18 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get paletteHoldToRemove => 'Toca para cambiar, mantén para quitar';
+
+  @override
+  String get libraryDevice => 'Del teléfono';
+
+  @override
+  String get libraryDeviceEmpty =>
+      'Aquí aparece la música guardada en este teléfono.';
+
+  @override
+  String get libraryDeviceScan => 'Buscar música';
+
+  @override
+  String get libraryDeviceDenied =>
+      'Sin acceso a tu audio no hay nada que revisar.';
 }

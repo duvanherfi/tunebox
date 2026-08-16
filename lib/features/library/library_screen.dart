@@ -74,7 +74,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
     // are this device's, and hiding them behind a sign-in wall would be a lie
     // about where they come from.
     return DefaultTabController(
-      length: 6,
+      length: 7,
       child: Column(
         children: [
           // Above the tabs, because these are not one of them: they cut across
@@ -89,6 +89,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               Tab(text: l10n.libraryPlaylists),
               Tab(text: l10n.libraryAlbums),
               Tab(text: l10n.libraryArtists),
+              Tab(text: l10n.libraryDevice),
               Tab(text: l10n.libraryHistory),
             ],
           ),
@@ -122,6 +123,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   )
                 else
                   _SignedOut(onSignIn: _signIn),
+                const _DeviceSongs(),
                 _Shelf<Song>(
                   load: _history,
                   empty: l10n.libraryEmptyHistory,
@@ -429,6 +431,58 @@ class _CollectionList extends StatelessWidget {
                 ),
           onTap: () => openCollection(context, collection),
         );
+      },
+    );
+  }
+}
+
+/// The music already on the phone, once permission is given to look.
+class _DeviceSongs extends StatelessWidget {
+  const _DeviceSongs();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+
+    return ListenableBuilder(
+      listenable: deviceSongs,
+      builder: (context, _) {
+        if (deviceSongs.scanning) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (deviceSongs.songs.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    l10n.libraryDeviceEmpty,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton.tonal(
+                    onPressed: () async {
+                      final allowed = await deviceSongs.scan();
+                      if (!allowed && context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(l10n.libraryDeviceDenied)),
+                        );
+                      }
+                    },
+                    child: Text(l10n.libraryDeviceScan),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        return SortedSongs(songs: deviceSongs.songs);
       },
     );
   }

@@ -238,5 +238,9 @@
   "paletteReset": "Volver al color de la app",
   "themeCustomise": "Personalizar",
   "paletteGradientColours": "Colores del degradado",
-  "paletteHoldToRemove": "Toca para cambiar, mantén para quitar"
+  "paletteHoldToRemove": "Toca para cambiar, mantén para quitar",
+  "libraryDevice": "Del teléfono",
+  "libraryDeviceEmpty": "Aquí aparece la música guardada en este teléfono.",
+  "libraryDeviceScan": "Buscar música",
+  "libraryDeviceDenied": "Sin acceso a tu audio no hay nada que revisar."
 }

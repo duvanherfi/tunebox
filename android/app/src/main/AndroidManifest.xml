@@ -7,6 +7,11 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
     <!-- Android 13+ will not show the media notification without this. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- To play music the phone already has. Android 13 split this by media
+         type; older versions only know the blanket one. -->
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32"/>
 
     <application
         android:label="Tunebox"

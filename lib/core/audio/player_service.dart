@@ -7,6 +7,7 @@ import 'package:just_audio/just_audio.dart';
 import '../../data/models/song.dart';
 import '../../data/play_history.dart';
 import '../../data/audio_cache.dart';
+import '../../data/device_songs.dart';
 import '../../data/downloads.dart';
 import '../../data/likes.dart';
 import '../../data/resume_point.dart';
@@ -473,7 +474,10 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     // A downloaded track never touches the network — not to resolve it, not to
     // report it. That is the whole promise of a download.
     AudioStream? stream;
-    if (_downloads.has(song.videoId)) {
+    if (DeviceSongs.isLocal(song.videoId)) {
+      // Already a file on this phone: nothing to resolve, nothing to report.
+      await _player.setFilePath(DeviceSongs.pathOf(song.videoId));
+    } else if (_downloads.has(song.videoId)) {
       await _player.setFilePath(_downloads.fileFor(song.videoId).path);
     } else {
       stream = await _innertube.resolveStream(song.videoId);

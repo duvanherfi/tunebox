@@ -1381,6 +1381,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Tap to change, hold to remove'**
   String get paletteHoldToRemove;
+
+  /// No description provided for @libraryDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'On the phone'**
+  String get libraryDevice;
+
+  /// No description provided for @libraryDeviceEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Music stored on this phone shows up here.'**
+  String get libraryDeviceEmpty;
+
+  /// No description provided for @libraryDeviceScan.
+  ///
+  /// In en, this message translates to:
+  /// **'Look for music'**
+  String get libraryDeviceScan;
+
+  /// No description provided for @libraryDeviceDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Without access to your audio there is nothing to look through.'**
+  String get libraryDeviceDenied;
 }
 
 class _AppLocalizationsDelegate
