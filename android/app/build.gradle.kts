@@ -50,10 +50,9 @@ android {
             storeFile = keyProperties.getProperty("storeFile")?.let { rootProject.file(it) }
             storePassword = keyProperties.getProperty("storePassword")
 
-            // v3 is what lets this key be replaced later without every install
-            // becoming an uninstall; v1 costs nothing and keeps the APK
-            // installable by tools that still read the old manifest signature.
-            enableV1Signing = true
+            // v2 is what every device that can install this app verifies; v3
+            // additionally lets the key be replaced later without every install
+            // having to be removed first.
             enableV2Signing = true
             enableV3Signing = true
         }

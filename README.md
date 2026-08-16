@@ -10,12 +10,44 @@ directo con la API por HTTP y el audio va a ExoPlayer nativo, sin WebView.
 
 ## Estado
 
-| Fase | Alcance | Estado |
-|---|---|---|
-| 1 | Buscar, reproducir, cola, segundo plano con notificación | Hecho |
-| 2 | Login con cuenta, biblioteca / likes / playlists / historial | Hecho (lectura) |
-| 3 | Escritura: like, crear playlist, añadir y quitar canciones | Pendiente |
-| 4 | Ping de historial de reproducción, feed de inicio personalizado | Pendiente |
+Versión **0.1.0**: usable a diario.
+
+| Alcance | Estado |
+|---|---|
+| Buscar, reproducir, cola, segundo plano con notificación | Hecho |
+| Login con cuenta, biblioteca, likes, playlists, historial, feed de inicio | Hecho |
+| Escritura en la cuenta: like, crear playlist, añadir canciones | Hecho |
+| Radio y autoplay, letras sincronizadas, ecualizador, temporizador | Hecho |
+| Descargas, caché y reproducción sin conexión | Hecho |
+| Android Auto, widget de pantalla de inicio, retomar donde se quedó | Hecho |
+| Scrobbling a Last.fm y ListenBrainz, estadísticas, copia de seguridad | Hecho |
+| Música del propio teléfono, playlists locales, tema y degradados a medida | Hecho |
+| Reconocer canciones, importar de Spotify, actualizaciones in-app | Pendiente |
+
+El historial **no** se escribe en la cuenta de YouTube: los pings se envían tal
+y como los manda la web, YouTube responde 204 y no aparece nada en
+`FEmusic_history`. Lo medido está en `docs/streaming-findings.md`. Por eso el
+historial, las estadísticas y el scrobbling se llevan en el dispositivo.
+
+## Instalar
+
+El APK de cada versión está en las [releases](https://github.com/duvanherfi/tunebox/releases).
+Es universal: un solo archivo con `arm64-v8a`, `armeabi-v7a` y `x86_64` dentro,
+así que sirve para cualquier teléfono con Android 7 o superior.
+
+Para compilar uno firmado hace falta `android/key.properties` (ignorado por git)
+apuntando al almacén de claves:
+
+```properties
+storePassword=…
+keyPassword=…
+keyAlias=tunebox
+storeFile=tunebox-release.jks
+```
+
+Sin ese archivo la compilación sigue funcionando y firma con la clave de
+depuración. **La clave de release no se puede perder**: Android se niega a
+actualizar una app instalada si la nueva versión viene firmada con otra clave.
 
 ## Cuando deje de sonar: lee esto primero
 
