@@ -16,6 +16,7 @@ class Settings extends ChangeNotifier {
   static const _bandsKey = 'equalizer_bands';
   static const _cacheKey = 'cache_enabled';
   static const _cacheLimitKey = 'cache_limit_mb';
+  static const _fadeKey = 'fade_seconds';
 
   bool autoplay = true;
   double speed = 1;
@@ -28,6 +29,10 @@ class Settings extends ChangeNotifier {
 
   /// How much of the phone this app may take for that, in megabytes.
   int cacheLimitMb = 512;
+
+  /// Seconds of fade at each end of a track. Zero is a hard cut, which is what
+  /// most listening wants and what this defaults to.
+  int fadeSeconds = 0;
 
   /// Gain per equalizer band, in decibels, in the order the device reports its
   /// bands. Empty until the equalizer has been opened once — the number of
@@ -43,6 +48,7 @@ class Settings extends ChangeNotifier {
     equalizerEnabled = prefs.getBool(_equalizerKey) ?? equalizerEnabled;
     cacheEnabled = prefs.getBool(_cacheKey) ?? cacheEnabled;
     cacheLimitMb = prefs.getInt(_cacheLimitKey) ?? cacheLimitMb;
+    fadeSeconds = prefs.getInt(_fadeKey) ?? fadeSeconds;
     bandGains = prefs
             .getStringList(_bandsKey)
             ?.map((value) => double.tryParse(value) ?? 0.0)
@@ -86,6 +92,9 @@ class Settings extends ChangeNotifier {
         () => cacheLimitMb = value,
         (p) => p.setInt(_cacheLimitKey, value),
       );
+
+  Future<void> setFadeSeconds(int value) =>
+      _write(() => fadeSeconds = value, (p) => p.setInt(_fadeKey, value));
 
   Future<void> _write(
     VoidCallback apply,

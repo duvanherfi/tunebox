@@ -1207,6 +1207,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Waiting'**
   String get downloadQueued;
+
+  /// No description provided for @settingsFade.
+  ///
+  /// In en, this message translates to:
+  /// **'Fade between tracks'**
+  String get settingsFade;
+
+  /// No description provided for @settingsFadeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Ease each track in and out instead of cutting. Zero is off.'**
+  String get settingsFadeBody;
+
+  /// No description provided for @settingsFadeValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{seconds} s'**
+  String settingsFadeValue(int seconds);
 }
 
 class _AppLocalizationsDelegate

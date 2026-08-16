@@ -43,6 +43,17 @@ class SettingsScreen extends StatelessWidget {
               onChanged: settings.setNormalizeVolume,
             ),
             const _SpeedSlider(),
+            ListTile(
+              title: Text(l10n.settingsFade),
+              subtitle: Text(l10n.settingsFadeBody),
+            ),
+            Slider(
+              value: settings.fadeSeconds.toDouble(),
+              max: 12,
+              divisions: 12,
+              label: l10n.settingsFadeValue(settings.fadeSeconds),
+              onChanged: (value) => settings.setFadeSeconds(value.round()),
+            ),
             _Label(l10n.settingsEqualizer),
             SwitchListTile(
               title: Text(l10n.settingsEqualizerOn),

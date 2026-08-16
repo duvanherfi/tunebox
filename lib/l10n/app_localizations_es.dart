@@ -614,4 +614,16 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get downloadQueued => 'En espera';
+
+  @override
+  String get settingsFade => 'Fundido entre canciones';
+
+  @override
+  String get settingsFadeBody =>
+      'Entrar y salir suave en vez de cortar. Cero lo apaga.';
+
+  @override
+  String settingsFadeValue(int seconds) {
+    return '$seconds s';
+  }
 }

@@ -142,6 +142,44 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
 
   int _savedAt = -1;
 
+  /// Volume the fade is working towards, so a fade-out in progress is not
+  /// undone by the stream's next tick.
+  double _fadeTarget = 1;
+
+  /// Raises the volume from silence over the configured seconds.
+  Future<void> _fadeIn() async {
+    final seconds = _settings.fadeSeconds;
+    if (seconds <= 0) {
+      await _player.setVolume(1);
+      return;
+    }
+    _fadeTarget = 1;
+    await _player.setVolume(0);
+    const step = Duration(milliseconds: 100);
+    final steps = seconds * 1000 ~/ step.inMilliseconds;
+    for (var i = 1; i <= steps; i++) {
+      await Future<void>.delayed(step);
+      if (_fadeTarget != 1) return; // A new track took over mid-fade.
+      await _player.setVolume(i / steps);
+    }
+  }
+
+  void _fadeOutNearTheEnd(Duration position) {
+    final seconds = _settings.fadeSeconds;
+    final total = _player.duration;
+    if (seconds <= 0 || total == null || !_player.playing) return;
+
+    final left = total - position;
+    if (left > Duration(seconds: seconds)) {
+      // Comfortably inside the track: nothing to do, and the volume belongs to
+      // whatever the fade-in left it at.
+      return;
+    }
+    final ratio = (left.inMilliseconds / (seconds * 1000)).clamp(0.0, 1.0);
+    _fadeTarget = ratio;
+    _player.setVolume(ratio);
+  }
+
   /// Where a restored track should start, until the first play consumes it.
   ///
   /// Nothing is fetched to restore a queue: reopening the app costs no network
@@ -195,6 +233,11 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
       unawaited(_saveResumePoint());
     });
     _player.playingStream.listen((_) => unawaited(_saveResumePoint()));
+
+    // Fading out is driven by position rather than by a timer: seeking, pausing
+    // and speed changes all move the end of a track around, and a timer set
+    // when it started would be wrong by then.
+    _player.positionStream.listen(_fadeOutNearTheEnd);
 
     // just_audio reports completion of the single loaded track; advancing the
     // queue is this class's job because the queue lives here, not in the player.
@@ -469,6 +512,8 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     if (actual != null) {
       mediaItem.add(_toMediaItem(song).copyWith(duration: actual));
     }
+
+    unawaited(_fadeIn());
 
     // Deliberately not awaited: just_audio's play() completes when playback
     // *stops*, not when it starts, so waiting on it would hold everything below

@@ -208,5 +208,9 @@
   "playlistLocalNew": "New playlist",
   "playlistOnDevice": "On this device",
   "playlistInAccount": "In your account",
-  "downloadQueued": "Waiting"
+  "downloadQueued": "Waiting",
+  "settingsFade": "Fade between tracks",
+  "settingsFadeBody": "Ease each track in and out instead of cutting. Zero is off.",
+  "settingsFadeValue": "{seconds} s",
+  "@settingsFadeValue": {"placeholders": {"seconds": {"type": "int"}}}
 }
