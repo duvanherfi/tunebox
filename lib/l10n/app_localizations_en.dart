@@ -609,4 +609,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get playlistInAccount => 'In your account';
+
+  @override
+  String get downloadQueued => 'Waiting';
 }

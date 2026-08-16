@@ -643,13 +643,15 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   /// the only way to fetch a whole file from googlevideo — it refuses anything
   /// but bounded ranges, and the proxy is what turns one request into many.
   Future<void> download(Song song) async {
-    final stream = await _innertube.resolveStream(song.videoId);
-    await _proxy.start();
-    await _downloads.add(
-      song,
-      _proxy.wrap(stream.url, userAgent: stream.userAgent),
-      userAgent: stream.userAgent,
-    );
+    _downloads.enqueue(song, (queued) async {
+      final stream = await _innertube.resolveStream(queued.videoId);
+      await _proxy.start();
+      await _downloads.add(
+        queued,
+        _proxy.wrap(stream.url, userAgent: stream.userAgent),
+        userAgent: stream.userAgent,
+      );
+    });
   }
 
   /// Starts a radio from one track: it plays, and what YouTube says goes with

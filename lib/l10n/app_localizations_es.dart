@@ -611,4 +611,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get playlistInAccount => 'En tu cuenta';
+
+  @override
+  String get downloadQueued => 'En espera';
 }

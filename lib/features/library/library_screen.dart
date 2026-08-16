@@ -275,6 +275,15 @@ class _SectionLabel extends StatelessWidget {
 class _Downloads extends StatelessWidget {
   const _Downloads();
 
+  /// The name of a track being fetched. It has left the queue and has not
+  /// joined the library yet, so it is looked for in both.
+  static String _titleFor(String videoId, List<Song> pending, List<Song> done) {
+    for (final song in [...pending, ...done]) {
+      if (song.videoId == videoId) return song.title;
+    }
+    return videoId;
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -284,7 +293,10 @@ class _Downloads extends StatelessWidget {
       listenable: downloads,
       builder: (context, _) {
         final songs = downloads.songs;
-        if (songs.isEmpty && downloads.inProgress.isEmpty) {
+        final pending = downloads.queued;
+        final active = downloads.inProgress;
+
+        if (songs.isEmpty && pending.isEmpty && active.isEmpty) {
           return Center(
             child: Padding(
               padding: const EdgeInsets.all(32),
@@ -298,8 +310,65 @@ class _Downloads extends StatelessWidget {
             ),
           );
         }
-        return SortedSongs(songs: songs);
+        // What is arriving goes above what has arrived: the rows that change
+        // are the ones being watched.
+        return Column(
+          children: [
+            for (final entry in active.entries)
+              _Downloading(
+                title: _titleFor(entry.key, pending, songs),
+                progress: entry.value,
+              ),
+            for (final song in pending)
+              ListTile(
+                dense: true,
+                leading: const Icon(Icons.schedule_rounded),
+                title: Text(
+                  song.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: Text(l10n.downloadQueued),
+                trailing: IconButton(
+                  tooltip: l10n.cancel,
+                  icon: const Icon(Icons.close_rounded),
+                  onPressed: () => downloads.cancel(song.videoId),
+                ),
+              ),
+            if (songs.isNotEmpty) Expanded(child: SortedSongs(songs: songs)),
+          ],
+        );
       },
+    );
+  }
+}
+
+/// A track being fetched right now, with how far it has got.
+class _Downloading extends StatelessWidget {
+  const _Downloading({required this.title, required this.progress});
+
+  final String title;
+  final double progress;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      dense: true,
+      leading: const Icon(Icons.downloading_rounded),
+      title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
+      subtitle: Padding(
+        padding: const EdgeInsets.only(top: 6),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(3),
+          child: LinearProgressIndicator(
+            // Indeterminate until the first bytes report a size: a bar sitting
+            // at zero looks stuck, and it is not.
+            value: progress == 0 ? null : progress,
+            minHeight: 4,
+          ),
+        ),
+      ),
+      trailing: Text('${(progress * 100).round()}%'),
     );
   }
 }

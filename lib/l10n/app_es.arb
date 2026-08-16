@@ -207,5 +207,6 @@
   "playlistEmptyLocal": "Esta playlist está vacía. Añade canciones desde el menú de cualquier canción.",
   "playlistLocalNew": "Nueva playlist",
   "playlistOnDevice": "En este dispositivo",
-  "playlistInAccount": "En tu cuenta"
+  "playlistInAccount": "En tu cuenta",
+  "downloadQueued": "En espera"
 }

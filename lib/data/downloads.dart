@@ -29,11 +29,64 @@ class Downloads extends ChangeNotifier {
   /// here is not yet playable offline.
   final Map<String, double> _progress = {};
 
+  /// Tracks waiting their turn, in the order they were asked for.
+  ///
+  /// One at a time on purpose: ten parallel downloads share the same pipe and
+  /// all finish late, where a queue makes the first one playable in seconds.
+  final List<Song> _queue = [];
+
+  /// The one being fetched right now. It has left the queue and has not
+  /// reached the library, so without this it looks like nothing is happening —
+  /// and asking for it again would start it a second time.
+  Song? _current;
+  bool _working = false;
+
   List<Song> get songs => _songs.values.toList().reversed.toList();
   Map<String, double> get inProgress => Map.unmodifiable(_progress);
+  List<Song> get queued => List.unmodifiable(_queue);
 
   bool has(String videoId) => _songs.containsKey(videoId);
-  bool isDownloading(String videoId) => _progress.containsKey(videoId);
+  bool isDownloading(String videoId) =>
+      _current?.videoId == videoId ||
+      _progress.containsKey(videoId) ||
+      _queue.any((song) => song.videoId == videoId);
+
+  /// Puts a track in line. [fetch] resolves its audio when its turn comes —
+  /// resolved then rather than now, because a signed URL waiting in a queue
+  /// expires before it is used.
+  void enqueue(Song song, Future<void> Function(Song) fetch) {
+    if (has(song.videoId) || isDownloading(song.videoId)) return;
+    _queue.add(song);
+    notifyListeners();
+    unawaited(_drain(fetch));
+  }
+
+  void cancel(String videoId) {
+    _queue.removeWhere((song) => song.videoId == videoId);
+    notifyListeners();
+  }
+
+  Future<void> _drain(Future<void> Function(Song) fetch) async {
+    if (_working) return;
+    _working = true;
+    try {
+      while (_queue.isNotEmpty) {
+        final song = _queue.removeAt(0);
+        _current = song;
+        notifyListeners();
+        try {
+          await fetch(song);
+        } catch (_) {
+          // One failure does not stop the rest of the queue.
+        } finally {
+          _current = null;
+        }
+      }
+    } finally {
+      _working = false;
+      notifyListeners();
+    }
+  }
 
   Future<void> load() async {
     final index = File('${(await _resolve()).path}/$_indexName');

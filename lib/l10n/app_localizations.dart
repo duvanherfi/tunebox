@@ -1201,6 +1201,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'In your account'**
   String get playlistInAccount;
+
+  /// No description provided for @downloadQueued.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting'**
+  String get downloadQueued;
 }
 
 class _AppLocalizationsDelegate
