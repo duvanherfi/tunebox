@@ -201,5 +201,11 @@
   "autoTop": "Your top 100",
   "autoDownloads": "Downloaded",
   "autoCached": "Ready offline",
-  "@sortCount": {"placeholders": {"count": {"type": "int"}}}
+  "@sortCount": {"placeholders": {"count": {"type": "int"}}},
+  "playlistRename": "Rename",
+  "playlistDelete": "Delete",
+  "playlistEmptyLocal": "Nothing in this playlist yet. Add tracks from any song's menu.",
+  "playlistLocalNew": "New playlist",
+  "playlistOnDevice": "On this device",
+  "playlistInAccount": "In your account"
 }

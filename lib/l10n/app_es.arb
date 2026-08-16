@@ -201,5 +201,11 @@
   "autoTop": "Tus 100 más",
   "autoDownloads": "Descargadas",
   "autoCached": "Listas sin conexión",
-  "@sortCount": {"placeholders": {"count": {"type": "int"}}}
+  "@sortCount": {"placeholders": {"count": {"type": "int"}}},
+  "playlistRename": "Renombrar",
+  "playlistDelete": "Eliminar",
+  "playlistEmptyLocal": "Esta playlist está vacía. Añade canciones desde el menú de cualquier canción.",
+  "playlistLocalNew": "Nueva playlist",
+  "playlistOnDevice": "En este dispositivo",
+  "playlistInAccount": "En tu cuenta"
 }

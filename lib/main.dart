@@ -16,6 +16,7 @@ import 'data/audio_cache.dart';
 import 'data/backup.dart';
 import 'data/downloads.dart';
 import 'data/likes.dart';
+import 'data/local_playlists.dart';
 import 'data/play_history.dart';
 import 'data/recent_searches.dart';
 import 'data/resume_point.dart';
@@ -39,6 +40,7 @@ late final Scrobbler scrobbler;
 late final Backup backup;
 late final Likes likes;
 late final AccountStore accountStore;
+late final LocalPlaylists localPlaylists;
 late final RecentSearches recentSearches;
 late final ResumePoint resumePoint;
 final LyricsClient lyricsClient = LyricsClient();
@@ -94,6 +96,9 @@ Future<void> main() async {
   );
 
   likes = Likes(innertube);
+
+  localPlaylists = LocalPlaylists();
+  await localPlaylists.load();
 
   // Not awaited: the corner shows an icon until the photo arrives, and a
   // portrait is never worth delaying the first frame for.

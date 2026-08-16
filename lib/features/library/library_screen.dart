@@ -9,6 +9,7 @@ import '../auth/login_screen.dart';
 import '../shared/skeleton.dart';
 import '../shared/sorted_songs.dart';
 import 'auto_playlists.dart';
+import 'local_playlist_screen.dart';
 import 'playlist_screen.dart';
 
 /// The signed-in surfaces: liked songs, saved playlists and listening history.
@@ -100,14 +101,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   )
                 else
                   _SignedOut(onSignIn: _signIn),
-                if (session.isSignedIn)
-                  _Shelf<Playlist>(
-                    load: innertube.savedPlaylists,
-                    empty: l10n.libraryEmptyPlaylists,
-                    build: (playlists) => _PlaylistGrid(playlists: playlists),
-                  )
-                else
-                  _SignedOut(onSignIn: _signIn),
+                _Playlists(onSignIn: _signIn),
                 _Shelf<Song>(
                   load: _history,
                   empty: l10n.libraryEmptyHistory,
@@ -117,6 +111,161 @@ class _LibraryScreenState extends State<LibraryScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Playlists: the ones made here first, then the account's.
+///
+/// Two sources in one tab rather than two tabs, because a listener looking for
+/// a playlist does not care which side of the network it lives on.
+class _Playlists extends StatelessWidget {
+  const _Playlists({required this.onSignIn});
+
+  final VoidCallback onSignIn;
+
+  Future<void> _create(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+    final controller = TextEditingController();
+
+    final name = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.playlistLocalNew),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: InputDecoration(hintText: l10n.playlistNameHint),
+          onSubmitted: (value) => Navigator.of(context).pop(value),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(controller.text),
+            child: Text(l10n.create),
+          ),
+        ],
+      ),
+    );
+    if (name != null && name.trim().isNotEmpty) {
+      await localPlaylists.create(name);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
+    return ListenableBuilder(
+      listenable: localPlaylists,
+      builder: (context, _) => ListView(
+        padding: const EdgeInsets.only(bottom: 24),
+        children: [
+          ListTile(
+            leading: const Icon(Icons.add_rounded),
+            title: Text(l10n.playlistLocalNew),
+            onTap: () => _create(context),
+          ),
+          for (final playlist in localPlaylists.all)
+            ListTile(
+              leading: Artwork(
+                url: playlist.thumbnailUrl,
+                size: 44,
+                radius: 8,
+              ),
+              title: Text(playlist.name),
+              subtitle: Text(l10n.sortCount(playlist.songs.length)),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => LocalPlaylistScreen(id: playlist.id),
+                ),
+              ),
+            ),
+          if (session.isSignedIn) ...[
+            _SectionLabel(l10n.playlistInAccount),
+            _AccountPlaylists(),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// The account's own playlists, loaded once the tab is open.
+class _AccountPlaylists extends StatefulWidget {
+  @override
+  State<_AccountPlaylists> createState() => _AccountPlaylistsState();
+}
+
+class _AccountPlaylistsState extends State<_AccountPlaylists> {
+  late final Future<List<Playlist>> _future = innertube.savedPlaylists();
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<Playlist>>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        final playlists = snapshot.data ?? const <Playlist>[];
+        return Column(
+          children: [
+            for (final playlist in playlists)
+              ListTile(
+                leading: Artwork(
+                  url: playlist.thumbnailUrl,
+                  size: 44,
+                  radius: 8,
+                ),
+                title: Text(
+                  playlist.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: playlist.subtitle.isEmpty
+                    ? null
+                    : Text(
+                        playlist.subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => PlaylistScreen(playlist: playlist),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
+      child: Text(
+        text,
+        style: theme.textTheme.labelLarge?.copyWith(
+          color: theme.colorScheme.primary,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
@@ -279,59 +428,6 @@ class _Retry extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _PlaylistGrid extends StatelessWidget {
-  const _PlaylistGrid({required this.playlists});
-
-  final List<Playlist> playlists;
-
-  @override
-  Widget build(BuildContext context) {
-    return GridView.builder(
-      padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 200,
-        childAspectRatio: 0.74,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-      ),
-      itemCount: playlists.length,
-      itemBuilder: (context, index) {
-        final playlist = playlists[index];
-        return InkWell(
-          borderRadius: BorderRadius.circular(AppTheme.radiusArtwork),
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => PlaylistScreen(playlist: playlist),
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: LayoutBuilder(
-                  builder: (context, constraints) => Artwork(
-                    url: playlist.thumbnailUrl,
-                    size: constraints.maxWidth,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                playlist.title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 }

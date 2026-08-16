@@ -132,6 +132,14 @@ class _SongMenu extends StatelessWidget {
                 );
               },
             ),
+          ListTile(
+            leading: const Icon(Icons.playlist_add_rounded),
+            title: Text(l10n.menuAddToPlaylist),
+            onTap: () {
+              Navigator.of(context).pop();
+              showPlaylistPicker(context, song);
+            },
+          ),
           if (session.isSignedIn) ...[
             ListenableBuilder(
               listenable: likes,
@@ -150,14 +158,6 @@ class _SongMenu extends StatelessWidget {
                     liked ? l10n.menuUnliked : l10n.menuLiked,
                   ),
                 );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.playlist_add_rounded),
-              title: Text(l10n.menuAddToPlaylist),
-              onTap: () {
-                Navigator.of(context).pop();
-                showPlaylistPicker(context, song);
               },
             ),
           ],
@@ -261,13 +261,22 @@ class _PlaylistPickerState extends State<_PlaylistPicker> {
     }
   }
 
-  Future<void> _createAndAdd() async {
+  /// Adds to a playlist on the device: no network, no account, immediate.
+  Future<void> _addLocal(String id, String name) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    Navigator.of(context).pop();
+    await localPlaylists.add(id, widget.song);
+    messenger.showSnackBar(SnackBar(content: Text(l10n.menuAddedTo(name))));
+  }
+
+  Future<void> _createLocal() async {
     final l10n = AppLocalizations.of(context)!;
     final controller = TextEditingController();
-    final title = await showDialog<String>(
+    final name = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(l10n.playlistNew),
+        title: Text(l10n.playlistLocalNew),
         content: TextField(
           controller: controller,
           autofocus: true,
@@ -286,25 +295,14 @@ class _PlaylistPickerState extends State<_PlaylistPicker> {
         ],
       ),
     );
-    if (title == null || title.trim().isEmpty || !mounted) return;
+    if (name == null || name.trim().isEmpty || !mounted) return;
 
     final messenger = ScaffoldMessenger.of(context);
     Navigator.of(context).pop();
-    try {
-      // Created with the track already in it: one request instead of two, and
-      // no window where the playlist exists but is empty.
-      await innertube.createPlaylist(
-        title.trim(),
-        videoIds: [widget.song.videoId],
-      );
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.menuAddedTo(title.trim()))),
-      );
-    } catch (error) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.menuFailed('$error'))),
-      );
-    }
+    await localPlaylists.create(name.trim(), songs: [widget.song]);
+    messenger.showSnackBar(
+      SnackBar(content: Text(l10n.menuAddedTo(name.trim()))),
+    );
   }
 
   @override
@@ -327,10 +325,38 @@ class _PlaylistPickerState extends State<_PlaylistPicker> {
         ),
         ListTile(
           leading: const Icon(Icons.add_rounded),
-          title: Text(l10n.playlistNew),
-          onTap: _createAndAdd,
+          title: Text(l10n.playlistLocalNew),
+          onTap: _createLocal,
         ),
         const Divider(height: 1),
+        ListenableBuilder(
+          listenable: localPlaylists,
+          builder: (context, _) => Column(
+            children: [
+              for (final playlist in localPlaylists.all)
+                ListTile(
+                  leading: Artwork(
+                    url: playlist.thumbnailUrl,
+                    size: 44,
+                    radius: 8,
+                  ),
+                  title: Text(playlist.name),
+                  onTap: () => _addLocal(playlist.id, playlist.name),
+                ),
+            ],
+          ),
+        ),
+        if (session.isSignedIn) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+            child: Text(
+              l10n.playlistInAccount,
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
         Flexible(
           child: FutureBuilder<List<Playlist>>(
             future: _playlists,
@@ -362,6 +388,7 @@ class _PlaylistPickerState extends State<_PlaylistPicker> {
             },
           ),
         ),
+        ],
       ],
     );
   }

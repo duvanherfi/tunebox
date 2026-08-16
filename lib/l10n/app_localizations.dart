@@ -1165,6 +1165,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Ready offline'**
   String get autoCached;
+
+  /// No description provided for @playlistRename.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename'**
+  String get playlistRename;
+
+  /// No description provided for @playlistDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get playlistDelete;
+
+  /// No description provided for @playlistEmptyLocal.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing in this playlist yet. Add tracks from any song\'s menu.'**
+  String get playlistEmptyLocal;
+
+  /// No description provided for @playlistLocalNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New playlist'**
+  String get playlistLocalNew;
+
+  /// No description provided for @playlistOnDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'On this device'**
+  String get playlistOnDevice;
+
+  /// No description provided for @playlistInAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'In your account'**
+  String get playlistInAccount;
 }
 
 class _AppLocalizationsDelegate

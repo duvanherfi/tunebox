@@ -590,4 +590,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get autoCached => 'Ready offline';
+
+  @override
+  String get playlistRename => 'Rename';
+
+  @override
+  String get playlistDelete => 'Delete';
+
+  @override
+  String get playlistEmptyLocal =>
+      'Nothing in this playlist yet. Add tracks from any song\'s menu.';
+
+  @override
+  String get playlistLocalNew => 'New playlist';
+
+  @override
+  String get playlistOnDevice => 'On this device';
+
+  @override
+  String get playlistInAccount => 'In your account';
 }

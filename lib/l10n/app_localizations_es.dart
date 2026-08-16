@@ -592,4 +592,23 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get autoCached => 'Listas sin conexión';
+
+  @override
+  String get playlistRename => 'Renombrar';
+
+  @override
+  String get playlistDelete => 'Eliminar';
+
+  @override
+  String get playlistEmptyLocal =>
+      'Esta playlist está vacía. Añade canciones desde el menú de cualquier canción.';
+
+  @override
+  String get playlistLocalNew => 'Nueva playlist';
+
+  @override
+  String get playlistOnDevice => 'En este dispositivo';
+
+  @override
+  String get playlistInAccount => 'En tu cuenta';
 }
