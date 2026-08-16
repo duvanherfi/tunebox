@@ -7,7 +7,8 @@ import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../auth/login_screen.dart';
 import '../shared/skeleton.dart';
-import '../shared/song_list_view.dart';
+import '../shared/sorted_songs.dart';
+import 'auto_playlists.dart';
 import 'playlist_screen.dart';
 
 /// The signed-in surfaces: liked songs, saved playlists and listening history.
@@ -74,6 +75,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
       length: 4,
       child: Column(
         children: [
+          // Above the tabs, because these are not one of them: they cut across
+          // everything the library holds.
+          const AutoPlaylists(),
           TabBar(
             isScrollable: true,
             tabAlignment: TabAlignment.start,
@@ -92,7 +96,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   _Shelf<Song>(
                     load: innertube.likedSongs,
                     empty: l10n.libraryEmptyLikes,
-                    build: (songs) => SongListView(songs: songs),
+                    build: (songs) => SortedSongs(songs: songs),
                   )
                 else
                   _SignedOut(onSignIn: _signIn),
@@ -107,7 +111,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 _Shelf<Song>(
                   load: _history,
                   empty: l10n.libraryEmptyHistory,
-                  build: (songs) => SongListView(songs: songs),
+                  build: (songs) => SortedSongs(songs: songs),
                 ),
               ],
             ),
@@ -145,7 +149,7 @@ class _Downloads extends StatelessWidget {
             ),
           );
         }
-        return SongListView(songs: songs);
+        return SortedSongs(songs: songs);
       },
     );
   }

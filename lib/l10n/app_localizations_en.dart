@@ -555,4 +555,39 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tipReorder => 'Drag to reorder';
+
+  @override
+  String get sortNatural => 'Default order';
+
+  @override
+  String get sortTitle => 'Title';
+
+  @override
+  String get sortArtist => 'Artist';
+
+  @override
+  String get sortPlays => 'Most played';
+
+  @override
+  String get sortAscending => 'Ascending';
+
+  @override
+  String get sortDescending => 'Descending';
+
+  @override
+  String sortCount(int count) {
+    return '$count tracks';
+  }
+
+  @override
+  String get libraryAuto => 'Made for you';
+
+  @override
+  String get autoTop => 'Your top 100';
+
+  @override
+  String get autoDownloads => 'Downloaded';
+
+  @override
+  String get autoCached => 'Ready offline';
 }

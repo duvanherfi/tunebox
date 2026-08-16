@@ -557,4 +557,39 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get tipReorder => 'Arrastra para reordenar';
+
+  @override
+  String get sortNatural => 'Orden original';
+
+  @override
+  String get sortTitle => 'Título';
+
+  @override
+  String get sortArtist => 'Artista';
+
+  @override
+  String get sortPlays => 'Más escuchadas';
+
+  @override
+  String get sortAscending => 'Ascendente';
+
+  @override
+  String get sortDescending => 'Descendente';
+
+  @override
+  String sortCount(int count) {
+    return '$count canciones';
+  }
+
+  @override
+  String get libraryAuto => 'Hechas para ti';
+
+  @override
+  String get autoTop => 'Tus 100 más';
+
+  @override
+  String get autoDownloads => 'Descargadas';
+
+  @override
+  String get autoCached => 'Listas sin conexión';
 }

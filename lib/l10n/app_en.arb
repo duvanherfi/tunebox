@@ -189,5 +189,17 @@
   "tipPlay": "Play",
   "tipPause": "Pause",
   "tipRemove": "Remove",
-  "tipReorder": "Drag to reorder"
+  "tipReorder": "Drag to reorder",
+  "sortNatural": "Default order",
+  "sortTitle": "Title",
+  "sortArtist": "Artist",
+  "sortPlays": "Most played",
+  "sortAscending": "Ascending",
+  "sortDescending": "Descending",
+  "sortCount": "{count} tracks",
+  "libraryAuto": "Made for you",
+  "autoTop": "Your top 100",
+  "autoDownloads": "Downloaded",
+  "autoCached": "Ready offline",
+  "@sortCount": {"placeholders": {"count": {"type": "int"}}}
 }

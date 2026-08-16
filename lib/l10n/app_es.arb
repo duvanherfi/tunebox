@@ -189,5 +189,17 @@
   "tipPlay": "Reproducir",
   "tipPause": "Pausar",
   "tipRemove": "Quitar",
-  "tipReorder": "Arrastra para reordenar"
+  "tipReorder": "Arrastra para reordenar",
+  "sortNatural": "Orden original",
+  "sortTitle": "Título",
+  "sortArtist": "Artista",
+  "sortPlays": "Más escuchadas",
+  "sortAscending": "Ascendente",
+  "sortDescending": "Descendente",
+  "sortCount": "{count} canciones",
+  "libraryAuto": "Hechas para ti",
+  "autoTop": "Tus 100 más",
+  "autoDownloads": "Descargadas",
+  "autoCached": "Listas sin conexión",
+  "@sortCount": {"placeholders": {"count": {"type": "int"}}}
 }

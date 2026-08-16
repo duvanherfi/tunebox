@@ -1099,6 +1099,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Drag to reorder'**
   String get tipReorder;
+
+  /// No description provided for @sortNatural.
+  ///
+  /// In en, this message translates to:
+  /// **'Default order'**
+  String get sortNatural;
+
+  /// No description provided for @sortTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Title'**
+  String get sortTitle;
+
+  /// No description provided for @sortArtist.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist'**
+  String get sortArtist;
+
+  /// No description provided for @sortPlays.
+  ///
+  /// In en, this message translates to:
+  /// **'Most played'**
+  String get sortPlays;
+
+  /// No description provided for @sortAscending.
+  ///
+  /// In en, this message translates to:
+  /// **'Ascending'**
+  String get sortAscending;
+
+  /// No description provided for @sortDescending.
+  ///
+  /// In en, this message translates to:
+  /// **'Descending'**
+  String get sortDescending;
+
+  /// No description provided for @sortCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} tracks'**
+  String sortCount(int count);
+
+  /// No description provided for @libraryAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Made for you'**
+  String get libraryAuto;
+
+  /// No description provided for @autoTop.
+  ///
+  /// In en, this message translates to:
+  /// **'Your top 100'**
+  String get autoTop;
+
+  /// No description provided for @autoDownloads.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloaded'**
+  String get autoDownloads;
+
+  /// No description provided for @autoCached.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready offline'**
+  String get autoCached;
 }
 
 class _AppLocalizationsDelegate
