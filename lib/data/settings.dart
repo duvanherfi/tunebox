@@ -17,6 +17,7 @@ class Settings extends ChangeNotifier {
   static const _cacheKey = 'cache_enabled';
   static const _cacheLimitKey = 'cache_limit_mb';
   static const _fadeKey = 'fade_seconds';
+  static const _keepAwakeKey = 'keep_awake';
 
   bool autoplay = true;
   double speed = 1;
@@ -34,6 +35,10 @@ class Settings extends ChangeNotifier {
   /// most listening wants and what this defaults to.
   int fadeSeconds = 0;
 
+  /// Whether the screen stays on while the full player is open — for a phone
+  /// propped up as a now-playing display rather than carried in a pocket.
+  bool keepAwake = false;
+
   /// Gain per equalizer band, in decibels, in the order the device reports its
   /// bands. Empty until the equalizer has been opened once — the number of
   /// bands is the device's to decide, not this app's.
@@ -49,6 +54,7 @@ class Settings extends ChangeNotifier {
     cacheEnabled = prefs.getBool(_cacheKey) ?? cacheEnabled;
     cacheLimitMb = prefs.getInt(_cacheLimitKey) ?? cacheLimitMb;
     fadeSeconds = prefs.getInt(_fadeKey) ?? fadeSeconds;
+    keepAwake = prefs.getBool(_keepAwakeKey) ?? keepAwake;
     bandGains = prefs
             .getStringList(_bandsKey)
             ?.map((value) => double.tryParse(value) ?? 0.0)
@@ -95,6 +101,9 @@ class Settings extends ChangeNotifier {
 
   Future<void> setFadeSeconds(int value) =>
       _write(() => fadeSeconds = value, (p) => p.setInt(_fadeKey, value));
+
+  Future<void> setKeepAwake(bool value) =>
+      _write(() => keepAwake = value, (p) => p.setBool(_keepAwakeKey, value));
 
   Future<void> _write(
     VoidCallback apply,

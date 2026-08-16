@@ -48,6 +48,8 @@ dependencies:
   flutter_inappwebview:
   shared_preferences:
   path_provider:
+  share_plus:
+  wakelock_plus:
 
 dev_dependencies:
   flutter_test:

@@ -54,6 +54,12 @@ class SettingsScreen extends StatelessWidget {
               label: l10n.settingsFadeValue(settings.fadeSeconds),
               onChanged: (value) => settings.setFadeSeconds(value.round()),
             ),
+            SwitchListTile(
+              title: Text(l10n.settingsKeepAwake),
+              subtitle: Text(l10n.settingsKeepAwakeBody),
+              value: settings.keepAwake,
+              onChanged: settings.setKeepAwake,
+            ),
             _Label(l10n.settingsEqualizer),
             SwitchListTile(
               title: Text(l10n.settingsEqualizerOn),

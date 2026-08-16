@@ -642,4 +642,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get themePalette => 'Base colour';
+
+  @override
+  String get lyricsShare => 'Share the lyrics';
+
+  @override
+  String get lyricsPickLines => 'Pick up to four lines.';
+
+  @override
+  String get lyricsCardReady => 'Ready to share.';
+
+  @override
+  String get settingsKeepAwake => 'Keep the screen on';
+
+  @override
+  String get settingsKeepAwakeBody =>
+      'While the full player is open, for a phone left propped up.';
 }

@@ -4,6 +4,7 @@ import '../../core/lyrics/lyrics.dart';
 import '../../data/models/song.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
+import 'lyrics_card.dart';
 
 /// The words, in the place the cover was.
 ///
@@ -60,6 +61,35 @@ class _LyricsViewState extends State<LyricsView> {
           );
         }
 
+        // The share button rides on top of the words rather than beside them:
+        // the panel is already full, and this is a second thought, not a
+        // control anyone reaches for mid-song.
+        return Stack(
+          children: [
+            Positioned.fill(child: _words(context, lyrics)),
+            Positioned(
+              right: 0,
+              top: 0,
+              child: IconButton(
+                tooltip: l10n.lyricsShare,
+                icon: const Icon(Icons.ios_share_rounded),
+                onPressed: () {
+                  final song = widget.song;
+                  if (song != null) {
+                    showLyricsCard(context, song: song, lyrics: lyrics);
+                  }
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _words(BuildContext context, Lyrics lyrics) {
+    final theme = Theme.of(context);
+    {
         if (!lyrics.isSynced) {
           return SingleChildScrollView(
             child: Text(
@@ -71,8 +101,7 @@ class _LyricsViewState extends State<LyricsView> {
         }
 
         return _Synced(lyrics: lyrics);
-      },
-    );
+    }
   }
 }
 

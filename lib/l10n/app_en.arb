@@ -218,5 +218,10 @@
   "libraryEmptyArtists": "No artists saved yet.",
   "libraryEmptyAlbums": "No albums saved yet.",
   "playlistSuggestions": "You might also like",
-  "themePalette": "Base colour"
+  "themePalette": "Base colour",
+  "lyricsShare": "Share the lyrics",
+  "lyricsPickLines": "Pick up to four lines.",
+  "lyricsCardReady": "Ready to share.",
+  "settingsKeepAwake": "Keep the screen on",
+  "settingsKeepAwakeBody": "While the full player is open, for a phone left propped up."
 }

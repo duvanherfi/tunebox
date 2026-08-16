@@ -1261,6 +1261,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Base colour'**
   String get themePalette;
+
+  /// No description provided for @lyricsShare.
+  ///
+  /// In en, this message translates to:
+  /// **'Share the lyrics'**
+  String get lyricsShare;
+
+  /// No description provided for @lyricsPickLines.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick up to four lines.'**
+  String get lyricsPickLines;
+
+  /// No description provided for @lyricsCardReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready to share.'**
+  String get lyricsCardReady;
+
+  /// No description provided for @settingsKeepAwake.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep the screen on'**
+  String get settingsKeepAwake;
+
+  /// No description provided for @settingsKeepAwakeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'While the full player is open, for a phone left propped up.'**
+  String get settingsKeepAwakeBody;
 }
 
 class _AppLocalizationsDelegate

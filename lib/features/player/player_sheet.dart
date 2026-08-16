@@ -2,6 +2,7 @@ import 'dart:ui' show lerpDouble;
 
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../main.dart';
@@ -57,14 +58,24 @@ class PlayerSheetState extends State<PlayerSheet>
 
   @override
   void dispose() {
+    WakelockPlus.disable();
     _controller.dispose();
     super.dispose();
   }
 
   bool get _isExpanded => _controller.value > 0.5;
 
-  void expand() => _controller.animateTo(1, curve: Curves.easeOutCubic);
-  void collapse() => _controller.animateTo(0, curve: Curves.easeOutCubic);
+  void expand() {
+    _controller.animateTo(1, curve: Curves.easeOutCubic);
+    // Held only while the player fills the screen: a phone propped up as a
+    // now-playing display should not sleep, and one in a pocket should.
+    if (settings.keepAwake) WakelockPlus.enable();
+  }
+
+  void collapse() {
+    _controller.animateTo(0, curve: Curves.easeOutCubic);
+    WakelockPlus.disable();
+  }
 
   double _travel(BuildContext context) =>
       MediaQuery.sizeOf(context).height - collapsedHeight - widget.bottomInset;

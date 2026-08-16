@@ -218,5 +218,10 @@
   "libraryEmptyArtists": "Aún no guardas artistas.",
   "libraryEmptyAlbums": "Aún no guardas álbumes.",
   "playlistSuggestions": "También te puede gustar",
-  "themePalette": "Color base"
+  "themePalette": "Color base",
+  "lyricsShare": "Compartir la letra",
+  "lyricsPickLines": "Elige hasta cuatro versos.",
+  "lyricsCardReady": "Listo para compartir.",
+  "settingsKeepAwake": "Mantener la pantalla encendida",
+  "settingsKeepAwakeBody": "Mientras el reproductor está abierto, para dejar el teléfono a la vista."
 }
