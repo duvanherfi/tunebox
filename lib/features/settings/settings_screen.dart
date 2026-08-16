@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../data/home_widget_bridge.dart';
 import '../../l10n/app_localizations.dart';
 import '../player/playback_sheet.dart';
 import '../../main.dart';
@@ -77,6 +78,20 @@ class SettingsScreen extends StatelessWidget {
             ),
             if (settings.cacheEnabled) const _CacheLimit(),
             const _ClearCache(),
+            ListTile(
+              leading: const Icon(Icons.widgets_outlined),
+              title: Text(l10n.settingsWidget),
+              subtitle: Text(l10n.settingsWidgetBody),
+              onTap: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                final asked = await requestWidgetOnHomeScreen();
+                if (!asked) {
+                  messenger.showSnackBar(
+                    SnackBar(content: Text(l10n.settingsWidgetManual)),
+                  );
+                }
+              },
+            ),
             _Label(l10n.settingsBackup),
             const _Backups(),
             _Label(l10n.settingsSleep),

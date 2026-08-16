@@ -716,4 +716,15 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get libraryDeviceDenied =>
       'Without access to your audio there is nothing to look through.';
+
+  @override
+  String get settingsWidget => 'Add the home screen widget';
+
+  @override
+  String get settingsWidgetBody =>
+      'What is playing, with its controls, without opening the app.';
+
+  @override
+  String get settingsWidgetManual =>
+      'This launcher cannot be asked; add it by holding the home screen and choosing Widgets.';
 }

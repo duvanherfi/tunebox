@@ -719,4 +719,15 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get libraryDeviceDenied =>
       'Sin acceso a tu audio no hay nada que revisar.';
+
+  @override
+  String get settingsWidget => 'Añadir el widget a la pantalla de inicio';
+
+  @override
+  String get settingsWidgetBody =>
+      'Lo que suena y sus controles, sin abrir la app.';
+
+  @override
+  String get settingsWidgetManual =>
+      'A este lanzador no se le puede pedir; añádelo manteniendo pulsada la pantalla de inicio y eligiendo Widgets.';
 }

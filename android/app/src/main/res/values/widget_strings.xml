@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Shown before anything has played. Deliberately outside the app's ARB
+         files: a widget is drawn by the launcher, not by Flutter. -->
+    <string name="widget_idle">Tunebox</string>
+    <string name="widget_play">Play</string>
+    <string name="widget_previous">Previous</string>
+    <string name="widget_next">Next</string>
+</resources>

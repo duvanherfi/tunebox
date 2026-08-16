@@ -242,5 +242,8 @@
   "libraryDevice": "On the phone",
   "libraryDeviceEmpty": "Music stored on this phone shows up here.",
   "libraryDeviceScan": "Look for music",
-  "libraryDeviceDenied": "Without access to your audio there is nothing to look through."
+  "libraryDeviceDenied": "Without access to your audio there is nothing to look through.",
+  "settingsWidget": "Add the home screen widget",
+  "settingsWidgetBody": "What is playing, with its controls, without opening the app.",
+  "settingsWidgetManual": "This launcher cannot be asked; add it by holding the home screen and choosing Widgets."
 }

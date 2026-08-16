@@ -242,5 +242,8 @@
   "libraryDevice": "Del teléfono",
   "libraryDeviceEmpty": "Aquí aparece la música guardada en este teléfono.",
   "libraryDeviceScan": "Buscar música",
-  "libraryDeviceDenied": "Sin acceso a tu audio no hay nada que revisar."
+  "libraryDeviceDenied": "Sin acceso a tu audio no hay nada que revisar.",
+  "settingsWidget": "Añadir el widget a la pantalla de inicio",
+  "settingsWidgetBody": "Lo que suena y sus controles, sin abrir la app.",
+  "settingsWidgetManual": "A este lanzador no se le puede pedir; añádelo manteniendo pulsada la pantalla de inicio y eligiendo Widgets."
 }

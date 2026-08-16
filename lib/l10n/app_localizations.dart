@@ -1405,6 +1405,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Without access to your audio there is nothing to look through.'**
   String get libraryDeviceDenied;
+
+  /// No description provided for @settingsWidget.
+  ///
+  /// In en, this message translates to:
+  /// **'Add the home screen widget'**
+  String get settingsWidget;
+
+  /// No description provided for @settingsWidgetBody.
+  ///
+  /// In en, this message translates to:
+  /// **'What is playing, with its controls, without opening the app.'**
+  String get settingsWidgetBody;
+
+  /// No description provided for @settingsWidgetManual.
+  ///
+  /// In en, this message translates to:
+  /// **'This launcher cannot be asked; add it by holding the home screen and choosing Widgets.'**
+  String get settingsWidgetManual;
 }
 
 class _AppLocalizationsDelegate

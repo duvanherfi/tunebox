@@ -17,6 +17,7 @@ import 'data/audio_cache.dart';
 import 'data/backup.dart';
 import 'data/device_songs.dart';
 import 'data/downloads.dart';
+import 'data/home_widget_bridge.dart';
 import 'data/likes.dart';
 import 'data/local_playlists.dart';
 import 'data/play_history.dart';
@@ -156,6 +157,10 @@ Future<void> main() async {
   // Paused, at the second it stopped on: reopening the app answers "what was
   // I listening to" without asking the network anything.
   await playerService.restore();
+
+  // What the launcher's widget shows, for as long as the app is alive; its
+  // buttons keep working after that, since they talk to the service directly.
+  HomeWidgetBridge().listen(playerService);
 
   // The colours follow whatever is playing, when that is switched on.
   playerService.mediaItem.listen(
