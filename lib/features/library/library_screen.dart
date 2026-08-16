@@ -7,6 +7,7 @@ import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../auth/login_screen.dart';
 import '../shared/skeleton.dart';
+import '../shared/shelf_row.dart';
 import '../shared/sorted_songs.dart';
 import 'auto_playlists.dart';
 import 'local_playlist_screen.dart';
@@ -73,7 +74,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
     // are this device's, and hiding them behind a sign-in wall would be a lie
     // about where they come from.
     return DefaultTabController(
-      length: 4,
+      length: 6,
       child: Column(
         children: [
           // Above the tabs, because these are not one of them: they cut across
@@ -86,6 +87,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
               Tab(text: l10n.libraryDownloads),
               Tab(text: l10n.libraryLikes),
               Tab(text: l10n.libraryPlaylists),
+              Tab(text: l10n.libraryAlbums),
+              Tab(text: l10n.libraryArtists),
               Tab(text: l10n.libraryHistory),
             ],
           ),
@@ -102,6 +105,23 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 else
                   _SignedOut(onSignIn: _signIn),
                 _Playlists(onSignIn: _signIn),
+                if (session.isSignedIn)
+                  _Shelf<Playlist>(
+                    load: innertube.savedAlbums,
+                    empty: l10n.libraryEmptyAlbums,
+                    build: (albums) => _CollectionList(collections: albums),
+                  )
+                else
+                  _SignedOut(onSignIn: _signIn),
+                if (session.isSignedIn)
+                  _Shelf<Playlist>(
+                    load: innertube.savedArtists,
+                    empty: l10n.libraryEmptyArtists,
+                    build: (artists) =>
+                        _CollectionList(collections: artists, round: true),
+                  )
+                else
+                  _SignedOut(onSignIn: _signIn),
                 _Shelf<Song>(
                   load: _history,
                   empty: l10n.libraryEmptyHistory,
@@ -369,6 +389,47 @@ class _Downloading extends StatelessWidget {
         ),
       ),
       trailing: Text('${(progress * 100).round()}%'),
+    );
+  }
+}
+
+/// A plain list of albums or artists, each opening its own page.
+class _CollectionList extends StatelessWidget {
+  const _CollectionList({required this.collections, this.round = false});
+
+  final List<Playlist> collections;
+
+  /// Artists are people; a circle says so.
+  final bool round;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      padding: const EdgeInsets.only(bottom: 24),
+      itemCount: collections.length,
+      itemBuilder: (context, index) {
+        final collection = collections[index];
+        return ListTile(
+          leading: Artwork(
+            url: collection.thumbnailUrl,
+            size: 48,
+            radius: round ? 24 : 8,
+          ),
+          title: Text(
+            collection.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          subtitle: collection.subtitle.isEmpty
+              ? null
+              : Text(
+                  collection.subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+          onTap: () => openCollection(context, collection),
+        );
+      },
     );
   }
 }

@@ -212,5 +212,10 @@
   "settingsFade": "Fade between tracks",
   "settingsFadeBody": "Ease each track in and out instead of cutting. Zero is off.",
   "settingsFadeValue": "{seconds} s",
-  "@settingsFadeValue": {"placeholders": {"seconds": {"type": "int"}}}
+  "@settingsFadeValue": {"placeholders": {"seconds": {"type": "int"}}},
+  "libraryArtists": "Artists",
+  "libraryAlbums": "Albums",
+  "libraryEmptyArtists": "No artists saved yet.",
+  "libraryEmptyAlbums": "No albums saved yet.",
+  "playlistSuggestions": "You might also like"
 }

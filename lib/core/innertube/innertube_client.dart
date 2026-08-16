@@ -568,6 +568,25 @@ class InnertubeClient {
     }
   }
 
+  /// Albums the account saved to its library.
+  Future<List<Playlist>> savedAlbums() async =>
+      parsePlaylists(await browse('FEmusic_liked_albums'));
+
+  /// Artists the account follows, plus the ones behind its saved songs —
+  /// YouTube keeps those in separate corpora and a listener does not think of
+  /// them as different lists.
+  Future<List<Playlist>> savedArtists() async {
+    final followed = parseArtistRows(await browse('FEmusic_library_corpus_artists'));
+    final seen = followed.map((artist) => artist.browseId).toSet();
+    final fromSongs = parseArtistRows(
+      await browse('FEmusic_library_corpus_track_artists'),
+    );
+    return [
+      ...followed,
+      ...fromSongs.where((artist) => !seen.contains(artist.browseId)),
+    ];
+  }
+
   /// Playlists the account created or saved.
   Future<List<Playlist>> savedPlaylists() async =>
       parsePlaylists(await browse('FEmusic_liked_playlists'));

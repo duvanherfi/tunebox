@@ -1225,6 +1225,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{seconds} s'**
   String settingsFadeValue(int seconds);
+
+  /// No description provided for @libraryArtists.
+  ///
+  /// In en, this message translates to:
+  /// **'Artists'**
+  String get libraryArtists;
+
+  /// No description provided for @libraryAlbums.
+  ///
+  /// In en, this message translates to:
+  /// **'Albums'**
+  String get libraryAlbums;
+
+  /// No description provided for @libraryEmptyArtists.
+  ///
+  /// In en, this message translates to:
+  /// **'No artists saved yet.'**
+  String get libraryEmptyArtists;
+
+  /// No description provided for @libraryEmptyAlbums.
+  ///
+  /// In en, this message translates to:
+  /// **'No albums saved yet.'**
+  String get libraryEmptyAlbums;
+
+  /// No description provided for @playlistSuggestions.
+  ///
+  /// In en, this message translates to:
+  /// **'You might also like'**
+  String get playlistSuggestions;
 }
 
 class _AppLocalizationsDelegate

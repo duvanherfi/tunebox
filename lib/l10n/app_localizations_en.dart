@@ -624,4 +624,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String settingsFadeValue(int seconds) {
     return '$seconds s';
   }
+
+  @override
+  String get libraryArtists => 'Artists';
+
+  @override
+  String get libraryAlbums => 'Albums';
+
+  @override
+  String get libraryEmptyArtists => 'No artists saved yet.';
+
+  @override
+  String get libraryEmptyAlbums => 'No albums saved yet.';
+
+  @override
+  String get playlistSuggestions => 'You might also like';
 }

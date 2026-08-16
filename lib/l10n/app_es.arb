@@ -212,5 +212,10 @@
   "settingsFade": "Fundido entre canciones",
   "settingsFadeBody": "Entrar y salir suave en vez de cortar. Cero lo apaga.",
   "settingsFadeValue": "{seconds} s",
-  "@settingsFadeValue": {"placeholders": {"seconds": {"type": "int"}}}
+  "@settingsFadeValue": {"placeholders": {"seconds": {"type": "int"}}},
+  "libraryArtists": "Artistas",
+  "libraryAlbums": "Álbumes",
+  "libraryEmptyArtists": "Aún no guardas artistas.",
+  "libraryEmptyAlbums": "Aún no guardas álbumes.",
+  "playlistSuggestions": "También te puede gustar"
 }
