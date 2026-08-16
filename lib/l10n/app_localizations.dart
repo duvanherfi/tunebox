@@ -1291,6 +1291,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'While the full player is open, for a phone left propped up.'**
   String get settingsKeepAwakeBody;
+
+  /// No description provided for @paletteBaseColour.
+  ///
+  /// In en, this message translates to:
+  /// **'Base colour'**
+  String get paletteBaseColour;
+
+  /// No description provided for @paletteBackground.
+  ///
+  /// In en, this message translates to:
+  /// **'Background'**
+  String get paletteBackground;
+
+  /// No description provided for @paletteSecondColour.
+  ///
+  /// In en, this message translates to:
+  /// **'Second colour'**
+  String get paletteSecondColour;
+
+  /// No description provided for @paletteAngle.
+  ///
+  /// In en, this message translates to:
+  /// **'Angle'**
+  String get paletteAngle;
+
+  /// No description provided for @paletteFlat.
+  ///
+  /// In en, this message translates to:
+  /// **'Flat'**
+  String get paletteFlat;
+
+  /// No description provided for @paletteLinear.
+  ///
+  /// In en, this message translates to:
+  /// **'Linear'**
+  String get paletteLinear;
+
+  /// No description provided for @paletteRadial.
+  ///
+  /// In en, this message translates to:
+  /// **'Circular'**
+  String get paletteRadial;
+
+  /// No description provided for @paletteCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get paletteCustom;
+
+  /// No description provided for @paletteHue.
+  ///
+  /// In en, this message translates to:
+  /// **'Hue'**
+  String get paletteHue;
+
+  /// No description provided for @paletteSaturation.
+  ///
+  /// In en, this message translates to:
+  /// **'Saturation'**
+  String get paletteSaturation;
+
+  /// No description provided for @paletteBrightness.
+  ///
+  /// In en, this message translates to:
+  /// **'Brightness'**
+  String get paletteBrightness;
+
+  /// No description provided for @paletteReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to the app\'s own colour'**
+  String get paletteReset;
+
+  /// No description provided for @themeCustomise.
+  ///
+  /// In en, this message translates to:
+  /// **'Customise'**
+  String get themeCustomise;
+
+  /// No description provided for @paletteGradientColours.
+  ///
+  /// In en, this message translates to:
+  /// **'Gradient colours'**
+  String get paletteGradientColours;
+
+  /// No description provided for @paletteHoldToRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to change, hold to remove'**
+  String get paletteHoldToRemove;
 }
 
 class _AppLocalizationsDelegate

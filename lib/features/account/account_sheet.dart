@@ -7,6 +7,7 @@ import '../../main.dart';
 import '../auth/login_screen.dart';
 import '../settings/settings_screen.dart';
 import '../shared/sheet_body.dart';
+import '../settings/palette_screen.dart';
 import '../settings/scrobble_screen.dart';
 import '../stats/stats_screen.dart';
 
@@ -229,6 +230,19 @@ class _Palette extends StatelessWidget {
                       value == ThemeController.seeds.first ? null : value,
                     ),
                   ),
+                _Swatch(
+                  color: Theme.of(context).colorScheme.primary,
+                  selected: false,
+                  custom: true,
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const PaletteScreen(),
+                      ),
+                    );
+                  },
+                ),
               ],
             ),
           ],
@@ -243,11 +257,15 @@ class _Swatch extends StatelessWidget {
     required this.color,
     required this.selected,
     required this.onTap,
+    this.custom = false,
   });
 
   final Color color;
   final bool selected;
   final VoidCallback onTap;
+
+  /// The way out of the presets: anything at all, plus the background wash.
+  final bool custom;
 
   @override
   Widget build(BuildContext context) {
@@ -266,9 +284,11 @@ class _Swatch extends StatelessWidget {
               ? Border.all(color: colors.onSurface, width: 3)
               : null,
         ),
-        child: selected
-            ? const Icon(Icons.check_rounded, color: Colors.white, size: 20)
-            : null,
+        child: custom
+            ? const Icon(Icons.tune_rounded, color: Colors.white, size: 20)
+            : selected
+                ? const Icon(Icons.check_rounded, color: Colors.white, size: 20)
+                : null,
       ),
     );
   }

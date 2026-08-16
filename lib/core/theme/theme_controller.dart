@@ -1,6 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// The shapes a background wash can take.
+enum AppGradient {
+  /// A flat surface, which is what Material expects and what reads best behind
+  /// dense lists.
+  none,
+
+  /// Top to bottom.
+  linear,
+
+  /// Out from the middle.
+  radial,
+
+  /// Whatever angle was chosen.
+  custom,
+}
+
 /// Remembers which theme the user picked.
 ///
 /// Defaults to following the system, which is the right answer for most people
@@ -10,6 +26,9 @@ class ThemeController extends ChangeNotifier {
   static const _key = 'theme_mode';
   static const _dynamicKey = 'theme_dynamic';
   static const _seedKey = 'theme_seed';
+  static const _gradientKey = 'theme_gradient';
+  static const _gradientColoursKey = 'theme_gradient_colours';
+  static const _gradientAngleKey = 'theme_gradient_angle';
 
   ThemeMode _mode = ThemeMode.system;
   ThemeMode get mode => _mode;
@@ -45,6 +64,41 @@ class ThemeController extends ChangeNotifier {
     0xFF455A64,
   ];
 
+  /// Whether the app sits on a flat colour or a wash, and of what shape.
+  AppGradient gradient = AppGradient.none;
+
+  /// The colours the wash runs through, in order. Two or more; anything less
+  /// is a flat colour, which is what [AppGradient.none] is for.
+  List<int> gradientColours = const [];
+
+  /// Where a linear wash points, in turns: 0 is downward, 0.25 is to the left.
+  /// Only read for [AppGradient.custom].
+  double gradientAngle = 0;
+
+  Future<void> setGradient(AppGradient value) async {
+    gradient = value;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_gradientKey, value.name);
+  }
+
+  Future<void> setGradientColours(List<int> values) async {
+    gradientColours = List.of(values);
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(
+      _gradientColoursKey,
+      [for (final value in values) '$value'],
+    );
+  }
+
+  Future<void> setGradientAngle(double value) async {
+    gradientAngle = value;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_gradientAngleKey, value);
+  }
+
   Future<void> setSeed(int? value) async {
     _seed = value;
     notifyListeners();
@@ -66,6 +120,17 @@ class ThemeController extends ChangeNotifier {
     _mode = _decode(prefs.getString(_key));
     _dynamic = prefs.getBool(_dynamicKey) ?? false;
     _seed = prefs.getInt(_seedKey);
+    gradient = AppGradient.values.firstWhere(
+      (kind) => kind.name == prefs.getString(_gradientKey),
+      orElse: () => AppGradient.none,
+    );
+    gradientColours = prefs
+            .getStringList(_gradientColoursKey)
+            ?.map((value) => int.tryParse(value) ?? 0)
+            .where((value) => value != 0)
+            .toList() ??
+        const [];
+    gradientAngle = prefs.getDouble(_gradientAngleKey) ?? 0;
     notifyListeners();
   }
 

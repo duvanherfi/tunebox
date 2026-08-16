@@ -11,6 +11,7 @@ import 'core/lyrics/lyrics_client.dart';
 import 'core/scrobble/scrobbler.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
+import 'features/shared/app_background.dart';
 import 'data/account_store.dart';
 import 'data/audio_cache.dart';
 import 'data/backup.dart';
@@ -185,6 +186,9 @@ class TuneboxApp extends StatelessWidget {
         // to English when the phone speaks something we do not.
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
+        // The wash lives behind every route rather than inside one screen, so
+        // it stays put while navigating instead of sliding with the page.
+        builder: (context, child) => AppBackground(child: child!),
         home: const HomeScreen(),
       ),
     );

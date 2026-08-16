@@ -658,4 +658,49 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get settingsKeepAwakeBody =>
       'While the full player is open, for a phone left propped up.';
+
+  @override
+  String get paletteBaseColour => 'Base colour';
+
+  @override
+  String get paletteBackground => 'Background';
+
+  @override
+  String get paletteSecondColour => 'Second colour';
+
+  @override
+  String get paletteAngle => 'Angle';
+
+  @override
+  String get paletteFlat => 'Flat';
+
+  @override
+  String get paletteLinear => 'Linear';
+
+  @override
+  String get paletteRadial => 'Circular';
+
+  @override
+  String get paletteCustom => 'Custom';
+
+  @override
+  String get paletteHue => 'Hue';
+
+  @override
+  String get paletteSaturation => 'Saturation';
+
+  @override
+  String get paletteBrightness => 'Brightness';
+
+  @override
+  String get paletteReset => 'Back to the app\'s own colour';
+
+  @override
+  String get themeCustomise => 'Customise';
+
+  @override
+  String get paletteGradientColours => 'Gradient colours';
+
+  @override
+  String get paletteHoldToRemove => 'Tap to change, hold to remove';
 }

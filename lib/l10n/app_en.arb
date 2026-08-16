@@ -223,5 +223,20 @@
   "lyricsPickLines": "Pick up to four lines.",
   "lyricsCardReady": "Ready to share.",
   "settingsKeepAwake": "Keep the screen on",
-  "settingsKeepAwakeBody": "While the full player is open, for a phone left propped up."
+  "settingsKeepAwakeBody": "While the full player is open, for a phone left propped up.",
+  "paletteBaseColour": "Base colour",
+  "paletteBackground": "Background",
+  "paletteSecondColour": "Second colour",
+  "paletteAngle": "Angle",
+  "paletteFlat": "Flat",
+  "paletteLinear": "Linear",
+  "paletteRadial": "Circular",
+  "paletteCustom": "Custom",
+  "paletteHue": "Hue",
+  "paletteSaturation": "Saturation",
+  "paletteBrightness": "Brightness",
+  "paletteReset": "Back to the app's own colour",
+  "themeCustomise": "Customise",
+  "paletteGradientColours": "Gradient colours",
+  "paletteHoldToRemove": "Tap to change, hold to remove"
 }

@@ -223,5 +223,20 @@
   "lyricsPickLines": "Elige hasta cuatro versos.",
   "lyricsCardReady": "Listo para compartir.",
   "settingsKeepAwake": "Mantener la pantalla encendida",
-  "settingsKeepAwakeBody": "Mientras el reproductor está abierto, para dejar el teléfono a la vista."
+  "settingsKeepAwakeBody": "Mientras el reproductor está abierto, para dejar el teléfono a la vista.",
+  "paletteBaseColour": "Color base",
+  "paletteBackground": "Fondo",
+  "paletteSecondColour": "Segundo color",
+  "paletteAngle": "Ángulo",
+  "paletteFlat": "Plano",
+  "paletteLinear": "Lineal",
+  "paletteRadial": "Circular",
+  "paletteCustom": "Personalizado",
+  "paletteHue": "Tono",
+  "paletteSaturation": "Saturación",
+  "paletteBrightness": "Brillo",
+  "paletteReset": "Volver al color de la app",
+  "themeCustomise": "Personalizar",
+  "paletteGradientColours": "Colores del degradado",
+  "paletteHoldToRemove": "Toca para cambiar, mantén para quitar"
 }
