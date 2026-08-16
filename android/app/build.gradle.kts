@@ -1,8 +1,18 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+// The release signing key, kept out of the repository. Without it the build
+// still works — it falls back to the debug key — so a fresh clone compiles;
+// only the release someone installs needs the real one.
+val keyProperties = Properties().apply {
+    val file = rootProject.file("key.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
 }
 
 android {
@@ -33,11 +43,30 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            keyAlias = keyProperties.getProperty("keyAlias")
+            keyPassword = keyProperties.getProperty("keyPassword")
+            storeFile = keyProperties.getProperty("storeFile")?.let { rootProject.file(it) }
+            storePassword = keyProperties.getProperty("storePassword")
+
+            // v3 is what lets this key be replaced later without every install
+            // becoming an uninstall; v1 costs nothing and keeps the APK
+            // installable by tools that still read the old manifest signature.
+            enableV1Signing = true
+            enableV2Signing = true
+            enableV3Signing = true
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Every build of a given version has to be signed by the same key or
+            // Android refuses to install it over the last one. Updates outside a
+            // store are the whole point here, so this is the release's identity.
+            signingConfig = signingConfigs.getByName(
+                if (keyProperties.isEmpty) "debug" else "release",
+            )
         }
     }
 }
