@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
-import '../account/account_sheet.dart';
+import '../account/account_avatar.dart';
 import '../browse/explore_screen.dart';
 import '../library/library_screen.dart';
 import '../shared/measured.dart';
@@ -78,15 +78,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     AppBar(
                       title: const Text('Tunebox'),
-                      actions: [
-                        IconButton(
-                          tooltip: l10n.accountTooltip,
-                          icon: Icon(
-                            session.isSignedIn
-                                ? Icons.account_circle
-                                : Icons.account_circle_outlined,
-                          ),
-                          onPressed: () => showAccountSheet(context),
+                      actions: const [
+                        Padding(
+                          padding: EdgeInsets.only(right: 12),
+                          child: AccountAvatar(),
                         ),
                       ],
                     ),

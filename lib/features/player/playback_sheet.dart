@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../settings/settings_screen.dart';
+import '../shared/sheet_body.dart';
 
 /// The three things that change how the music sounds and how long it lasts,
 /// reachable from the player rather than from settings.
@@ -32,7 +33,7 @@ class _PlaybackSheet extends StatelessWidget {
 
     return ListenableBuilder(
       listenable: settings,
-      builder: (context, _) => SingleChildScrollView(
+      builder: (context, _) => SheetBody(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,

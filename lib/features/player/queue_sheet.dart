@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
+import '../shared/sheet_body.dart';
 
 /// What is going to play, and in what order.
 ///
@@ -39,7 +40,9 @@ class _QueueSheet extends StatelessWidget {
         final items = snapshot.data ?? const <MediaItem>[];
         final current = playerService.currentIndex;
 
-        return Column(
+        return SheetBody(
+          scrollable: false,
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -89,6 +92,7 @@ class _QueueSheet extends StatelessWidget {
                 ),
               ),
           ],
+          ),
         );
       },
     );

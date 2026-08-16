@@ -8,6 +8,7 @@ import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../browse/album_screen.dart';
 import '../browse/artist_screen.dart';
+import 'sheet_body.dart';
 
 /// Everything you can do to a track that is not "play it now".
 ///
@@ -55,7 +56,7 @@ class _SongMenu extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
 
-    return SafeArea(
+    return SheetBody(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

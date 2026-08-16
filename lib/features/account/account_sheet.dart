@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/theme_controller.dart';
-import '../../data/models/playlist.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../auth/login_screen.dart';
 import '../settings/settings_screen.dart';
+import '../shared/sheet_body.dart';
 import '../settings/scrobble_screen.dart';
 import '../stats/stats_screen.dart';
 
@@ -33,105 +33,87 @@ class _AccountSheet extends StatefulWidget {
 }
 
 class _AccountSheetState extends State<_AccountSheet> {
-  late Future<Account?> _account = innertube.accountInfo();
-
   Future<void> _signIn() async {
     final signedIn = await Navigator.of(context).push<bool>(
       MaterialPageRoute(builder: (_) => LoginScreen(session: session)),
     );
-    if (signedIn ?? false) {
-      setState(() => _account = innertube.accountInfo());
-    }
+    if (signedIn ?? false) await accountStore.refresh();
   }
 
-  Future<void> _signOut() async {
-    await session.signOut();
-    if (mounted) setState(() => _account = Future.value(null));
-  }
+  Future<void> _signOut() => session.signOut();
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
-    return SafeArea(
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-              child: _AccountCard(
-                account: _account,
-                onSignIn: _signIn,
-                onSignOut: _signOut,
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.insights_rounded),
-              title: Text(l10n.accountStats),
-              onTap: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const StatsScreen()),
-                );
+    return SheetBody(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+            child: _AccountCard(onSignIn: _signIn, onSignOut: _signOut),
+          ),
+          ListTile(
+            leading: const Icon(Icons.insights_rounded),
+            title: Text(l10n.accountStats),
+            onTap: () {
+              Navigator.of(context).pop();
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const StatsScreen()));
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.tune_rounded),
+            title: Text(l10n.accountSettings),
+            onTap: () {
+              Navigator.of(context).pop();
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.timeline_rounded),
+            title: Text(l10n.accountScrobble),
+            onTap: () {
+              Navigator.of(context).pop();
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const ScrobbleScreen()));
+            },
+          ),
+          _SectionLabel(l10n.accountAppearance),
+          const _ThemeOptions(),
+          ListenableBuilder(
+            listenable: themeController,
+            builder: (context, _) => SwitchListTile(
+              secondary: const Icon(Icons.palette_outlined),
+              title: Text(l10n.themeDynamic),
+              subtitle: Text(l10n.themeDynamicBody),
+              value: themeController.dynamicColors,
+              onChanged: (value) async {
+                await themeController.setDynamicColors(value);
+                if (value) {
+                  await themeController.adoptArtwork(
+                    playerService.mediaItem.value?.artUri?.toString(),
+                  );
+                }
               },
             ),
-            ListTile(
-              leading: const Icon(Icons.tune_rounded),
-              title: Text(l10n.accountSettings),
-              onTap: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.timeline_rounded),
-              title: Text(l10n.accountScrobble),
-              onTap: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ScrobbleScreen()),
-                );
-              },
-            ),
-            _SectionLabel(l10n.accountAppearance),
-            const _ThemeOptions(),
-            ListenableBuilder(
-              listenable: themeController,
-              builder: (context, _) => SwitchListTile(
-                secondary: const Icon(Icons.palette_outlined),
-                title: Text(l10n.themeDynamic),
-                subtitle: Text(l10n.themeDynamicBody),
-                value: themeController.dynamicColors,
-                onChanged: (value) async {
-                  await themeController.setDynamicColors(value);
-                  if (value) {
-                    await themeController.adoptArtwork(
-                      playerService.mediaItem.value?.artUri?.toString(),
-                    );
-                  }
-                },
-              ),
-            ),
-            const SizedBox(height: 12),
-          ],
-        ),
+          ),
+          const SizedBox(height: 12),
+        ],
       ),
     );
   }
 }
 
 class _AccountCard extends StatelessWidget {
-  const _AccountCard({
-    required this.account,
-    required this.onSignIn,
-    required this.onSignOut,
-  });
+  const _AccountCard({required this.onSignIn, required this.onSignOut});
 
-  final Future<Account?> account;
   final VoidCallback onSignIn;
   final VoidCallback onSignOut;
 
@@ -146,9 +128,9 @@ class _AccountCard extends StatelessWidget {
         color: theme.colorScheme.secondaryContainer,
         borderRadius: BorderRadius.circular(AppTheme.radiusCard),
       ),
-      child: FutureBuilder<Account?>(
-        future: account,
-        builder: (context, snapshot) {
+      child: ListenableBuilder(
+        listenable: session,
+        builder: (context, _) {
           if (!session.isSignedIn) {
             return Row(
               children: [
@@ -168,9 +150,7 @@ class _AccountCard extends StatelessWidget {
             );
           }
 
-          final info = snapshot.data;
-          final waiting =
-              snapshot.connectionState != ConnectionState.done;
+          final info = accountStore.account;
 
           return Row(
             children: [
@@ -191,9 +171,7 @@ class _AccountCard extends StatelessWidget {
                     Text(
                       // Falls back to a plain confirmation: the panel is
                       // useful even when the name never arrives.
-                      waiting || info == null
-                          ? l10n.accountSignedIn
-                          : info.name,
+                      info?.name ?? l10n.accountSignedIn,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.titleSmall?.copyWith(
@@ -223,16 +201,16 @@ class _ThemeOptions extends StatelessWidget {
   const _ThemeOptions();
 
   static String _label(AppLocalizations l10n, ThemeMode mode) => switch (mode) {
-        ThemeMode.light => l10n.themeLight,
-        ThemeMode.dark => l10n.themeDark,
-        ThemeMode.system => l10n.themeSystem,
-      };
+    ThemeMode.light => l10n.themeLight,
+    ThemeMode.dark => l10n.themeDark,
+    ThemeMode.system => l10n.themeSystem,
+  };
 
   static IconData _icon(ThemeMode mode) => switch (mode) {
-        ThemeMode.light => Icons.light_mode_outlined,
-        ThemeMode.dark => Icons.dark_mode_outlined,
-        ThemeMode.system => Icons.brightness_auto_outlined,
-      };
+    ThemeMode.light => Icons.light_mode_outlined,
+    ThemeMode.dark => Icons.dark_mode_outlined,
+    ThemeMode.system => Icons.brightness_auto_outlined,
+  };
 
   @override
   Widget build(BuildContext context) {

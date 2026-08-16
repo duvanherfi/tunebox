@@ -11,6 +11,7 @@ import 'core/lyrics/lyrics_client.dart';
 import 'core/scrobble/scrobbler.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
+import 'data/account_store.dart';
 import 'data/audio_cache.dart';
 import 'data/backup.dart';
 import 'data/downloads.dart';
@@ -37,6 +38,7 @@ late final AudioCache audioCache;
 late final Scrobbler scrobbler;
 late final Backup backup;
 late final Likes likes;
+late final AccountStore accountStore;
 late final RecentSearches recentSearches;
 late final ResumePoint resumePoint;
 final LyricsClient lyricsClient = LyricsClient();
@@ -92,6 +94,11 @@ Future<void> main() async {
   );
 
   likes = Likes(innertube);
+
+  // Not awaited: the corner shows an icon until the photo arrives, and a
+  // portrait is never worth delaying the first frame for.
+  accountStore = AccountStore(innertube, session);
+  unawaited(accountStore.refresh());
 
   recentSearches = RecentSearches();
   await recentSearches.load();
