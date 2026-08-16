@@ -641,4 +641,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get playlistSuggestions => 'También te puede gustar';
+
+  @override
+  String get themePalette => 'Color base';
 }

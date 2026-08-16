@@ -217,5 +217,6 @@
   "libraryAlbums": "Álbumes",
   "libraryEmptyArtists": "Aún no guardas artistas.",
   "libraryEmptyAlbums": "Aún no guardas álbumes.",
-  "playlistSuggestions": "También te puede gustar"
+  "playlistSuggestions": "También te puede gustar",
+  "themePalette": "Color base"
 }

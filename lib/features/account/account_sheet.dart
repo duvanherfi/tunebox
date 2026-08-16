@@ -104,6 +104,7 @@ class _AccountSheetState extends State<_AccountSheet> {
               },
             ),
           ),
+          const _Palette(),
           const SizedBox(height: 12),
         ],
       ),
@@ -192,6 +193,82 @@ class _AccountCard extends StatelessWidget {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+/// The colour everything else is generated from.
+class _Palette extends StatelessWidget {
+  const _Palette();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+
+    return ListenableBuilder(
+      listenable: themeController,
+      builder: (context, _) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l10n.themePalette, style: theme.textTheme.bodyMedium),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                for (final value in ThemeController.seeds)
+                  _Swatch(
+                    color: Color(value),
+                    selected: (themeController.seed ?? ThemeController.seeds.first) ==
+                        value,
+                    onTap: () => themeController.setSeed(
+                      value == ThemeController.seeds.first ? null : value,
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Swatch extends StatelessWidget {
+  const _Swatch({
+    required this.color,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final Color color;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return InkWell(
+      onTap: onTap,
+      customBorder: const CircleBorder(),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          border: selected
+              ? Border.all(color: colors.onSurface, width: 3)
+              : null,
+        ),
+        child: selected
+            ? const Icon(Icons.check_rounded, color: Colors.white, size: 20)
+            : null,
       ),
     );
   }

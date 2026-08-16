@@ -5,6 +5,7 @@ import '../../data/models/playlist.dart';
 import '../../data/models/song.dart';
 import '../../main.dart';
 import '../shared/song_list_view.dart';
+import '../shared/suggestions.dart';
 
 /// The tracks inside a saved playlist or album.
 class PlaylistScreen extends StatefulWidget {
@@ -55,7 +56,16 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                     child: Text(AppLocalizations.of(context)!.libraryPlaylistEmpty),
                   );
                 }
-                return SongListView(songs: songs);
+                return ListView(
+                  padding: const EdgeInsets.only(bottom: 24),
+                  children: [
+                    for (var i = 0; i < songs.length; i++)
+                      SongRow(songs: songs, index: i),
+                    // What else goes with this, once the list itself has been
+                    // read: a playlist that ends in a wall is a dead end.
+                    Suggestions(seed: songs.first),
+                  ],
+                );
               },
             ),
           ),

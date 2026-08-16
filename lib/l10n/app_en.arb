@@ -217,5 +217,6 @@
   "libraryAlbums": "Albums",
   "libraryEmptyArtists": "No artists saved yet.",
   "libraryEmptyAlbums": "No albums saved yet.",
-  "playlistSuggestions": "You might also like"
+  "playlistSuggestions": "You might also like",
+  "themePalette": "Base colour"
 }

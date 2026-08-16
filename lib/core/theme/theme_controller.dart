@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ThemeController extends ChangeNotifier {
   static const _key = 'theme_mode';
   static const _dynamicKey = 'theme_dynamic';
+  static const _seedKey = 'theme_seed';
 
   ThemeMode _mode = ThemeMode.system;
   ThemeMode get mode => _mode;
@@ -24,6 +25,38 @@ class ThemeController extends ChangeNotifier {
 
   String? _artworkSource;
 
+  /// The colour the whole interface is generated from when it is not taking
+  /// one from the artwork. Null means the app's own raspberry.
+  int? _seed;
+  int? get seed => _seed;
+
+  /// A short row rather than a colour wheel: every one of these is a seed
+  /// Material can build a readable scheme from, which is not true of an
+  /// arbitrary pick.
+  static const seeds = <int>[
+    0xFFC2185B, // the app's own
+    0xFF6750A4,
+    0xFF1565C0,
+    0xFF00897B,
+    0xFF2E7D32,
+    0xFFF9A825,
+    0xFFE64A19,
+    0xFF5D4037,
+    0xFF455A64,
+  ];
+
+  Future<void> setSeed(int? value) async {
+    _seed = value;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    if (value == null) {
+      await prefs.remove(_seedKey);
+    } else {
+      await prefs.setInt(_seedKey, value);
+    }
+  }
+
   /// Offered in this order: the two explicit choices first, then the default.
   /// Labels live in the UI layer, where the translations are.
   static const options = [ThemeMode.light, ThemeMode.dark, ThemeMode.system];
@@ -32,6 +65,7 @@ class ThemeController extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     _mode = _decode(prefs.getString(_key));
     _dynamic = prefs.getBool(_dynamicKey) ?? false;
+    _seed = prefs.getInt(_seedKey);
     notifyListeners();
   }
 

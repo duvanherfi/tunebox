@@ -1255,6 +1255,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You might also like'**
   String get playlistSuggestions;
+
+  /// No description provided for @themePalette.
+  ///
+  /// In en, this message translates to:
+  /// **'Base colour'**
+  String get themePalette;
 }
 
 class _AppLocalizationsDelegate

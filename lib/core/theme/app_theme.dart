@@ -23,14 +23,21 @@ class AppTheme {
   /// [scheme] replaces the seeded palette when the app is taking its colours
   /// from the cover that is playing. Everything else is identical, so a change
   /// of scheme repaints the app without changing how it is shaped.
-  static ThemeData light([ColorScheme? scheme]) =>
-      _build(Brightness.light, scheme);
-  static ThemeData dark([ColorScheme? scheme]) =>
-      _build(Brightness.dark, scheme);
+  static ThemeData light([ColorScheme? scheme, Color? seedColor]) =>
+      _build(Brightness.light, scheme, seedColor);
+  static ThemeData dark([ColorScheme? scheme, Color? seedColor]) =>
+      _build(Brightness.dark, scheme, seedColor);
 
-  static ThemeData _build(Brightness brightness, [ColorScheme? scheme]) {
+  static ThemeData _build(
+    Brightness brightness, [
+    ColorScheme? scheme,
+    Color? seedColor,
+  ]) {
     final colors = scheme ??
-        ColorScheme.fromSeed(seedColor: seed, brightness: brightness);
+        ColorScheme.fromSeed(
+          seedColor: seedColor ?? seed,
+          brightness: brightness,
+        );
 
     return ThemeData(
       useMaterial3: true,

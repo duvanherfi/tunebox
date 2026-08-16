@@ -639,4 +639,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get playlistSuggestions => 'You might also like';
+
+  @override
+  String get themePalette => 'Base colour';
 }

@@ -172,8 +172,14 @@ class TuneboxApp extends StatelessWidget {
       builder: (context, _) => MaterialApp(
         title: 'Tunebox',
         debugShowCheckedModeBanner: false,
-        theme: AppTheme.light(themeController.lightFromArtwork),
-        darkTheme: AppTheme.dark(themeController.darkFromArtwork),
+        theme: AppTheme.light(
+          themeController.lightFromArtwork,
+          themeController.seed == null ? null : Color(themeController.seed!),
+        ),
+        darkTheme: AppTheme.dark(
+          themeController.darkFromArtwork,
+          themeController.seed == null ? null : Color(themeController.seed!),
+        ),
         themeMode: themeController.mode,
         // Flutter resolves the device locale against this list and falls back
         // to English when the phone speaks something we do not.
