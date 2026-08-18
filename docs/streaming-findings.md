@@ -212,48 +212,56 @@ cuentan una escucha, así que se implementó tal cual:
 - Sólo cookies en la cabecera: `s.youtube.com` es una baliza, no una API, y las
   cabeceras firmadas del resto del cliente apuntan a otro origen.
 
-**Medición:** ambos pings responden **HTTP 204** — que es lo que responde una
-baliza pase lo que pase — y **ninguna reproducción apareció en
-`FEmusic_history`**, comprobado con cuatro pistas distintas, reinicios de app y
-esperas de varios minutos. La lista devuelta no cambió ni un elemento en media
-hora. Con el cliente que sirve el audio (VISIONOS, o iOS: los clientes MUSIC se
-probaron primero estando la sesión iniciada y no entregaron stream) la escucha
-no se atribuye a la cuenta, o no a la superficie de YouTube Music.
+**Medición, y la corrección que costó dos vueltas.** Ambos pings responden
+**HTTP 204** — que es lo que responde una baliza pase lo que pase — y durante
+mucho tiempo pareció que no servían de nada: ninguna reproducción aparecía en
+`FEmusic_history`, con cuatro pistas distintas, reinicios y esperas largas.
 
-Los pings se dejan puestos: son correctos, cuestan una petición y no rompen
-nada si algún día YouTube los acepta. **El historial que la app muestra es
-propio**, guardado en el dispositivo (`PlayHistory`) y mezclado por encima del
-de la cuenta. Es lo mismo que hacen SimpMusic y OpenTune, y funciona sin sesión.
+Lo que en realidad pasaba es que **sí se contaban, pero en el sitio equivocado**:
+las escuchas aparecían en el historial de YouTube (`youtube.com/feed/history`) y
+no en el de YouTube Music. La baliza no se ignora; se archiva contra la
+superficie que la baliza dice ser, y este cliente no decía ninguna.
 
-### Acuñar la baliza con el cliente que sí escribe en la cuenta
+### Cómo se consigue que la escucha entre en YouTube Music
 
-La pregunta obvia, viendo que el "me gusta" sí llega: si `WEB_REMIX` autenticado
-puede escribir en la cuenta, ¿por qué no pedirle a él la baliza y pinchearla,
-aunque el audio venga de otro? Medido el 18 de agosto de 2026, instrumentando la
-app contra la sesión real:
+Medido el 18 de agosto de 2026 contra una cuenta real, con pistas nunca oídas
+antes para que la posición en `FEmusic_history` fuera prueba y no coincidencia.
+Hacen falta **las dos cosas a la vez**:
 
-- **`WEB_REMIX` con cookie de sesión responde `OK` y sí trae `playbackTracking`**
-  — las dos URLs, `playback` y `watchtime`. Sin cookie responde `UNPLAYABLE` y no
-  trae nada, así que una prueba anónima con `curl` engaña: parece que el cliente
-  no sirve para esto y sí sirve.
+1. **La baliza la tiene que acuñar `WEB_REMIX`.** Se le pide `player` al mismo
+   cliente que ya manda los "me gusta", sólo para quedarse con sus
+   `videostatsPlaybackUrl` y `videostatsWatchtimeUrl`. El audio sigue viniendo
+   de quien quiera servirlo. Ojo: **basta la cookie de sesión para que responda
+   `OK` y traiga baliza** — sin ella contesta `UNPLAYABLE`, igual que sin
+   `signatureTimestamp` más arriba. Una prueba anónima con `curl` dice, por eso,
+   que este camino no existe. Existe.
+2. **El ping tiene que declarar la superficie**, añadiendo `c=WEB_REMIX` y
+   `cver=<versión>` a la query, con el user-agent a juego.
+
+La tabla que lo cierra, una pista nueva por fila:
+
+| Baliza acuñada por | `c`/`cver` en el ping | ¿Entra en `FEmusic_history`? |
+| --- | --- | --- |
+| `WEB_REMIX` | no | no |
+| el cliente que sirvió el audio | sí | no |
+| `WEB_REMIX` | sí | **sí, en la posición 0** |
+
+Con las dos, la pista aparece la primera del historial de la cuenta en menos de
+tres minutos, contados desde el ping de `watchtime`.
+
+Dos cosas que se descartaron por el camino y conviene no volver a intentar:
+
 - `ANDROID_MUSIC` e `IOS_MUSIC` contestan `LOGIN_REQUIRED` **incluso con la
-  sesión**. La preferencia por los clientes MUSIC en `_clientOrder` nunca llega a
-  aplicarse: siempre acaba sirviendo VISIONOS.
-- Sustituidas las URLs por las de `WEB_REMIX`, con su misma cabecera de cliente,
-  los dos pings volvieron a responder **204 y el historial de la cuenta no se
-  movió** — mismo recuento (200) y mismas tres primeras pistas antes y después.
+  sesión iniciada**, así que la preferencia por clientes MUSIC en `_clientOrder`
+  nunca llega a aplicarse: siempre acaba sirviendo VISIONOS.
+- `WEB_REMIX` sí trae formatos de audio (itag 140 en m4a, 249/250/251 en opus),
+  pero **todos con `signatureCipher` y ninguno con `url`**. Reproducir desde ahí
+  sigue necesitando el descifrado de firma; para el historial, por suerte, ya no
+  hace falta.
 
-La explicación que queda en pie: la escucha se cuenta contra la sesión que
-**sirvió los bytes**, no contra quien pide la baliza. Un ping de `watchtime`
-sobre un `ei` que nunca entregó un solo byte describe una reproducción que no
-existió, y el servidor lo tira.
-
-Para cerrarlo habría que reproducir de verdad desde la respuesta de `WEB_REMIX`.
-Sus cuatro formatos de audio están ahí —itag 140 en m4a, 249/250/251 en opus—
-pero **todos vienen con `signatureCipher` y ninguno con `url`**. Es decir, el
-problema del historial no es de pings ni de sesión: es el mismo descifrado de
-firma que ya aparece más arriba en este documento. Con eso resuelto la cuenta
-contaría las escuchas; sin eso, no hay atajo.
+El historial que la app muestra sigue siendo **propio**, guardado en el
+dispositivo (`PlayHistory`) y mezclado por encima del de la cuenta: funciona sin
+sesión y no depende de que nada de lo anterior siga siendo cierto.
 
 ### Trampa de `just_audio` que ocultó todo esto
 

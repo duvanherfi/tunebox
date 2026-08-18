@@ -359,14 +359,19 @@ class InnertubeClient {
         ...base.queryParameters,
         'ver': '2',
         'cpn': stream.cpn,
+        // Which surface the listen belongs to. Without this pair YouTube files
+        // it as a video watched, not as a track listened to, and the account's
+        // music history never moves.
+        'c': _webRemix.name,
+        'cver': _webRemix.version,
         ...extra,
       });
       await _http.get(
         ping,
         headers: {
-          // The same identity that was handed the stream: a report from a
-          // client the server never issued one to describes nothing it knows.
-          'User-Agent': stream.userAgent,
+          // Matching the client the beacon was minted for and the one the
+          // query above claims to be, rather than whoever served the audio.
+          'User-Agent': _webRemix.userAgent,
           // Cookies alone, deliberately. The stats endpoint is a beacon, not an
           // API: the signed API headers the rest of this file sends are scoped
           // to another origin and only make the request look wrong.
@@ -627,6 +632,10 @@ class InnertubeClient {
     String? lastReason;
     final visitor = await visitorData();
 
+    // Started here rather than awaited, so it overlaps the player calls below
+    // and costs nothing on the way to the first note.
+    final beacon = _musicBeacon(videoId, visitor);
+
     // Walked more than once on purpose. Refusals are not deterministic: the
     // same client that answers "sign in to confirm you're not a bot" often
     // serves the track a second later, so treating one failure as a verdict
@@ -672,16 +681,21 @@ class InnertubeClient {
           mimeType: stream.mimeType,
           userAgent: client.userAgent,
           cpn: cpn,
-          trackingUrl: readPath(json, [
-            'playbackTracking',
-            'videostatsPlaybackUrl',
-            'baseUrl',
-          ]) as String?,
-          watchtimeUrl: readPath(json, [
-            'playbackTracking',
-            'videostatsWatchtimeUrl',
-            'baseUrl',
-          ]) as String?,
+          // The music client's beacon when there is one, since only that one
+          // is counted as a listen; the serving client's otherwise, which is
+          // better than nothing and is all there is signed out.
+          trackingUrl: (await beacon).$1 ??
+              readPath(json, [
+                'playbackTracking',
+                'videostatsPlaybackUrl',
+                'baseUrl',
+              ]) as String?,
+          watchtimeUrl: (await beacon).$2 ??
+              readPath(json, [
+                'playbackTracking',
+                'videostatsWatchtimeUrl',
+                'baseUrl',
+              ]) as String?,
         );
         if (await _servesWholeTrack(candidate)) return candidate;
       }
@@ -690,6 +704,44 @@ class InnertubeClient {
     throw InnertubeException(
       lastReason ?? 'Ningún cliente entregó un stream reproducible',
     );
+  }
+
+
+  /// The playback beacon as YouTube Music's own web client is given it.
+  ///
+  /// A listen is filed against the surface the beacon names, not against
+  /// whoever fetched the bytes — and the clients that will serve this app audio
+  /// are plain YouTube ones, so every play landed in the account's *watch*
+  /// history and never in `FEmusic_history`. Asking `WEB_REMIX` for the same
+  /// track yields a beacon minted for the music surface; pinging that one is
+  /// what puts the track at the top of the listening history.
+  ///
+  /// Both halves are needed: measured against a real account, this URL without
+  /// the client parameters [_ping] adds does nothing, and those parameters on
+  /// the serving client's URL do nothing either.
+  ///
+  /// Signed out there is no history to write to, and `WEB_REMIX` answers
+  /// `UNPLAYABLE` without a session anyway.
+  Future<(String?, String?)> _musicBeacon(String videoId, String? visitor) async {
+    if (session?.isSignedIn != true) return (null, null);
+    try {
+      final json = await _post(
+        _musicBase,
+        'player',
+        _webRemix,
+        {'videoId': videoId, 'contentCheckOk': true, 'racyCheckOk': true},
+        visitorData: visitor,
+      );
+      return (
+        readPath(json, ['playbackTracking', 'videostatsPlaybackUrl', 'baseUrl'])
+            as String?,
+        readPath(json, ['playbackTracking', 'videostatsWatchtimeUrl', 'baseUrl'])
+            as String?,
+      );
+    } catch (_) {
+      // A play that was not counted is not a reason to interrupt the music.
+      return (null, null);
+    }
   }
 
   /// Rejects a stream that would die partway through.
