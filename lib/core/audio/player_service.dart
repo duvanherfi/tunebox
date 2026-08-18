@@ -803,8 +803,18 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
 
     // The shelf the driver was looking at becomes the queue, so a car behaves
     // like the app does: tapping the fourth song plays it and then the fifth.
-    final source = _browsed[shelf] ??
-        [..._downloads.songs, ..._history.songs];
+    //
+    // The car keeps the tree it was shown even after Android has killed this
+    // app, so a tap routinely arrives for a shelf this run never listed. Asking
+    // for it again is the difference between playing the playlist the driver is
+    // looking at and playing whatever the fallback happened to hold — or, when
+    // the track is in neither, doing nothing at all to a tap.
+    var source = _browsed[shelf];
+    if (source == null && shelf != null) {
+      await getChildren(shelf);
+      source = _browsed[shelf];
+    }
+    source ??= [..._downloads.songs, ..._history.songs];
     final index = source.indexWhere((song) => song.videoId == videoId);
     if (index < 0) return;
     await setQueue(source, startIndex: index);

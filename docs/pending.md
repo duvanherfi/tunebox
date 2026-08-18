@@ -49,18 +49,18 @@ carpeta oculta que solo ella ve, sin pedir acceso a los archivos de nadie.
 # Cabos sueltos
 
 Cosas que funcionan a medias y conviene mirar antes de dar por cerrada una
-versión:
+versión.
 
-- **Las carátulas no cargan en el navegador del coche.** El árbol de Android
-  Auto se ve y suena, pero las portadas salen como el marcador azul de
-  siempre. Verificado en un emulador Automotive.
-- **La interfaz de Android Auto proyectada no se ha probado.** El emulador
-  Automotive es el sistema operativo del coche, no la proyección desde el
-  teléfono; para eso hace falta el DHU o una radio de verdad.
-- **Los estantes de la cuenta en el coche solo están probados con tests.** El
-  emulador Automotive no tiene sesión iniciada, así que solo enseña Descargas e
-  Historial; Me gusta, Playlists, Álbumes y Artistas están cubiertos por
-  `test/car_browse_test.dart` pero nunca se han visto en una pantalla real.
+El 18 de agosto de 2026 se probó por fin la proyección con el DHU sobre un
+teléfono real y un APK de release: los seis estantes, las carátulas, los cuatro
+botones propios del reproductor y la reproducción desde una lista salieron bien.
+De ahí salió el arreglo de `playFromMediaId`, que se queda sin el estante cuando
+Android mata la app y el coche conserva el árbol.
+
+- **Las carátulas no cargan en el navegador del emulador Automotive.** Salen
+  como el marcador azul de siempre. Es cosa del emulador: en la proyección
+  real, con el DHU, las portadas cargan tanto en las listas como en el
+  reproductor.
 - **Escribir en la cuenta solo se probó con el "me gusta".** Crear playlists y
   añadir canciones está implementado pero nunca se ejecutó contra la cuenta
   real, para no ensuciar la biblioteca de nadie.

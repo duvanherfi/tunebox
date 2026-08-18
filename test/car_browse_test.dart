@@ -196,6 +196,20 @@ void main() {
     expect(player.songs.length, 2);
   });
 
+  test('a tap on a shelf this run never listed still queues that shelf',
+      () async {
+    build();
+
+    // What a car does after Android has killed the app: it still has the tree
+    // it was shown, so the tap arrives with nothing browsed behind it. Verified
+    // on a real head unit — the playlist rows either did nothing or started the
+    // right song with the history as its queue.
+    await player.playFromMediaId('playlists/PL1/PL1-b');
+
+    expect(player.currentSong?.videoId, 'PL1-b');
+    expect(player.songs.map((song) => song.videoId), ['PL1-a', 'PL1-b']);
+  });
+
   test('a shelf the network refuses comes back empty, not thrown', () async {
     build(offline: true);
 

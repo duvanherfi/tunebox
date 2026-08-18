@@ -25,6 +25,29 @@ adb -s <automotive> shell am start -a android.car.intent.action.MEDIA_TEMPLATE \
   "com.tunebox.tunebox/com.ryanheise.audioservice.AudioService"
 ```
 
+The Automotive AVD is the car's own operating system, not the projection a
+phone drives, and the two differ — album art that the emulator draws as a blue
+placeholder loads fine when projected. Projection needs a phone on USB and the
+Desktop Head Unit:
+
+```bash
+# Android Auto settings on the phone (Settings › Connected devices › Android
+# Auto) › ⋮ › Start head unit server. The server is one-shot: every DHU run
+# needs a fresh tap, and killing the DHU tears the session down.
+adb forward tcp:5277 tcp:5277
+cd ~/Library/Android/sdk/extras/google/auto
+./desktop-head-unit -c config/default.ini -a localhost:5277
+```
+
+The DHU reads commands from stdin (`tap X Y`, `screenshot FILE`), so drive it
+through a FIFO rather than backgrounding it — with stdin closed it reads EOF and
+exits the moment it connects. `screenshot` is the only way to see the projected
+screen when the terminal has no screen-recording permission.
+
+Reinstalling over a build without bumping `versionCode` leaves Android Auto
+resolving the old resource ids, and a custom action whose icon moved comes out
+as a warning triangle. Restart Android Auto before believing an icon is broken.
+
 ## Read first
 
 `docs/streaming-findings.md` records what was measured against YouTube's servers
