@@ -94,6 +94,7 @@
   "@menuAddedTo": {"placeholders": {"playlist": {"type": "String"}}},
   "@menuFailed": {"placeholders": {"reason": {"type": "String"}}},
   "play": "Play",
+  "repeat": "Repeat",
   "shuffle": "Shuffle",
   "artistSongs": "Songs",
   "menuGoArtist": "Go to artist",

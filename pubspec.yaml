@@ -65,6 +65,10 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
 
+  # Lets the tests stand in a player that decodes nothing, so the queue logic
+  # can be exercised without a device.
+  just_audio_platform_interface:
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 

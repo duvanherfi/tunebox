@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'dart:ui' show PlatformDispatcher;
 
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import 'core/audio/player_service.dart';
 import 'core/auth/session.dart';
@@ -127,7 +129,17 @@ Future<void> main() async {
       scrobbler,
       likes,
       resumePoint,
-      (downloads: l10n.libraryDownloads, history: l10n.libraryHistory),
+      (
+        likes: l10n.libraryLikes,
+        playlists: l10n.libraryPlaylists,
+        albums: l10n.libraryAlbums,
+        artists: l10n.libraryArtists,
+        downloads: l10n.libraryDownloads,
+        history: l10n.libraryHistory,
+        shuffle: l10n.shuffle,
+        repeat: l10n.repeat,
+        radio: l10n.menuRadio,
+      ),
     ),
     config: AudioServiceConfig(
       androidNotificationChannelId: 'com.tunebox.tunebox.audio',
@@ -168,6 +180,27 @@ Future<void> main() async {
   );
 
   runApp(const TuneboxApp());
+
+  // Asked after the first frame is on its way, so the dialog has a window to
+  // land on.
+  unawaited(_askAboutNotifications());
+}
+
+/// Asks for the notification permission Android 13 introduced.
+///
+/// Declaring it in the manifest is not enough — it is denied until the user is
+/// actually asked — and audio_service does not ask on the app's behalf. Without
+/// the grant the playback notification is dropped in silence, which leaves a
+/// music player that cannot be controlled from the lock screen, the shade or a
+/// watch, and gives no hint why.
+///
+/// Only ever asked when the answer is still open: a refusal is remembered by
+/// the system, and this returns without putting a dialog up again.
+Future<void> _askAboutNotifications() async {
+  if (!Platform.isAndroid) return;
+  if (await Permission.notification.isDenied) {
+    await Permission.notification.request();
+  }
 }
 
 class TuneboxApp extends StatelessWidget {

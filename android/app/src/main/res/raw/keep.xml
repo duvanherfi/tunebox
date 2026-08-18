@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Drawables that are only ever named as strings from Dart, never referenced
+     from code or from another resource.
+
+     The release build shrinks resources, and the shrinker can only see XML and
+     R.* references — so it deleted these. Android then resolved the names to
+     id 0, and audio_service refuses to build a media control without an icon:
+     every setPlaybackState threw, which left the notification unposted and the
+     media session frozen on whatever it had last managed to publish. Android
+     Auto sat on a stale, paused track for an entire drive because of it.
+
+     Only reproducible in a release build, which is why an emulator never
+     showed it. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_favorite,@drawable/ic_favorite_filled,@drawable/ic_notification,@drawable/ic_auto_*" />

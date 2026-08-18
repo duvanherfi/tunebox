@@ -65,6 +65,26 @@ a loopback server that fetches 1 MiB windows. Anything that must survive across
 launches (`ResumePoint`) or reach other surfaces (notification, Android Auto) is
 published through `playbackState` / `mediaItem` / `queue`.
 
+A track YouTube refuses is an ordinary event, not an error: `_playIndex` answers
+false instead of throwing and `_advance` steps over it, up to five in a row.
+Thrown, the refusal became an unhandled async error at the end of the previous
+track and playback simply stopped there.
+
+`getChildren` is the entire interface a driver gets, so it answers with the whole
+library — the account's likes, playlists, albums and artists as well as downloads
+and history — and browse ids carry the shelf they came from
+(`playlists/PL123/videoId`) because tapping a row in a car means "play this list
+from here". A shelf the network refuses comes back empty rather than throwing: a
+dialog is the wrong answer to a tunnel.
+
+**Icons named from Dart must be pinned.** Any `drawable/…` reached by name — the
+media controls, the car's shelf icons — is invisible to the release build's
+resource shrinker, which deletes it; `getIdentifier` then answers 0 and
+audio_service throws out of *every* `setPlaybackState`, which kills the
+notification and freezes the media session for Android Auto. Only release builds
+shrink, so no emulator shows it. `android/app/src/main/res/raw/keep.xml` pins
+them and `test/android_icon_resources_test.dart` keeps the two in step.
+
 **Storage is split by kind.** Scalar settings → `shared_preferences`
 (`data/settings.dart`, `core/theme/theme_controller.dart`). Growing records →
 JSON files under `getApplicationSupportDirectory()` (play log, downloads index,

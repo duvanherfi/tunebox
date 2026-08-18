@@ -94,6 +94,7 @@
   "@menuAddedTo": {"placeholders": {"playlist": {"type": "String"}}},
   "@menuFailed": {"placeholders": {"reason": {"type": "String"}}},
   "play": "Reproducir",
+  "repeat": "Repetir",
   "shuffle": "Aleatorio",
   "artistSongs": "Canciones",
   "menuGoArtist": "Ir al artista",

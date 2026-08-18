@@ -57,6 +57,10 @@ versión:
 - **La interfaz de Android Auto proyectada no se ha probado.** El emulador
   Automotive es el sistema operativo del coche, no la proyección desde el
   teléfono; para eso hace falta el DHU o una radio de verdad.
+- **Los estantes de la cuenta en el coche solo están probados con tests.** El
+  emulador Automotive no tiene sesión iniciada, así que solo enseña Descargas e
+  Historial; Me gusta, Playlists, Álbumes y Artistas están cubiertos por
+  `test/car_browse_test.dart` pero nunca se han visto en una pantalla real.
 - **Escribir en la cuenta solo se probó con el "me gusta".** Crear playlists y
   añadir canciones está implementado pero nunca se ejecutó contra la cuenta
   real, para no ensuciar la biblioteca de nadie.

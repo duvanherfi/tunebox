@@ -566,6 +566,12 @@ abstract class AppLocalizations {
   /// **'Play'**
   String get play;
 
+  /// No description provided for @repeat.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat'**
+  String get repeat;
+
   /// No description provided for @shuffle.
   ///
   /// In en, this message translates to:

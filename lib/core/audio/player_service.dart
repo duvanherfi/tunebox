@@ -4,6 +4,7 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 
+import '../../data/models/playlist.dart';
 import '../../data/models/song.dart';
 import '../../data/play_history.dart';
 import '../../data/audio_cache.dart';
@@ -39,9 +40,7 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     _settings.addListener(_applySettings);
     // The heart in the shade is drawn from playback state, so a like made
     // anywhere else has to republish it.
-    _likes.addListener(
-      () => playbackState.add(_transformState(_player.playbackEvent)),
-    );
+    _likes.addListener(_publishState);
     _applySettings();
     unawaited(_restoreEqualizer());
   }
@@ -56,11 +55,26 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   final ResumePoint _resume;
 
   static const _likeAction = 'like';
+  static const _shuffleAction = 'shuffle';
+  static const _repeatAction = 'repeat';
+  static const _radioAction = 'radio';
 
-  /// Names for the two shelves a car shows. Passed in rather than looked up,
-  /// because this class runs without a widget tree and the translations live
-  /// in one.
-  final ({String downloads, String history}) _browseLabels;
+  /// How many refused tracks in a row the queue steps over before giving up.
+  static const _refusalsBeforeGivingUp = 5;
+
+  /// Names for what a car shows. Passed in rather than looked up, because this
+  /// class runs without a widget tree and the translations live in one.
+  final ({
+    String likes,
+    String playlists,
+    String albums,
+    String artists,
+    String downloads,
+    String history,
+    String shuffle,
+    String repeat,
+    String radio,
+  }) _browseLabels;
 
   /// Effects sit in the pipeline whether or not they are switched on: Android
   /// attaches them when the audio session opens, so one added later would not
@@ -245,9 +259,9 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     _player.processingStateStream.listen((state) {
       if (state != ProcessingState.completed) return;
       if (_repeat == AudioServiceRepeatMode.one) {
-        _playIndex(_index);
+        unawaited(_playIndex(_index));
       } else {
-        skipToNext();
+        unawaited(_advance());
       }
     });
   }
@@ -264,6 +278,11 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
         // Liking from the shade, where half of it happens. No stop button: the
         // system already offers a way out of a media notification, and the one
         // audio_service draws is a bare white square.
+        //
+        // These are custom actions rather than notification buttons, so they
+        // reach Android Auto's control row without crowding the phone's shade.
+        // Every icon named here must survive the release shrinker — see
+        // res/raw/keep.xml, and the test that keeps the two in step.
         if (_likes.canLike)
           MediaControl.custom(
             androidIcon: liked
@@ -272,6 +291,23 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
             label: 'Like',
             name: _likeAction,
           ),
+        MediaControl.custom(
+          androidIcon: 'drawable/ic_auto_shuffle',
+          label: _browseLabels.shuffle,
+          name: _shuffleAction,
+        ),
+        MediaControl.custom(
+          androidIcon: _repeat == AudioServiceRepeatMode.one
+              ? 'drawable/ic_auto_repeat_one'
+              : 'drawable/ic_auto_repeat',
+          label: _browseLabels.repeat,
+          name: _repeatAction,
+        ),
+        MediaControl.custom(
+          androidIcon: 'drawable/ic_auto_radio',
+          label: _browseLabels.radio,
+          name: _radioAction,
+        ),
       ],
       systemActions: const {MediaAction.seek},
       androidCompactActionIndices: const [0, 1, 2],
@@ -355,7 +391,7 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     _unshuffled = List.of(songs);
     if (_shuffled) _shuffleAround(startIndex);
     _publishQueue();
-    await _playIndex(_shuffled ? 0 : startIndex);
+    if (!await _playIndex(_shuffled ? 0 : startIndex)) await _advance();
   }
 
   /// Puts a track right after the one playing, for "play next".
@@ -456,54 +492,48 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     _index = 0;
   }
 
+  /// Republishes the state from the player as it is right now.
+  ///
+  /// For the moments the player itself has no event to offer — a like taken
+  /// elsewhere, a track that never loaded — where the media session would
+  /// otherwise keep describing the situation before it.
+  void _publishState() =>
+      playbackState.add(_transformState(_player.playbackEvent));
+
   void _publishQueue() {
     queue.add(_songs.map(_toMediaItem).toList());
     playbackState.add(playbackState.value.copyWith(queueIndex: _index));
   }
 
-  Future<void> _playIndex(int index, {Duration? from}) async {
+  /// Loads [index] and starts it, answering whether the track could be played
+  /// at all.
+  ///
+  /// A refusal is an ordinary outcome rather than an error to throw past the
+  /// caller: YouTube does not serve every track to every client, and the
+  /// caller here is usually the end of the previous song — it has to be told
+  /// "not this one" so it can decide what plays instead. Thrown, the refusal
+  /// became an unhandled async error and the music simply stopped at the tail
+  /// of the track that had just finished.
+  Future<bool> _playIndex(int index, {Duration? from}) async {
     _watchtime?.cancel();
     if (index < 0 || index >= _songs.length) {
       await stop();
-      return;
+      return false;
     }
     _index = index;
     final song = _songs[index];
     mediaItem.add(_toMediaItem(song));
 
-    // A downloaded track never touches the network — not to resolve it, not to
-    // report it. That is the whole promise of a download.
-    AudioStream? stream;
-    if (DeviceSongs.isLocal(song.videoId)) {
-      // Already a file on this phone: nothing to resolve, nothing to report.
-      await _player.setFilePath(DeviceSongs.pathOf(song.videoId));
-    } else if (_downloads.has(song.videoId)) {
-      await _player.setFilePath(_downloads.fileFor(song.videoId).path);
-    } else {
-      stream = await _innertube.resolveStream(song.videoId);
-
-      // Routed through the proxy so the request carries a Range header, which
-      // googlevideo requires and ExoPlayer omits on its first request. The user
-      // agent travels along because the URL was issued to one particular client
-      // and is fetched wearing that same identity.
-      await _proxy.start();
-      final source = _proxy.wrap(stream.url, userAgent: stream.userAgent);
-
-      if (_settings.cacheEnabled) {
-        // The same bytes are written to disk as they play, so hearing a track
-        // twice costs one download. Keyed by video id rather than by URL: the
-        // URL is signed and different every time, the track is not.
-        // just_audio marks this experimental; it has been in every release for
-        // years and there is no other way to cache while streaming.
-        // ignore: experimental_member_use
-        await _player.setAudioSource(LockCachingAudioSource(
-          source,
-          cacheFile: _cache.fileFor(song.videoId),
-        ));
-        unawaited(_cache.prune(_settings.cacheLimitMb * 1024 * 1024));
-      } else {
-        await _player.setUrl(source.toString());
-      }
+    final AudioStream? stream;
+    try {
+      stream = await _resolve(song);
+    } catch (_) {
+      // The queue will move past this one. Republish so nothing downstream —
+      // the car especially — is left believing a track is playing when no
+      // audio ever arrived for it.
+      _loaded = false;
+      _publishState();
+      return false;
     }
 
     _loaded = true;
@@ -555,18 +585,138 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     if (stream case final playing?) {
       unawaited(_innertube.reportPlayback(playing));
     }
+    return true;
+  }
+
+  /// Points the player at [song]'s audio, returning the stream it opened — or
+  /// null when the track came off this phone and no stream was involved.
+  ///
+  /// Throws when YouTube will not serve the track, which is the one failure
+  /// [_playIndex] has to survive.
+  Future<AudioStream?> _resolve(Song song) async {
+    // A downloaded track never touches the network — not to resolve it, not to
+    // report it. That is the whole promise of a download.
+    AudioStream? stream;
+    if (DeviceSongs.isLocal(song.videoId)) {
+      // Already a file on this phone: nothing to resolve, nothing to report.
+      await _player.setFilePath(DeviceSongs.pathOf(song.videoId));
+    } else if (_downloads.has(song.videoId)) {
+      await _player.setFilePath(_downloads.fileFor(song.videoId).path);
+    } else {
+      stream = await _innertube.resolveStream(song.videoId);
+
+      // Routed through the proxy so the request carries a Range header, which
+      // googlevideo requires and ExoPlayer omits on its first request. The user
+      // agent travels along because the URL was issued to one particular client
+      // and is fetched wearing that same identity.
+      await _proxy.start();
+      final source = _proxy.wrap(stream.url, userAgent: stream.userAgent);
+
+      if (_settings.cacheEnabled) {
+        // The same bytes are written to disk as they play, so hearing a track
+        // twice costs one download. Keyed by video id rather than by URL: the
+        // URL is signed and different every time, the track is not.
+        // just_audio marks this experimental; it has been in every release for
+        // years and there is no other way to cache while streaming.
+        // ignore: experimental_member_use
+        await _player.setAudioSource(LockCachingAudioSource(
+          source,
+          cacheFile: _cache.fileFor(song.videoId),
+        ));
+        unawaited(_cache.prune(_settings.cacheLimitMb * 1024 * 1024));
+      } else {
+        await _player.setUrl(source.toString());
+      }
+    }
+    return stream;
   }
 
   /// The browsing tree a car stereo asks for.
   ///
-  /// Android Auto talks to the same media session the phone uses, but it can
-  /// only show what this answers with — and it will not fetch anything: a car
-  /// gets what is already on the device, which is downloads and what has been
-  /// played, plus the liked songs the account already handed over.
-  /// The ids a car browses by. The root is audio_service's own constant rather
-  /// than a matching string, so the two cannot drift apart.
+  /// Android Auto talks to the same media session the phone does, but it draws
+  /// nothing of the app's own interface: everything a driver can reach has to
+  /// be answered here. So this is the whole library — the account's likes,
+  /// playlists, albums and artists as well as what is already on the phone —
+  /// rather than the two device-only shelves it used to be. A car with no
+  /// signal falls back to downloads and history, which need no network.
+  ///
+  /// Ids carry the shelf they came from (`likes/dQw4w9WgXcQ`), because tapping
+  /// a track in a car means "play this list starting here" and the media id is
+  /// the only thing that comes back.
+  static const _likesId = 'likes';
+  static const _playlistsId = 'playlists';
+  static const _albumsId = 'albums';
+  static const _artistsId = 'artists';
   static const _downloadsId = 'downloads';
   static const _historyId = 'history';
+
+  /// What each shelf last answered with, so tapping a row plays the list the
+  /// driver is looking at without fetching it a second time.
+  final _browsed = <String, List<Song>>{};
+
+  /// How a shelf lays its contents out. Declared per item rather than once at
+  /// the root: covers belong in a grid, tracks belong in a list, and a car
+  /// shows both under the same tree.
+  static Map<String, dynamic> _style({required int browsable, required int playable}) => {
+        AndroidContentStyle.supportedKey: true,
+        AndroidContentStyle.browsableHintKey: browsable,
+        AndroidContentStyle.playableHintKey: playable,
+      };
+
+  /// A shelf: a row with an icon that opens onto something else.
+  MediaItem _shelf(String id, String title, String icon, {bool grid = false}) =>
+      MediaItem(
+        id: id,
+        title: title,
+        playable: false,
+        // Resolved by the car as a resource of this app, which is why these
+        // drawables are pinned in res/raw/keep.xml against the shrinker.
+        artUri: Uri.parse('android.resource://com.tunebox.tunebox/drawable/$icon'),
+        extras: _style(
+          browsable: grid
+              ? AndroidContentStyle.gridItemHintValue
+              : AndroidContentStyle.listItemHintValue,
+          playable: AndroidContentStyle.listItemHintValue,
+        ),
+      );
+
+  /// A collection — a playlist, an album, an artist — as a cover the driver can
+  /// open.
+  MediaItem _collection(Playlist collection, String prefix) => MediaItem(
+        id: '$prefix/${collection.browseId}',
+        title: collection.title,
+        artist: collection.subtitle.isEmpty ? null : collection.subtitle,
+        playable: false,
+        artUri: collection.thumbnailUrl == null
+            ? null
+            : Uri.parse(collection.thumbnailUrl!),
+        extras: _style(
+          browsable: AndroidContentStyle.gridItemHintValue,
+          playable: AndroidContentStyle.listItemHintValue,
+        ),
+      );
+
+  /// A track as a car row. Remembers which shelf it was listed under so that
+  /// playing it can queue up its neighbours.
+  MediaItem _track(Song song, String shelf) =>
+      _toMediaItem(song).copyWith(id: '$shelf/${song.videoId}');
+
+  /// Answers a shelf of tracks, remembering it for [playFromMediaId].
+  List<MediaItem> _tracks(String shelf, List<Song> songs) {
+    _browsed[shelf] = songs;
+    return songs.map((song) => _track(song, shelf)).toList();
+  }
+
+  /// Whatever the account holds, or an empty shelf when it cannot be reached.
+  /// A car is exactly where the signal drops, and an error there is a dialog
+  /// the driver has to dismiss; an empty list is not.
+  Future<List<T>> _fromAccount<T>(Future<List<T>> Function() fetch) async {
+    try {
+      return await fetch();
+    } catch (_) {
+      return const [];
+    }
+  }
 
   @override
   Future<List<MediaItem>> getChildren(
@@ -576,29 +726,58 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     switch (parentMediaId) {
       case AudioService.browsableRootId:
         return [
-          MediaItem(
-            id: _downloadsId,
-            title: _browseLabels.downloads,
-            playable: false,
-          ),
-          MediaItem(
-            id: _historyId,
-            title: _browseLabels.history,
-            playable: false,
-          ),
+          // Only offered when there is an account behind them; a car showing
+          // four shelves that all open onto nothing is worse than showing two
+          // that work.
+          if (_likes.canLike) ...[
+            _shelf(_likesId, _browseLabels.likes, 'ic_favorite'),
+            _shelf(_playlistsId, _browseLabels.playlists, 'ic_auto_playlist',
+                grid: true),
+            _shelf(_albumsId, _browseLabels.albums, 'ic_auto_album', grid: true),
+            _shelf(_artistsId, _browseLabels.artists, 'ic_auto_artist',
+                grid: true),
+          ],
+          _shelf(_downloadsId, _browseLabels.downloads, 'ic_auto_download'),
+          _shelf(_historyId, _browseLabels.history, 'ic_auto_history'),
         ];
+
       case AudioService.recentRootId:
         // What a car asks for the moment it connects, to offer "resume": the
         // last thing played, and nothing else — this is a resume hint, not a
         // shelf to browse.
         final last = currentSong ?? _history.songs.firstOrNull;
         return [if (last != null) _toMediaItem(last)];
+
+      case _likesId:
+        return _tracks(_likesId, await _fromAccount(_innertube.likedSongs));
       case _downloadsId:
-        return _downloads.songs.map(_toMediaItem).toList();
+        return _tracks(_downloadsId, _downloads.songs);
       case _historyId:
-        return _history.songs.take(50).map(_toMediaItem).toList();
+        return _tracks(_historyId, _history.songs.take(100).toList());
+
+      case _playlistsId:
+        final saved = await _fromAccount(_innertube.savedPlaylists);
+        return saved.map((p) => _collection(p, _playlistsId)).toList();
+      case _albumsId:
+        final saved = await _fromAccount(_innertube.savedAlbums);
+        return saved.map((p) => _collection(p, _albumsId)).toList();
+      case _artistsId:
+        final saved = await _fromAccount(_innertube.savedArtists);
+        return saved.map((p) => _collection(p, _artistsId)).toList();
+
       default:
-        return const [];
+        final slash = parentMediaId.indexOf('/');
+        if (slash < 0) return const [];
+        final shelf = parentMediaId.substring(0, slash);
+        final id = parentMediaId.substring(slash + 1);
+        final songs = switch (shelf) {
+          _playlistsId =>
+            await _fromAccount(() => _innertube.playlistSongs(id)),
+          _albumsId => (await _innertube.albumPage(id)).songs,
+          _artistsId => (await _innertube.artistPage(id)).songs,
+          _ => const <Song>[],
+        };
+        return _tracks(parentMediaId, songs);
     }
   }
 
@@ -609,15 +788,24 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     String mediaId, [
     Map<String, dynamic>? extras,
   ]) async {
+    // The last segment is the track; everything before it names the shelf,
+    // which for a playlist is itself two segments (`playlists/PL123`).
+    final slash = mediaId.lastIndexOf('/');
+    final shelf = slash < 0 ? null : mediaId.substring(0, slash);
+    final videoId = slash < 0 ? mediaId : mediaId.substring(slash + 1);
+
     // The car's "resume" offer is the track that was already loaded: play it
     // where it was left rather than starting its queue over.
-    if (currentSong?.videoId == mediaId) {
+    if (currentSong?.videoId == videoId) {
       await play();
       return;
     }
 
-    final source = [..._downloads.songs, ..._history.songs];
-    final index = source.indexWhere((song) => song.videoId == mediaId);
+    // The shelf the driver was looking at becomes the queue, so a car behaves
+    // like the app does: tapping the fourth song plays it and then the fifth.
+    final source = _browsed[shelf] ??
+        [..._downloads.songs, ..._history.songs];
+    final index = source.indexWhere((song) => song.videoId == videoId);
     if (index < 0) return;
     await setQueue(source, startIndex: index);
   }
@@ -627,13 +815,34 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     String name, [
     Map<String, dynamic>? extras,
   ]) async {
-    if (name != _likeAction) return;
     final song = currentSong;
-    if (song == null) return;
-    await _likes.toggle(song);
-    // The icon is drawn from the state, so the shade only changes once the
-    // account has actually taken the like.
-    playbackState.add(_transformState(_player.playbackEvent));
+    switch (name) {
+      case _likeAction:
+        if (song == null) return;
+        await _likes.toggle(song);
+        // The icon is drawn from the state, so the shade only changes once the
+        // account has actually taken the like.
+        _publishState();
+      case _shuffleAction:
+        await setShuffleMode(
+          _shuffled
+              ? AudioServiceShuffleMode.none
+              : AudioServiceShuffleMode.all,
+        );
+      case _repeatAction:
+        // Round the same three the player screen cycles, so a driver who has
+        // used the app already knows what the button does.
+        await setRepeatMode(switch (_repeat) {
+          AudioServiceRepeatMode.none => AudioServiceRepeatMode.all,
+          AudioServiceRepeatMode.all => AudioServiceRepeatMode.one,
+          _ => AudioServiceRepeatMode.none,
+        });
+        // The icon says which of the three it is now.
+        _publishState();
+      case _radioAction:
+        if (song == null) return;
+        await startRadio(song);
+    }
   }
 
   @override
@@ -641,7 +850,7 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     // After a restore there is a track and a position but no audio yet; the
     // first press is what goes and gets it.
     if (!_loaded && currentSong != null) {
-      await _playIndex(_index, from: _pending);
+      if (!await _playIndex(_index, from: _pending)) await _advance();
       return;
     }
     await _player.play();
@@ -654,19 +863,34 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   Future<void> seek(Duration position) => _player.seek(position);
 
   @override
-  Future<void> skipToNext() async {
-    if (_index + 1 < _songs.length) {
-      await _playIndex(_index + 1);
-      return;
+  Future<void> skipToNext() => _advance();
+
+  /// Moves to the track after the current one, stepping over any the servers
+  /// refuse.
+  ///
+  /// A liked-songs playlist of any size holds a few videos that no client is
+  /// served — taken down, region-locked, or simply not offered. Stopping on
+  /// the first of them is what left the music dead at the end of the previous
+  /// track; walking the whole queue hammering a network that is plainly not
+  /// answering would be just as wrong, so the stepping is bounded.
+  Future<void> _advance() async {
+    for (var refused = 0; refused < _refusalsBeforeGivingUp; refused++) {
+      final int next;
+      if (_index + 1 < _songs.length) {
+        next = _index + 1;
+      } else if (_repeat == AudioServiceRepeatMode.all && _songs.isNotEmpty) {
+        next = 0;
+      } else if (await _extendWithRadio()) {
+        // Nothing queued and nothing to repeat: rather than fall silent, ask
+        // YouTube what goes with this and keep going. Silence at the end of a
+        // queue is a playlist's behaviour, not a radio's.
+        next = _index + 1;
+      } else {
+        return;
+      }
+      if (await _playIndex(next)) return;
     }
-    if (_repeat == AudioServiceRepeatMode.all && _songs.isNotEmpty) {
-      await _playIndex(0);
-      return;
-    }
-    // Nothing queued and nothing to repeat: rather than fall silent, ask
-    // YouTube what goes with this and keep going. Silence at the end of a
-    // queue is a playlist's behaviour, not a radio's.
-    if (await _extendWithRadio()) await _playIndex(_index + 1);
+    await stop();
   }
 
   /// Appends the current track's radio to the queue. False when there was
@@ -731,7 +955,9 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   }
 
   @override
-  Future<void> skipToQueueItem(int index) => _playIndex(index);
+  Future<void> skipToQueueItem(int index) async {
+    await _playIndex(index);
+  }
 
   @override
   Future<void> stop() async {

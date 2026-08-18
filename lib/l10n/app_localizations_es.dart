@@ -260,6 +260,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get play => 'Reproducir';
 
   @override
+  String get repeat => 'Repetir';
+
+  @override
   String get shuffle => 'Aleatorio';
 
   @override
