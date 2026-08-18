@@ -207,6 +207,42 @@ class _Playlists extends StatelessWidget {
                 ),
               ),
             ),
+          // Kept here rather than fetched: these are the collections the
+          // listener marked, and the whole point of the mark is that the shelf
+          // is there without an account and without a network.
+          ListenableBuilder(
+            listenable: savedCollections,
+            builder: (context, _) {
+              if (savedCollections.all.isEmpty) return const SizedBox.shrink();
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _SectionLabel(l10n.librarySaved),
+                  for (final collection in savedCollections.all)
+                    ListTile(
+                      leading: Artwork(
+                        url: collection.thumbnailUrl,
+                        size: 44,
+                        radius: 8,
+                      ),
+                      title: Text(
+                        collection.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: collection.subtitle.isEmpty
+                          ? null
+                          : Text(
+                              collection.subtitle,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                      onTap: () => openCollection(context, collection),
+                    ),
+                ],
+              );
+            },
+          ),
           if (session.isSignedIn) ...[
             _SectionLabel(l10n.playlistInAccount),
             _AccountPlaylists(),

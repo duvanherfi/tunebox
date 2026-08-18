@@ -4,10 +4,10 @@ import '../../core/theme/app_theme.dart';
 import '../../data/models/playlist.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
+import '../shared/collection_header.dart';
 import '../shared/shelf_row.dart';
 import '../shared/skeleton.dart';
 import '../shared/song_list_view.dart';
-import 'album_screen.dart';
 
 /// An artist: their popular tracks first, then everything they released.
 ///

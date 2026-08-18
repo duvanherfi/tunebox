@@ -279,6 +279,41 @@ class AppLocalizationsEn extends AppLocalizations {
   String get menuRadioStarted => 'Radio started';
 
   @override
+  String get collectionSave => 'Save to library';
+
+  @override
+  String get collectionRemove => 'Remove from library';
+
+  @override
+  String get collectionSaved => 'Saved to your library';
+
+  @override
+  String get collectionRemoved => 'Removed from your library';
+
+  @override
+  String collectionSyncFailed(String reason) {
+    return 'Saved here. YouTube was not told: $reason';
+  }
+
+  @override
+  String get collectionMore => 'More options';
+
+  @override
+  String get collectionDownloadAll => 'Download every track';
+
+  @override
+  String collectionDownloading(int count) {
+    return 'Downloading $count tracks';
+  }
+
+  @override
+  String get librarySaved => 'Saved';
+
+  @override
+  String get libraryEmptySaved =>
+      'Nothing saved yet. The heart on a playlist keeps it here.';
+
+  @override
   String get lyricsTitle => 'Lyrics';
 
   @override

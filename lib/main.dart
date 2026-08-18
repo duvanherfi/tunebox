@@ -21,6 +21,7 @@ import 'data/device_songs.dart';
 import 'data/downloads.dart';
 import 'data/home_widget_bridge.dart';
 import 'data/likes.dart';
+import 'data/saved_collections.dart';
 import 'data/local_playlists.dart';
 import 'data/play_history.dart';
 import 'data/recent_searches.dart';
@@ -46,6 +47,7 @@ late final Backup backup;
 late final Likes likes;
 late final AccountStore accountStore;
 late final LocalPlaylists localPlaylists;
+late final SavedCollections savedCollections;
 final DeviceSongs deviceSongs = DeviceSongs();
 late final RecentSearches recentSearches;
 late final ResumePoint resumePoint;
@@ -105,6 +107,9 @@ Future<void> main() async {
 
   localPlaylists = LocalPlaylists();
   await localPlaylists.load();
+
+  savedCollections = SavedCollections(innertube: innertube);
+  await savedCollections.load();
 
   // Not awaited: the corner shows an icon until the photo arrives, and a
   // portrait is never worth delaying the first frame for.

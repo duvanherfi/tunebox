@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
-import '../../l10n/app_localizations.dart';
-import '../../data/models/playlist.dart';
 import '../../data/models/song.dart';
+import '../../data/models/playlist.dart';
+import '../../l10n/app_localizations.dart';
 import '../../main.dart';
+import '../shared/collection_header.dart';
+import '../shared/skeleton.dart';
 import '../shared/song_list_view.dart';
 import '../shared/suggestions.dart';
 
@@ -28,48 +30,61 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
       appBar: AppBar(title: Text(widget.playlist.title)),
-      body: Column(
-        children: [
-          Expanded(
-            child: FutureBuilder<List<Song>>(
-              future: _future,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState != ConnectionState.done) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Text(
-                        '${snapshot.error}',
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  );
-                }
-                final songs = snapshot.data ?? const [];
-                if (songs.isEmpty) {
-                  return Center(
-                    child: Text(AppLocalizations.of(context)!.libraryPlaylistEmpty),
-                  );
-                }
-                return ListView(
-                  padding: const EdgeInsets.only(bottom: 24),
-                  children: [
-                    for (var i = 0; i < songs.length; i++)
-                      SongRow(songs: songs, index: i),
-                    // What else goes with this, once the list itself has been
-                    // read: a playlist that ends in a wall is a dead end.
-                    Suggestions(seed: songs.first),
-                  ],
-                );
-              },
-            ),
-          ),
-        ],
+      body: FutureBuilder<List<Song>>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const SongListSkeleton();
+          }
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text('${snapshot.error}', textAlign: TextAlign.center),
+              ),
+            );
+          }
+
+          final songs = snapshot.data ?? const <Song>[];
+          return CustomScrollView(
+            slivers: [
+              // The card that opened this already knew the name and the cover,
+              // so the header is complete before the tracks arrive and does not
+              // have to be fetched a second time.
+              SliverToBoxAdapter(
+                child: CollectionHeader(
+                  title: widget.playlist.title,
+                  subtitle: widget.playlist.subtitle,
+                  thumbnailUrl: widget.playlist.thumbnailUrl,
+                  songs: songs,
+                  collection: widget.playlist,
+                ),
+              ),
+              if (songs.isEmpty)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Center(child: Text(l10n.libraryPlaylistEmpty)),
+                  ),
+                )
+              else ...[
+                SliverList.builder(
+                  itemCount: songs.length,
+                  itemBuilder: (context, index) =>
+                      SongRow(songs: songs, index: index),
+                ),
+                // What else goes with this, once the list itself has been
+                // read: a playlist that ends in a wall is a dead end.
+                SliverToBoxAdapter(child: Suggestions(seed: songs.first)),
+              ],
+              const SliverToBoxAdapter(child: SizedBox(height: 24)),
+            ],
+          );
+        },
       ),
     );
   }

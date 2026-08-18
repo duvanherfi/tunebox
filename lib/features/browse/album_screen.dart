@@ -1,13 +1,9 @@
-import 'dart:ui';
-
-import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 
-import '../../core/theme/app_theme.dart';
 import '../../data/models/playlist.dart';
-import '../../data/models/song.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
+import '../shared/collection_header.dart';
 import '../shared/skeleton.dart';
 import '../shared/song_list_view.dart';
 
@@ -58,6 +54,12 @@ class _AlbumScreenState extends State<AlbumScreen> {
                   subtitle: page.subtitle,
                   thumbnailUrl: page.thumbnailUrl,
                   songs: page.songs,
+                  collection: Playlist(
+                    browseId: widget.browseId,
+                    title: page.title.isEmpty ? widget.title : page.title,
+                    subtitle: page.subtitle,
+                    thumbnailUrl: page.thumbnailUrl,
+                  ),
                 ),
               ),
               if (page.songs.isEmpty)
@@ -78,129 +80,6 @@ class _AlbumScreenState extends State<AlbumScreen> {
           );
         },
       ),
-    );
-  }
-}
-
-/// Cover, name and the two ways in: straight through, or shuffled.
-class CollectionHeader extends StatelessWidget {
-  const CollectionHeader({
-    super.key,
-    required this.title,
-    required this.subtitle,
-    required this.thumbnailUrl,
-    required this.songs,
-    this.round = false,
-  });
-
-  final String title;
-  final String subtitle;
-  final String? thumbnailUrl;
-  final List<Song> songs;
-
-  /// Artists are people, and a circle reads as one; a record is a square.
-  final bool round;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
-
-    return Stack(
-      children: [
-        // The cover again, blurred and fading out behind its own header, so a
-        // record's page takes the colour of the record.
-        if (thumbnailUrl != null)
-          Positioned.fill(
-            child: ShaderMask(
-              shaderCallback: (bounds) => LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.black.withValues(alpha: 0.55),
-                  Colors.black.withValues(alpha: 0.12),
-                  Colors.transparent,
-                ],
-                stops: const [0, 0.7, 0.92],
-              ).createShader(bounds),
-              blendMode: BlendMode.dstIn,
-              child: ImageFiltered(
-                imageFilter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
-                child: Image.network(
-                  thumbnailUrl!,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
-                ),
-              ),
-            ),
-          ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
-          child: Column(
-            children: [
-              Artwork(
-                url: thumbnailUrl,
-                size: 200,
-                radius: round ? 100 : AppTheme.radiusCard,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              if (subtitle.isNotEmpty) ...[
-                const SizedBox(height: 6),
-                Text(
-                  subtitle,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  FilledButton.icon(
-                    onPressed: songs.isEmpty
-                        ? null
-                        : () async {
-                            await playerService.setShuffleMode(
-                              AudioServiceShuffleMode.none,
-                            );
-                            await playerService.setQueue(songs);
-                          },
-                    icon: const Icon(Icons.play_arrow_rounded),
-                    label: Text(l10n.play),
-                  ),
-                  const SizedBox(width: 12),
-                  FilledButton.tonalIcon(
-                    onPressed: songs.isEmpty
-                        ? null
-                        : () async {
-                            // Shuffle first, so the queue arrives already scrambled
-                            // rather than starting on track one and jumping.
-                            await playerService.setShuffleMode(
-                              AudioServiceShuffleMode.all,
-                            );
-                            await playerService.setQueue(songs);
-                          },
-                    icon: const Icon(Icons.shuffle_rounded),
-                    label: Text(l10n.shuffle),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

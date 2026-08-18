@@ -281,6 +281,41 @@ class AppLocalizationsEs extends AppLocalizations {
   String get menuRadioStarted => 'Radio iniciada';
 
   @override
+  String get collectionSave => 'Guardar en la biblioteca';
+
+  @override
+  String get collectionRemove => 'Quitar de la biblioteca';
+
+  @override
+  String get collectionSaved => 'Guardada en tu biblioteca';
+
+  @override
+  String get collectionRemoved => 'Quitada de tu biblioteca';
+
+  @override
+  String collectionSyncFailed(String reason) {
+    return 'Guardada aquí. No se le pudo avisar a YouTube: $reason';
+  }
+
+  @override
+  String get collectionMore => 'Más opciones';
+
+  @override
+  String get collectionDownloadAll => 'Descargar todas las canciones';
+
+  @override
+  String collectionDownloading(int count) {
+    return 'Descargando $count canciones';
+  }
+
+  @override
+  String get librarySaved => 'Guardadas';
+
+  @override
+  String get libraryEmptySaved =>
+      'Aún no guardas nada. El corazón de una playlist la deja aquí.';
+
+  @override
   String get lyricsTitle => 'Letra';
 
   @override

@@ -492,6 +492,42 @@ class InnertubeClient {
     return songs.where((song) => song.videoId != videoId).toList();
   }
 
+  /// What YouTube would play after this whole collection.
+  ///
+  /// The same endpoint as a track's radio, seeded by the list instead of by one
+  /// song: `RDAMPL` glued onto the playlist id is what YouTube's own "start
+  /// radio" on a playlist asks for. Passing a `videoId` as well would pin the
+  /// mix to that track, which is the other feature.
+  Future<List<Song>> collectionRadio(String playlistId) async {
+    final id = _bareId(playlistId);
+    final json = await _post(_musicBase, 'next', _webRemix, {
+      'playlistId': id.startsWith('RDAMPL') ? id : 'RDAMPL$id',
+      'isAudioOnly': true,
+    });
+    return parseWatchQueue(json);
+  }
+
+  /// Adds or removes a playlist from the account's library.
+  ///
+  /// The collection-level twin of [setLiked]: YouTube models saving a playlist
+  /// as liking it, so it goes through the same endpoint with a playlist target.
+  Future<void> setCollectionSaved(String playlistId, bool saved) async {
+    _requireSession();
+    await _post(
+      _musicBase,
+      saved ? 'like/like' : 'like/removelike',
+      _webRemix,
+      {
+        'target': {'playlistId': _bareId(playlistId)},
+      },
+    );
+  }
+
+  /// A browse id without the `VL` a library shelf prefixes it with. Everything
+  /// but `browse` wants the bare playlist id.
+  static String _bareId(String playlistId) =>
+      playlistId.startsWith('VL') ? playlistId.substring(2) : playlistId;
+
   /// An artist's page: their popular tracks, then their albums and singles.
   Future<MusicPage> artistPage(String browseId) async {
     final json = await browse(browseId);
@@ -536,15 +572,26 @@ class InnertubeClient {
   }
 
   /// Adds a track to one of the account's playlists.
-  Future<void> addToPlaylist(String playlistId, String videoId) async {
+  Future<void> addToPlaylist(String playlistId, String videoId) =>
+      addAllToPlaylist(playlistId, [videoId]);
+
+  /// Adds several tracks at once.
+  ///
+  /// One edit carrying every track rather than one request per track: a record
+  /// added song by song would be a hundred round trips, and YouTube accepts the
+  /// whole list in a single `actions` array.
+  Future<void> addAllToPlaylist(
+    String playlistId,
+    List<String> videoIds,
+  ) async {
     _requireSession();
+    if (videoIds.isEmpty) return;
     await _post(_musicBase, 'browse/edit_playlist', _webRemix, {
       // The edit endpoint wants the bare id, not the `VL` browse form.
-      'playlistId': playlistId.startsWith('VL')
-          ? playlistId.substring(2)
-          : playlistId,
+      'playlistId': _bareId(playlistId),
       'actions': [
-        {'action': 'ACTION_ADD_VIDEO', 'addedVideoId': videoId},
+        for (final videoId in videoIds)
+          {'action': 'ACTION_ADD_VIDEO', 'addedVideoId': videoId},
       ],
     });
   }

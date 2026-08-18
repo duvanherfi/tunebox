@@ -137,7 +137,7 @@ class _SongMenu extends StatelessWidget {
             title: Text(l10n.menuAddToPlaylist),
             onTap: () {
               Navigator.of(context).pop();
-              showPlaylistPicker(context, song);
+              showPlaylistPicker(context, [song]);
             },
           ),
           if (session.isSignedIn) ...[
@@ -221,7 +221,11 @@ class _SongMenu extends StatelessWidget {
 /// The account's playlists are fetched when the sheet opens rather than kept
 /// around: they change from other devices, and a stale list here would silently
 /// add a song to the wrong place.
-Future<void> showPlaylistPicker(BuildContext context, Song song) {
+/// Asks which playlist to add to.
+///
+/// Takes a list rather than a track because a whole record is added the same
+/// way a single song is, and going one by one would be one request per track.
+Future<void> showPlaylistPicker(BuildContext context, List<Song> songs) {
   return showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
@@ -229,14 +233,14 @@ Future<void> showPlaylistPicker(BuildContext context, Song song) {
     constraints: BoxConstraints(
       maxHeight: MediaQuery.sizeOf(context).height * 0.7,
     ),
-    builder: (_) => _PlaylistPicker(song: song),
+    builder: (_) => _PlaylistPicker(songs: songs),
   );
 }
 
 class _PlaylistPicker extends StatefulWidget {
-  const _PlaylistPicker({required this.song});
+  const _PlaylistPicker({required this.songs});
 
-  final Song song;
+  final List<Song> songs;
 
   @override
   State<_PlaylistPicker> createState() => _PlaylistPickerState();
@@ -250,7 +254,10 @@ class _PlaylistPickerState extends State<_PlaylistPicker> {
     final l10n = AppLocalizations.of(context)!;
     Navigator.of(context).pop();
     try {
-      await innertube.addToPlaylist(playlist.browseId, widget.song.videoId);
+      await innertube.addAllToPlaylist(
+        playlist.browseId,
+        [for (final song in widget.songs) song.videoId],
+      );
       messenger.showSnackBar(
         SnackBar(content: Text(l10n.menuAddedTo(playlist.title))),
       );
@@ -266,7 +273,9 @@ class _PlaylistPickerState extends State<_PlaylistPicker> {
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context)!;
     Navigator.of(context).pop();
-    await localPlaylists.add(id, widget.song);
+    for (final song in widget.songs) {
+      await localPlaylists.add(id, song);
+    }
     messenger.showSnackBar(SnackBar(content: Text(l10n.menuAddedTo(name))));
   }
 
@@ -299,7 +308,7 @@ class _PlaylistPickerState extends State<_PlaylistPicker> {
 
     final messenger = ScaffoldMessenger.of(context);
     Navigator.of(context).pop();
-    await localPlaylists.create(name.trim(), songs: [widget.song]);
+    await localPlaylists.create(name.trim(), songs: widget.songs);
     messenger.showSnackBar(
       SnackBar(content: Text(l10n.menuAddedTo(name.trim()))),
     );

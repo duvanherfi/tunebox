@@ -23,6 +23,22 @@ class Playlist {
   /// Meaningless on its own, and never inspected: it is passed back as given.
   final String? params;
 
+  Map<String, Object?> toJson() => {
+        'browseId': browseId,
+        'title': title,
+        'subtitle': subtitle,
+        'thumbnailUrl': thumbnailUrl,
+        'params': params,
+      };
+
+  factory Playlist.fromJson(Map<String, dynamic> json) => Playlist(
+        browseId: json['browseId'] as String? ?? '',
+        title: json['title'] as String? ?? '',
+        subtitle: json['subtitle'] as String? ?? '',
+        thumbnailUrl: json['thumbnailUrl'] as String?,
+        params: json['params'] as String?,
+      );
+
   @override
   bool operator ==(Object other) =>
       other is Playlist && other.browseId == browseId;

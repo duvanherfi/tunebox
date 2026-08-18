@@ -608,6 +608,66 @@ abstract class AppLocalizations {
   /// **'Radio started'**
   String get menuRadioStarted;
 
+  /// No description provided for @collectionSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save to library'**
+  String get collectionSave;
+
+  /// No description provided for @collectionRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from library'**
+  String get collectionRemove;
+
+  /// No description provided for @collectionSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved to your library'**
+  String get collectionSaved;
+
+  /// No description provided for @collectionRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed from your library'**
+  String get collectionRemoved;
+
+  /// No description provided for @collectionSyncFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved here. YouTube was not told: {reason}'**
+  String collectionSyncFailed(String reason);
+
+  /// No description provided for @collectionMore.
+  ///
+  /// In en, this message translates to:
+  /// **'More options'**
+  String get collectionMore;
+
+  /// No description provided for @collectionDownloadAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Download every track'**
+  String get collectionDownloadAll;
+
+  /// No description provided for @collectionDownloading.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading {count} tracks'**
+  String collectionDownloading(int count);
+
+  /// No description provided for @librarySaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get librarySaved;
+
+  /// No description provided for @libraryEmptySaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing saved yet. The heart on a playlist keeps it here.'**
+  String get libraryEmptySaved;
+
   /// No description provided for @lyricsTitle.
   ///
   /// In en, this message translates to:
