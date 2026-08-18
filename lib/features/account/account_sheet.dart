@@ -130,8 +130,14 @@ class _AccountCard extends StatelessWidget {
         color: theme.colorScheme.secondaryContainer,
         borderRadius: BorderRadius.circular(AppTheme.radiusCard),
       ),
+      // Both, because the card is telling one story out of two sources that
+      // change at different moments: the session flips the instant someone
+      // signs in, and the name and photo land from the network afterwards.
+      // Listening only to the session leaves the panel showing the fallback
+      // until something else happens to rebuild it — which is what closing and
+      // reopening the sheet was doing.
       child: ListenableBuilder(
-        listenable: session,
+        listenable: Listenable.merge([session, accountStore]),
         builder: (context, _) {
           if (!session.isSignedIn) {
             return Row(
