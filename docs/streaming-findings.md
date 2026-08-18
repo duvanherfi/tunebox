@@ -225,6 +225,36 @@ nada si algún día YouTube los acepta. **El historial que la app muestra es
 propio**, guardado en el dispositivo (`PlayHistory`) y mezclado por encima del
 de la cuenta. Es lo mismo que hacen SimpMusic y OpenTune, y funciona sin sesión.
 
+### Acuñar la baliza con el cliente que sí escribe en la cuenta
+
+La pregunta obvia, viendo que el "me gusta" sí llega: si `WEB_REMIX` autenticado
+puede escribir en la cuenta, ¿por qué no pedirle a él la baliza y pinchearla,
+aunque el audio venga de otro? Medido el 18 de agosto de 2026, instrumentando la
+app contra la sesión real:
+
+- **`WEB_REMIX` con cookie de sesión responde `OK` y sí trae `playbackTracking`**
+  — las dos URLs, `playback` y `watchtime`. Sin cookie responde `UNPLAYABLE` y no
+  trae nada, así que una prueba anónima con `curl` engaña: parece que el cliente
+  no sirve para esto y sí sirve.
+- `ANDROID_MUSIC` e `IOS_MUSIC` contestan `LOGIN_REQUIRED` **incluso con la
+  sesión**. La preferencia por los clientes MUSIC en `_clientOrder` nunca llega a
+  aplicarse: siempre acaba sirviendo VISIONOS.
+- Sustituidas las URLs por las de `WEB_REMIX`, con su misma cabecera de cliente,
+  los dos pings volvieron a responder **204 y el historial de la cuenta no se
+  movió** — mismo recuento (200) y mismas tres primeras pistas antes y después.
+
+La explicación que queda en pie: la escucha se cuenta contra la sesión que
+**sirvió los bytes**, no contra quien pide la baliza. Un ping de `watchtime`
+sobre un `ei` que nunca entregó un solo byte describe una reproducción que no
+existió, y el servidor lo tira.
+
+Para cerrarlo habría que reproducir de verdad desde la respuesta de `WEB_REMIX`.
+Sus cuatro formatos de audio están ahí —itag 140 en m4a, 249/250/251 en opus—
+pero **todos vienen con `signatureCipher` y ninguno con `url`**. Es decir, el
+problema del historial no es de pings ni de sesión: es el mismo descifrado de
+firma que ya aparece más arriba en este documento. Con eso resuelto la cuenta
+contaría las escuchas; sin eso, no hay atajo.
+
 ### Trampa de `just_audio` que ocultó todo esto
 
 `AudioPlayer.play()` devuelve un futuro que se completa cuando la reproducción
