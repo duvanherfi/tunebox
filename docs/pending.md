@@ -1,50 +1,35 @@
 # Pendiente
 
 Lo que falta de la lista de funcionalidades y, sobre todo, **qué bloquea cada
-cosa**. Todo lo de aquí está parado porque hace falta una credencial o una
-decisión, no porque falte escribir código.
-
-Estado al publicar la 0.1.0 (16 de agosto de 2026).
-
-## Reconocer la canción que está sonando
-
-Escuchar unos segundos por el micrófono e identificar la pista, como Shazam.
-
-**Bloqueado por:** hace falta un servicio de huellas acústicas. No es algo que
-se pueda calcular en el dispositivo: la huella se compara contra un catálogo
-enorme que solo tienen unos pocos.
-
-- **AudD** — API HTTP sencilla, de pago desde el primer día.
-- **ShazamKit** — gratis, pero exige una clave de desarrollador de Apple y su
-  SDK de Android está descontinuado.
-
-**Decisión pendiente:** si vale la pena pagar por esto. Es la única de la lista
-con coste recurrente.
+cosa**.
 
 ## Actualizaciones desde la propia app
 
-Mirar la última release de GitHub, comparar con `version` de `pubspec.yaml`,
+Mirar la última release, comparar con el `versionCode` de `pubspec.yaml`,
 descargar el APK y lanzar el instalador (`REQUEST_INSTALL_PACKAGES`).
 
 **Bloqueado por:** el repositorio es privado, y los assets de una release
 privada no se descargan sin un token. Meter un token dentro del APK es
-regalarlo: cualquiera puede extraerlo.
+regalarlo — y además ese token da lectura al código, que es justo lo que el
+repo privado protege.
 
-**Decisión pendiente:** hacer público el repositorio, o dejar las
-actualizaciones a mano.
+**Decisión pendiente:** publicar las releases en un repo público aparte
+(`tunebox-releases`, sin código: solo tag, changelog y el APK firmado), que la
+app consulta sin credencial ninguna. Falta decidir dónde se firma: keystore
+como secret de Actions, o seguir construyendo en local y solo publicar.
 
-## Copia de seguridad en Google Drive
+# Descartado
 
-`data/backup.dart` ya exporta e importa los ajustes y el historial; lo que falta
-es subir ese archivo a Drive y hacerlo cada cierto tiempo.
-
-**Bloqueado por:** un proyecto nuevo en Google Cloud con la API de Drive
-activada y el scope `drive.appdata` — el que deja a la app guardar en una
-carpeta oculta que solo ella ve, sin pedir acceso a los archivos de nadie.
-
-## Importar de Spotify
-
-**Descartado** por decisión del proyecto.
+- **Reconocer la canción que está sonando** (tipo Shazam). Exige un servicio de
+  huellas acústicas: la huella se compara contra un catálogo enorme que solo
+  tienen unos pocos, no es algo que se calcule en el dispositivo. AudD es de
+  pago desde el primer día y ShazamKit tiene su SDK de Android descontinuado.
+  Era la única función de la lista con coste recurrente.
+- **Copia de seguridad en Google Drive.** `data/backup.dart` ya exporta e
+  importa ajustes e historial a un archivo; subirlo a Drive exigía un proyecto
+  nuevo en Google Cloud con la API activada y el scope `drive.appdata`. El
+  export/import a mano se queda como está.
+- **Importar de Spotify.**
 
 # Cabos sueltos
 

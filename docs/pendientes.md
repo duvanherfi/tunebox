@@ -97,8 +97,10 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
 
 ## Pendiente
 
-Nada abierto. Lo siguiente sale de "Suelto, sin diagnosticar" o de una idea
-nueva.
+- **Actualizaciones desde la propia app.** Diseño validado y escrito en
+  `docs/superpowers/specs/2026-08-19-in-app-updates-design.md`; ahí está el
+  orden de trabajo y lo que hace el humano. Sin implementar todavía. El primer
+  paso es de Duvan y es irreversible: abrir el repositorio.
 
 ## Sabido y descartado
 
