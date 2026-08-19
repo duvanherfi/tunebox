@@ -40,6 +40,8 @@ class Settings extends ChangeNotifier {
   static const _nightstandBurnInKey = 'nightstand_burn_in';
   static const _nightstandIdleKey = 'nightstand_idle_seconds';
   static const _nightstandChargeKey = 'nightstand_on_charge';
+  static const _updateCheckKey = 'update_check';
+  static const _updateCheckedAtKey = 'update_checked_at';
 
   bool autoplay = true;
   double speed = 1;
@@ -96,6 +98,17 @@ class Settings extends ChangeNotifier {
   /// Whether plugging the phone in, with music playing, brings it up.
   bool nightstandOnCharge = false;
 
+  /// Whether the app looks for a new release on its own.
+  ///
+  /// On by default, unlike the two nightstand switches above: there the
+  /// automatic thing takes the screen, here it is a sheet that goes away with
+  /// a tap, and an updater nobody turns on is an updater nobody has.
+  bool updateCheck = true;
+
+  /// When the last look was, in milliseconds since the epoch. Zero means
+  /// never. Kept so the check happens once a day rather than once a launch.
+  int updateCheckedAt = 0;
+
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
     autoplay = prefs.getBool(_autoplayKey) ?? autoplay;
@@ -120,6 +133,8 @@ class Settings extends ChangeNotifier {
         prefs.getInt(_nightstandIdleKey) ?? nightstandIdleSeconds;
     nightstandOnCharge =
         prefs.getBool(_nightstandChargeKey) ?? nightstandOnCharge;
+    updateCheck = prefs.getBool(_updateCheckKey) ?? updateCheck;
+    updateCheckedAt = prefs.getInt(_updateCheckedAtKey) ?? updateCheckedAt;
     bandGains = prefs
             .getStringList(_bandsKey)
             ?.map((value) => double.tryParse(value) ?? 0.0)
@@ -213,6 +228,16 @@ class Settings extends ChangeNotifier {
   Future<void> setNightstandOnCharge(bool value) => _write(
         () => nightstandOnCharge = value,
         (p) => p.setBool(_nightstandChargeKey, value),
+      );
+
+  Future<void> setUpdateCheck(bool value) => _write(
+        () => updateCheck = value,
+        (p) => p.setBool(_updateCheckKey, value),
+      );
+
+  Future<void> setUpdateCheckedAt(DateTime at) => _write(
+        () => updateCheckedAt = at.millisecondsSinceEpoch,
+        (p) => p.setInt(_updateCheckedAtKey, at.millisecondsSinceEpoch),
       );
 
   Future<void> _write(

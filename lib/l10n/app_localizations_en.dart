@@ -356,7 +356,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsSystem => 'System';
 
   @override
-  String get settingsSystemBody => 'The home screen widget';
+  String get settingsSystemBody => 'The home screen widget and updates';
 
   @override
   String get settingsPlayback => 'Playback';
@@ -920,4 +920,62 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get nightstandOpen => 'Nightstand mode';
+
+  @override
+  String get settingsUpdateNow => 'Check now';
+
+  @override
+  String get settingsUpdates => 'Updates';
+
+  @override
+  String settingsUpdatesInstalled(String version) {
+    return 'Version $version installed';
+  }
+
+  @override
+  String get settingsUpdateCheck => 'Look for updates on their own';
+
+  @override
+  String get settingsUpdateCheckBody =>
+      'Once a day. It only says something when there is a new version.';
+
+  @override
+  String get updateTitle => 'There is a new version';
+
+  @override
+  String updateSubtitle(String version, String size) {
+    return 'Version $version · $size MB';
+  }
+
+  @override
+  String get updateNotes => 'What is new';
+
+  @override
+  String get updateDownload => 'Download';
+
+  @override
+  String get updateInstall => 'Install';
+
+  @override
+  String get updateDownloading => 'Downloading…';
+
+  @override
+  String get updateChecking => 'Looking…';
+
+  @override
+  String get updateUpToDate => 'You are on the latest version.';
+
+  @override
+  String get updateFailed => 'GitHub could not be reached. Try again later.';
+
+  @override
+  String get updatePermission =>
+      'Android has to be told that Tunebox may install apps.';
+
+  @override
+  String get updatePermissionOpen => 'Open settings';
+
+  @override
+  String get updateSignature =>
+      'The file that arrived is not signed by Tunebox. It has been discarded and nothing was installed.';
 }

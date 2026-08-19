@@ -359,7 +359,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsSystem => 'Sistema';
 
   @override
-  String get settingsSystemBody => 'El widget de la pantalla de inicio';
+  String get settingsSystemBody =>
+      'El widget de la pantalla de inicio y las actualizaciones';
 
   @override
   String get settingsPlayback => 'Reproducción';
@@ -923,4 +924,63 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get nightstandOpen => 'Modo mesita de noche';
+
+  @override
+  String get settingsUpdateNow => 'Buscar ahora';
+
+  @override
+  String get settingsUpdates => 'Actualizaciones';
+
+  @override
+  String settingsUpdatesInstalled(String version) {
+    return 'Versión $version instalada';
+  }
+
+  @override
+  String get settingsUpdateCheck => 'Buscar actualizaciones solo';
+
+  @override
+  String get settingsUpdateCheckBody =>
+      'Una vez al día. Solo avisa cuando hay una versión nueva.';
+
+  @override
+  String get updateTitle => 'Hay una versión nueva';
+
+  @override
+  String updateSubtitle(String version, String size) {
+    return 'Versión $version · $size MB';
+  }
+
+  @override
+  String get updateNotes => 'Novedades';
+
+  @override
+  String get updateDownload => 'Descargar';
+
+  @override
+  String get updateInstall => 'Instalar';
+
+  @override
+  String get updateDownloading => 'Descargando…';
+
+  @override
+  String get updateChecking => 'Buscando…';
+
+  @override
+  String get updateUpToDate => 'Ya tienes la última versión.';
+
+  @override
+  String get updateFailed =>
+      'No se ha podido consultar GitHub. Inténtalo más tarde.';
+
+  @override
+  String get updatePermission =>
+      'Hay que decirle a Android que Tunebox puede instalar aplicaciones.';
+
+  @override
+  String get updatePermissionOpen => 'Abrir ajustes';
+
+  @override
+  String get updateSignature =>
+      'El archivo que ha llegado no está firmado por Tunebox. Se ha descartado y no se ha instalado nada.';
 }

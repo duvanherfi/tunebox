@@ -755,7 +755,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsSystemBody.
   ///
   /// In en, this message translates to:
-  /// **'The home screen widget'**
+  /// **'The home screen widget and updates'**
   String get settingsSystemBody;
 
   /// No description provided for @settingsPlayback.
@@ -1771,6 +1771,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Nightstand mode'**
   String get nightstandOpen;
+
+  /// No description provided for @settingsUpdateNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Check now'**
+  String get settingsUpdateNow;
+
+  /// No description provided for @settingsUpdates.
+  ///
+  /// In en, this message translates to:
+  /// **'Updates'**
+  String get settingsUpdates;
+
+  /// No description provided for @settingsUpdatesInstalled.
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version} installed'**
+  String settingsUpdatesInstalled(String version);
+
+  /// No description provided for @settingsUpdateCheck.
+  ///
+  /// In en, this message translates to:
+  /// **'Look for updates on their own'**
+  String get settingsUpdateCheck;
+
+  /// No description provided for @settingsUpdateCheckBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Once a day. It only says something when there is a new version.'**
+  String get settingsUpdateCheckBody;
+
+  /// No description provided for @updateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'There is a new version'**
+  String get updateTitle;
+
+  /// No description provided for @updateSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version} · {size} MB'**
+  String updateSubtitle(String version, String size);
+
+  /// No description provided for @updateNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'What is new'**
+  String get updateNotes;
+
+  /// No description provided for @updateDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Download'**
+  String get updateDownload;
+
+  /// No description provided for @updateInstall.
+  ///
+  /// In en, this message translates to:
+  /// **'Install'**
+  String get updateInstall;
+
+  /// No description provided for @updateDownloading.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading…'**
+  String get updateDownloading;
+
+  /// No description provided for @updateChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Looking…'**
+  String get updateChecking;
+
+  /// No description provided for @updateUpToDate.
+  ///
+  /// In en, this message translates to:
+  /// **'You are on the latest version.'**
+  String get updateUpToDate;
+
+  /// No description provided for @updateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'GitHub could not be reached. Try again later.'**
+  String get updateFailed;
+
+  /// No description provided for @updatePermission.
+  ///
+  /// In en, this message translates to:
+  /// **'Android has to be told that Tunebox may install apps.'**
+  String get updatePermission;
+
+  /// No description provided for @updatePermissionOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Open settings'**
+  String get updatePermissionOpen;
+
+  /// No description provided for @updateSignature.
+  ///
+  /// In en, this message translates to:
+  /// **'The file that arrived is not signed by Tunebox. It has been discarded and nothing was installed.'**
+  String get updateSignature;
 }
 
 class _AppLocalizationsDelegate

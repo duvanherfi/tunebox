@@ -9,6 +9,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'core/audio/player_service.dart';
 import 'core/auth/session.dart';
 import 'core/innertube/innertube_client.dart';
+import 'core/install/installer.dart';
 import 'core/lyrics/lyrics_client.dart';
 import 'core/scrobble/scrobbler.dart';
 import 'core/theme/app_theme.dart';
@@ -27,8 +28,10 @@ import 'data/play_history.dart';
 import 'data/recent_searches.dart';
 import 'data/resume_point.dart';
 import 'data/settings.dart';
+import 'data/updates.dart';
 import 'features/home/home_screen.dart';
 import 'features/nightstand/charge_watcher.dart';
+import 'features/settings/update_sheet.dart';
 import 'l10n/app_localizations.dart';
 
 /// Single shared instances. The audio handler is a process-wide singleton by
@@ -52,6 +55,7 @@ late final SavedCollections savedCollections;
 final DeviceSongs deviceSongs = DeviceSongs();
 late final RecentSearches recentSearches;
 late final ResumePoint resumePoint;
+late final Updates updates;
 
 /// The navigator, reachable from things that are not widgets. The nightstand's
 /// charge watcher is the first of them: it lives on a stream, not on a screen.
@@ -195,11 +199,41 @@ Future<void> main() async {
   // battery event arrives, which is long after the navigator exists.
   chargeWatcher = ChargeWatcher(navigatorKey: navigatorKey)..start();
 
+  // Only Android can install what this would find, and load() reads the
+  // package info the settings screen shows besides.
+  updates = Updates();
+  if (Installer.isSupported) await updates.load();
+
   runApp(const TuneboxApp());
 
   // Asked after the first frame is on its way, so the dialog has a window to
   // land on.
   unawaited(_askAboutNotifications());
+
+  // Not awaited either: a release from last week can wait for the network,
+  // and nothing on screen depends on the answer.
+  unawaited(_maybeOfferUpdate());
+}
+
+/// Looks for a new release once a day, and speaks only when there is one.
+///
+/// Silence is the whole design: an updater that reports "you are up to date"
+/// unasked is noise, and one that reports a tunnel is noise about something
+/// nobody can act on. Both answers are kept for the button in settings, which
+/// was asked.
+Future<void> _maybeOfferUpdate() async {
+  if (!Installer.isSupported || !settings.updateCheck) return;
+
+  final last = DateTime.fromMillisecondsSinceEpoch(settings.updateCheckedAt);
+  if (DateTime.now().difference(last) < const Duration(days: 1)) return;
+
+  final release = await updates.check();
+  await settings.setUpdateCheckedAt(DateTime.now());
+  if (release == null) return;
+
+  final context = navigatorKey.currentContext;
+  if (context == null || !context.mounted) return;
+  await showUpdateSheet(context);
 }
 
 /// Asks for the notification permission Android 13 introduced.
