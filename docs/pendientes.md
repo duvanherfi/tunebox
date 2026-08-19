@@ -22,6 +22,34 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
   shrinker los respetara, y ese fallo solo aparece en release, donde ningún
   emulador lo enseña.
 
+- **Job de build en CI.** Dos jobs nuevos junto al de analyze/test: `android`
+  corre `build apk --release` y `macos` corre `build macos --release`. Van **en
+  paralelo** con las comprobaciones, no detrás: un `analyze` en rojo suele ser
+  un lint, que no dice nada sobre si la cosa compila, y esperar tres minutos a
+  saberlo cuesta más de lo que ahorra.
+  El que vale es el de Android. La comprobación de drawables que solo existía
+  dentro de `tool/release.sh` se fue a `tool/check_drawables.sh` y la llaman los
+  dos, así que una rama y una release se miran con el mismo código en vez de con
+  dos copias que se separan. Busca los nombres dentro del APK con `aapt2`, no en
+  `keep.xml`: el test unitario ya vigila que `keep.xml` y Dart vayan en paralelo,
+  lo que no puede saber es si el shrinker le hizo caso, y ese fallo solo existe
+  en release.
+  En CI no hay `key.properties`, así que el APK sale firmado con la llave de
+  debug. Da igual: lo que se comprueba aquí es el shrinker, no la firma, y nada
+  de lo que construye este job se instala nunca. La firma es cosa de
+  `release.sh`, donde está la llave de verdad.
+  El de macOS firma ad-hoc — el proyecto de Xcode pide identidad `-`, así que no
+  necesita certificado y no produce nada distribuible. Está porque macOS es la
+  plataforma que nadie corre a mano: los entitlements, los pods y el catálogo de
+  iconos se rompen en silencio hasta que alguien los construye.
+  Java pineado a Temurin 17 con `setup-java`, que es contra lo que compila
+  `build.gradle.kts`; la imagen del runner trae varios JDK y elige el suyo.
+  **Sin pinear las acciones por SHA**: este workflow no lee ningún secret. Esa
+  condición es del de firma, que sigue pendiente.
+  Verificado en local antes de subir: los doce drawables vivos en un
+  `build apk --release` de verdad, el camino de fallo probado metiendo un nombre
+  que no existe, y `tunebox.app` construido.
+
 - **Actualizaciones desde la propia app** (pasos 5-8 del diseño). El updater
   entero, menos publicar la release que lo estrena. `lib/data/updates.dart`
   pregunta a la API pública de GitHub y **nunca lanza**: un túnel, un rate
@@ -163,9 +191,6 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
   quien actualice desde la 0.1.4 verá los asteriscos una vez más, y a partir de
   la 0.1.5 no. No hay nada que hacer con la release ya publicada — el cuerpo en
   GitHub es Markdown y ahí está bien.
-- **Job de build en CI.** Ahora que sale gratis: `build apk --release` mirando
-  los drawables dentro del APK, y `build macos`. Hilo aparte, no depende del
-  updater.
 - **Firmar en CI: secrets subidos, workflow por escribir.** La llave vive en el
   environment `release` como `KEYSTORE_BASE64` (el `.jks` en base64, round-trip
   verificado contra el SHA-256 del original), `KEYSTORE_PASSWORD`,

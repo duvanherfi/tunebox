@@ -30,14 +30,9 @@ for tool in flutter git gh; do
 done
 
 sdk=${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}
-# The newest build-tools installed; these two live only inside the SDK.
-tools=$(ls -d "$sdk"/build-tools/*/ 2>/dev/null | sort -V | tail -1)
-apksigner="${tools}apksigner"
-aapt2="${tools}aapt2"
-[[ -x "$apksigner" && -x "$aapt2" ]] || {
-  echo "no apksigner/aapt2 under $sdk/build-tools" >&2
-  exit 1
-}
+# The newest build-tools installed; apksigner lives only inside the SDK.
+apksigner=$(ls -d "$sdk"/build-tools/*/ 2>/dev/null | sort -V | tail -1)apksigner
+[[ -x "$apksigner" ]] || { echo "no apksigner under $sdk/build-tools" >&2; exit 1; }
 
 [[ -f android/key.properties ]] || {
   echo "android/key.properties missing — this would sign with the debug key" >&2
@@ -101,25 +96,8 @@ grep -qx "$expected" <<<"$signed" || {
 echo "signed by $alias"
 
 echo "==> pinned drawables"
-# Every drawable Dart reaches by name, checked inside the built APK rather than
-# against res/raw/keep.xml. The unit test already keeps keep.xml in step with
-# the Dart sources; what it cannot know is whether the shrinker obeyed it, and
-# that is the failure that only exists in a release build. If one is gone,
-# getIdentifier answers 0, audio_service throws out of every setPlaybackState,
-# and the notification and the car's media session die with it.
-missing=()
-resources=$("$aapt2" dump resources "$asset")
-while read -r drawable; do
-  grep -q "drawable/$drawable" <<<"$resources" || missing+=("$drawable")
-done < <(
-  grep -rhoE "'(drawable/)?ic_[a-z0-9_]+'" lib \
-    | tr -d "'" | sed 's|^drawable/||' | sort -u
-)
-((${#missing[@]} == 0)) || {
-  echo "the shrinker deleted: ${missing[*]}" >&2
-  exit 1
-}
-echo "all pinned drawables survived"
+# Shared with CI, so a branch and a release are checked by the same code.
+tool/check_drawables.sh "$asset"
 
 echo "==> publishing"
 git tag -a "$tag" -m "Tunebox $version"

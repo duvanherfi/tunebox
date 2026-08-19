@@ -16,8 +16,8 @@ jobs:
   check:
     name: Analyze and test
     runs-on: ubuntu-latest
-    # The default is six hours, which is long enough for one hung job to eat a
-    # private repository's whole monthly allowance.
+    # The default is six hours, which is how long a hung job sits there holding
+    # the branch's concurrency slot before anyone finds out.
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
@@ -36,3 +36,63 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
+
+  # The builds run alongside the checks rather than after them: a failing
+  # analyze is usually a lint, which says nothing about whether the thing
+  # compiles, and waiting three minutes to find out costs more than it saves.
+  android:
+    name: Build Android release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      # Pinned to what the app compiles against (build.gradle.kts asks for
+      # source and target 17). The runner image ships more than one JDK and
+      # picks its own default, which is exactly the kind of thing that moves.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.41.6
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      # android/key.properties is not in the repository, so this signs with the
+      # debug key. That is fine: what is being checked here is the shrinker, not
+      # the signature, and nothing built by this job is ever installed. The
+      # signature is tool/release.sh's job, where the real key lives.
+      - run: flutter build apk --release
+
+      # The reason this job exists. The release build shrinks resources and the
+      # shrinker cannot see a drawable that only Dart names as a string; when it
+      # deletes one, audio_service throws out of every setPlaybackState and the
+      # notification and the car's media session die. No emulator shows it,
+      # because only release builds shrink.
+      - run: tool/check_drawables.sh build/app/outputs/flutter-apk/app-release.apk
+
+  macos:
+    name: Build macOS release
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.41.6
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      # Signed ad-hoc — the Xcode project asks for identity "-", so this needs
+      # no certificate and produces nothing distributable. It is here because
+      # macOS is the platform nobody runs by hand: the entitlements, the pods
+      # and the icon catalogue all break silently until something builds them.
+      - run: flutter build macos --release
