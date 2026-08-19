@@ -5,7 +5,22 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
 
 ## Hecho
 
-- **Modo mesita de noche** (punto 1). Pantalla propia sobre negro puro: reloj
+- **Iconos en todas las plataformas** (punto 1). La marca — la caja blanca con
+  la nota sobre el rosa `#C2185B` — solo existía en el adaptive icon de Android;
+  el resto de plataformas seguía enseñando el logo de Flutter del `flutter
+  create`. Ahora sale toda de `tool/icons/*.svg`, que son los mismos paths del
+  `ic_launcher_foreground`, y `tool/icons/generate.sh` los rasteriza a los
+  mipmap heredados de Android, al catálogo de macOS, a los quince de iOS, al
+  `.ico` de Windows y a un PNG para Linux. Se corre a mano y los resultados se
+  versionan: la ilustración cambia una vez al año y un build que reescribe
+  binarios rastreados convierte cada diff en una pregunta. **No hay ningún
+  `.icns`** — Flutter en macOS usa el catálogo `AppIcon.appiconset` y Xcode lo
+  compila dentro de `Assets.car`. De paso, el test de `keep.xml` tenía un hueco:
+  buscaba `'drawable/xxx'` y los iconos de los estantes del coche se pasan
+  pelados a `_shelf(…)`, así que doce nombres viajaban sin vigilancia y sólo el
+  comodín `ic_auto_*` los salvaba por casualidad.
+
+- **Modo mesita de noche**. Pantalla propia sobre negro puro: reloj
   grande con la hora del sistema, fecha, carátula, título, progreso y
   controles, todo configurable pieza a pieza desde una sexta puerta en Ajustes.
   No es el AOD del sistema sino su contrario — el teléfono **despierto**, con el
@@ -62,17 +77,11 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
   alto de las barras viaja como `padding` del `MediaQuery` y cada scrollable lo
   suma a su relleno inferior: el contenido llega al borde y pasa por detrás.
 
-> Todo este bloque está en `main`. Hasta la mesita de noche, subido a `origin`
-> (18 de agosto de 2026); la mesita está fusionada pero **sin empujar** (19 de
-> agosto de 2026).
+> Todo este bloque está en `main` y subido a `origin` (19 de agosto de 2026).
 
 ## Pendiente
 
-1. **Iconos en todas las plataformas.** Recordar que el shrinker del release
-   borra los `drawable/` que solo se nombran desde Dart — `res/raw/keep.xml` y
-   `test/android_icon_resources_test.dart` los mantienen en pareja. Revisar
-   además el icono de la app en macOS (`.icns`).
-2. **Workflow de CI.** `flutter analyze`, `flutter test` y build de Android y
+1. **Workflow de CI.** `flutter analyze`, `flutter test` y build de Android y
    macOS en cada push. Opcionalmente un job de Linux en `continue-on-error` para
    medir cuánto falta, sin bloquear.
 
@@ -90,6 +99,16 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
 
 ## Suelto, sin diagnosticar
 
+- **Los PNG heredados de Android no se han visto en un lanzador.** Sólo los lee
+  API 25 y anterior; el emulador a mano es API 36 y sirve el adaptive icon en su
+  lugar. Están comprobados como archivo, no como icono en una pantalla.
+- **El icono de macOS está a medias en Tahoe.** macOS 26 mete un icono del
+  estilo antiguo dentro de su propio squircle y lo pone sobre una placa, así que
+  el cuadrado de 824 se hunde una segunda vez y la marca sale pequeña sobre
+  fondo oscuro. Darle el arte a sangre lo arregla ahí y lo rompe en macOS 15 y
+  anteriores, donde nadie lo recorta y cae en el Dock como un cuadrado duro. Con
+  el destino en 10.15 se queda en la rejilla clásica. La salida buena es un
+  `.icon` de Icon Composer, que Tahoe lee de forma nativa.
 - **Suscribirse solo se probó sin sesión.** En el emulador la marca local, la
   radio del artista y compartir salieron bien, pero la escritura a la cuenta
   (`subscription/subscribe`) no se ha ejecutado nunca contra una real — el mismo

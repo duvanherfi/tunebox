@@ -1,0 +1,28 @@
+<!-- The same mark on Apple's macOS icon grid.
+
+     macOS is the one platform that does not mask the icon for you: what the
+     file contains is what the Dock draws. Its grid puts the rounded square at
+     824 of a 1024 canvas, so a full-bleed icon stands taller and squarer than
+     every neighbour and reads as the odd one out. The art inside keeps the same
+     proportion it has everywhere else — the whole 72-unit design from icon.svg,
+     scaled up to the 824 square.
+
+     macOS 26 muddies this. Tahoe masks an old-style icon into its own squircle
+     and sets it on a plate, so the 824 square gets inset a second time and the
+     mark comes out small on a dark backdrop — measured, not guessed: both
+     variants were built and read back out of the compiled bundle. Feeding it
+     the full-bleed icon.svg instead looks right on Tahoe and only there; on
+     macOS 15 and earlier nothing masks it and it lands in the Dock as a hard
+     square. The deployment target is 10.15, so this file stays on the grid: dim
+     everywhere beats perfect on one release and broken on the rest. The way out
+     of the trade is an Icon Composer .icon asset, which Tahoe reads natively —
+     worth doing when the target moves up. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <g transform="translate(100,100) scale(11.444444)">
+    <rect width="72" height="72" rx="16.2" fill="#C2185B"/>
+    <g transform="translate(12,12)">
+      <path fill="#FFFFFF" d="M6,0h36a6,6 0 0 1 6,6v36a6,6 0 0 1 -6,6h-36a6,6 0 0 1 -6,-6v-36a6,6 0 0 1 6,-6z"/>
+      <path fill="#C2185B" d="M20,12v16.2a6,6 0 1 0 4,5.6V18h8v-6z"/>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,17 @@
+<!-- The app mark, full bleed: a white box with a note in it on the brand pink.
+
+     This is not a second drawing of the icon. Android's adaptive icon already
+     composes exactly this — background @color/ic_launcher_background over
+     drawable/ic_launcher_foreground — and the paths below are that foreground's
+     paths, moved onto the 72dp square a square mask actually shows (the
+     adaptive canvas is 108dp; the outer 18dp on each side is never visible).
+     Everything a square-icon platform renders comes from here, so an old
+     Android, an iPhone and a Windows taskbar all show what a modern Android
+     shows. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 72 72">
+  <rect width="72" height="72" fill="#C2185B"/>
+  <g transform="translate(12,12)">
+    <path fill="#FFFFFF" d="M6,0h36a6,6 0 0 1 6,6v36a6,6 0 0 1 -6,6h-36a6,6 0 0 1 -6,-6v-36a6,6 0 0 1 6,-6z"/>
+    <path fill="#C2185B" d="M20,12v16.2a6,6 0 1 0 4,5.6V18h8v-6z"/>
+  </g>
+</svg>

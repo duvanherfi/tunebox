@@ -19,10 +19,15 @@ void main() {
   final drawables = Directory('android/app/src/main/res/drawable');
   final keepFile = File('android/app/src/main/res/raw/keep.xml');
 
-  /// `drawable/ic_favorite` in any Dart source under lib/.
+  /// Every `ic_…` literal in any Dart source under lib/, with or without the
+  /// `drawable/` prefix. Both forms reach a resource by name: the media
+  /// controls spell it out (`'drawable/ic_favorite'`), while the car's shelves
+  /// pass the bare name and let `_shelf` interpolate it into an
+  /// `android.resource://` URI. Matching only the prefixed form left the shelf
+  /// icons unchecked.
   Set<String> namedFromDart() {
     final named = <String>{};
-    final pattern = RegExp(r"'drawable/([a-z0-9_]+)'");
+    final pattern = RegExp(r"'(?:drawable/)?(ic_[a-z0-9_]+)'");
     for (final entry in Directory('lib').listSync(recursive: true)) {
       if (entry is! File || !entry.path.endsWith('.dart')) continue;
       for (final match in pattern.allMatches(entry.readAsStringSync())) {
