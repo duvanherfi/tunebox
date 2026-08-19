@@ -1,7 +1,7 @@
 name: Release
 
 # A tag, and nothing else. There is no branch trigger and no manual one: this
-# is the only job in the repository that can read the signing key, and the
+# is the only workflow in the repository that can read the signing key, and the
 # environment's deployment policy only admits refs matching v*, so a tag is
 # also the only ref that would get past it.
 on:
@@ -13,26 +13,27 @@ on:
 # published once — and cancelling a run that is halfway through publishing is
 # worse than letting it finish.
 
+# Nothing by default; the one job that needs to write gets it for itself.
+permissions: {}
+
 jobs:
-  release:
-    name: Build, sign and publish
+  # Everything that can be known from the commit alone, before either build
+  # spends its ten minutes. The tag is what a reader is handed and pubspec is
+  # what ends up inside both artifacts: if they disagree, the release is named
+  # after one version and carries another.
+  check:
+    name: Check the tag
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 5
 
     # In a fork this does nothing at all: the secrets live here, and a job that
     # cannot reach them would only produce a debug-signed apk under someone
-    # else's release page.
+    # else's release page. Every other job runs behind this one, so skipping it
+    # skips the lot.
     if: github.repository == 'duvanherfi/tunebox'
 
-    # The whole point of the file. The signing key is not a repository secret —
-    # it belongs to this environment, so no other workflow can read it — and
-    # the environment asks a reviewer before the job starts.
-    environment: release
-
-    # Enough to create the release and upload the apk to it. Nothing writes
-    # code, opens a pull request or touches packages.
-    permissions:
-      contents: write
+    outputs:
+      full: ${{ steps.version.outputs.full }}
 
     steps:
       # Third-party actions are pinned by commit, not by tag. A tag is a label
@@ -43,13 +44,36 @@ jobs:
       # reads no secrets.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      # Before the ten minutes of build, not after them. release.sh checks this
-      # too, but a tag can also be pushed by hand, and the notes are the one
-      # input the workflow takes that is not derived from the commit.
-      - name: Check the release notes exist
+      - id: version
         run: |
+          # The notes are the one input a release takes that is not derived
+          # from the commit, and release.sh can be bypassed by tagging by hand.
           notes="docs/releases/${GITHUB_REF_NAME}.md"
           [[ -s "$notes" ]] || { echo "no release notes at $notes" >&2; exit 1; }
+
+          full=$(sed -n 's/^version: *//p' pubspec.yaml | tr -d '[:space:]')
+          [[ "v${full%%+*}" == "${GITHUB_REF_NAME}" ]] || {
+            echo "pubspec says v${full%%+*} but the tag is ${GITHUB_REF_NAME}" >&2
+            exit 1
+          }
+          echo "full=$full" >> "$GITHUB_OUTPUT"
+
+  android:
+    name: Build and sign the apk
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: check
+
+    # Repeated rather than inherited, because this is the job the key reaches.
+    if: github.repository == 'duvanherfi/tunebox'
+
+    # The whole point of the file. The signing key is not a repository secret —
+    # it belongs to this environment, so no other workflow can read it — and
+    # the environment asks a reviewer before the job starts.
+    environment: release
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
@@ -87,48 +111,114 @@ jobs:
       # The build number rides in the file name because a GitHub release has
       # nowhere else to put it, and the in-app updater reads it from there to
       # decide whether it is looking at something newer.
+      #
+      # The version arrives through the environment rather than through ${{ }},
+      # here and below: an expression is pasted into the script before the
+      # shell sees it, and this is the one workflow where a value that turned
+      # out to be attacker-shaped would be pasted next to the key.
       - name: Name the asset after the version
-        id: version
-        run: |
-          full=$(sed -n 's/^version: *//p' pubspec.yaml | tr -d '[:space:]')
-          tag="v${full%%+*}"
-          [[ "$tag" == "${GITHUB_REF_NAME}" ]] || {
-            echo "pubspec says $tag but the tag is ${GITHUB_REF_NAME}" >&2
-            exit 1
-          }
-          cp build/app/outputs/flutter-apk/app-release.apk "build/tunebox-$full.apk"
-          echo "asset=build/tunebox-$full.apk" >> "$GITHUB_OUTPUT"
+        env:
+          FULL: ${{ needs.check.outputs.full }}
+        run: cp build/app/outputs/flutter-apk/app-release.apk "build/tunebox-$FULL.apk"
 
       # The two failures that produce a release nobody can use without saying
       # so. Both run the same scripts a local build runs.
-      #
-      # The asset path arrives through the environment rather than through
-      # ${{ }}, here and below: an expression is pasted into the script before
-      # the shell sees it, and this is the one workflow where a value that
-      # turned out to be attacker-shaped would be pasted next to the key.
       - name: Check the signature
         env:
-          ASSET: ${{ steps.version.outputs.asset }}
-        run: tool/check_signature.sh "$ASSET"
+          FULL: ${{ needs.check.outputs.full }}
+        run: tool/check_signature.sh "build/tunebox-$FULL.apk"
 
       - name: Check the pinned drawables
         env:
-          ASSET: ${{ steps.version.outputs.asset }}
-        run: tool/check_drawables.sh "$ASSET"
+          FULL: ${{ needs.check.outputs.full }}
+        run: tool/check_drawables.sh "build/tunebox-$FULL.apk"
 
       # Off the disk before anything else can read it. The runner is thrown
-      # away regardless, but the steps after this one do not need the key.
+      # away regardless, but nothing after this needs the key.
       - name: Forget the signing key
         if: always()
         run: rm -f android/tunebox.jks android/key.properties
 
-      # Last, so a failure anywhere above leaves the tag without a release —
-      # which is the state a tag can still be deleted from.
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: apk
+          path: build/tunebox-*.apk
+          if-no-files-found: error
+          # The release is where these live; this copy only has to survive
+          # until the publish job picks it up.
+          retention-days: 1
+
+  # No environment and no secrets: the app is signed ad-hoc, which needs no
+  # certificate, so this job has nothing to leak and nothing to wait for. It
+  # builds while the apk is still waiting for its approval.
+  macos:
+    name: Build the disk image
+    runs-on: macos-latest
+    timeout-minutes: 45
+    needs: check
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: 3.41.6
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - run: flutter build macos --release
+
+      # Builds the .dmg and reads it back: mounts it, checks the app inside
+      # verifies its own seal, carries both architectures and matches the
+      # version it is named after.
+      - run: tool/package_dmg.sh
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: dmg
+          path: build/tunebox-*.dmg
+          if-no-files-found: error
+          retention-days: 1
+
+  # Last, and on its own, so a failure in either build leaves the tag without a
+  # release — which is the state a tag can still be deleted from. It is also
+  # what keeps the two artifacts in one release instead of publishing whichever
+  # runner finished first.
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [check, android, macos]
+
+    # Enough to create the release and upload to it. Nothing writes code, opens
+    # a pull request or touches packages.
+    permissions:
+      contents: write
+
+    steps:
+      # For the notes, which are read from the tagged commit rather than
+      # carried through the build.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: apk
+          path: build
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: dmg
+          path: build
+
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
-          ASSET: ${{ steps.version.outputs.asset }}
+          FULL: ${{ needs.check.outputs.full }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" "$ASSET#$(basename "$ASSET")" \
+          gh release create "${GITHUB_REF_NAME}" \
+            "build/tunebox-$FULL.apk#tunebox-$FULL.apk" \
+            "build/tunebox-$FULL.dmg#tunebox-$FULL.dmg" \
             --notes-file "docs/releases/${GITHUB_REF_NAME}.md" \
             --title "Tunebox ${GITHUB_REF_NAME#v}"
