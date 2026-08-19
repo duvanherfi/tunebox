@@ -157,3 +157,13 @@ parte que YouTube puede romper unilateralmente, así que es la única que tiene
 tests: si las pantallas se vacían, estos tests señalan exactamente qué se movió.
 Para regrabar los fixtures, captura una respuesta nueva de `search` y `player` y
 reemplaza los archivos de `test/fixtures/`.
+
+## Licencia
+
+GPL-3.0. Copyright (C) 2026 Duvan Hernandez Figueroa. El texto completo está en
+[`LICENSE`](LICENSE).
+
+Copyleft fuerte: puedes usar, estudiar, modificar y redistribuir este código,
+pero si distribuyes una versión — con cambios o sin ellos — estás obligado a
+publicar su fuente bajo esta misma licencia. Es la que usan NewPipe, InnerTune y
+OuterTune, y viene sin garantía de ningún tipo.
