@@ -122,7 +122,7 @@ cd "$tmp/tap"
 git add Casks/tunebox.rb
 git diff --cached --quiet && { echo "the cask already points at $tag"; exit 0; }
 git commit -q -m "tunebox $version+$build"
-git push -q origin HEAD
+git push -q origin HEAD:main
 echo "==> $tap now serves $version+$build"
 echo
 echo "    brew install --cask $tap/tunebox"
