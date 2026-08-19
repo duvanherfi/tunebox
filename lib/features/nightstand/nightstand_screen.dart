@@ -118,6 +118,9 @@ class _NightstandScreenState extends State<NightstandScreen> {
   /// Side by side once the screen is wider than it is tall, for the same
   /// reason the full player does it: stacking a square cover above the rest on
   /// a phone lying down leaves the cover a sliver.
+  ///
+  /// The clock leads in both layouts. It is the thing a phone on a nightstand
+  /// is looked at for; the cover is what it happens to be playing.
   Widget _layout(BuildContext context, MediaItem? item) {
     final size = MediaQuery.sizeOf(context);
     final cover =
@@ -131,7 +134,13 @@ class _NightstandScreenState extends State<NightstandScreen> {
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                children: _panel(context, item),
+                children: [
+                  if (settings.nightstandClock) ...[
+                    const _Clock(),
+                    const SizedBox(height: 24),
+                  ],
+                  ..._panel(context, item),
+                ],
               ),
             ),
           ),
@@ -142,7 +151,12 @@ class _NightstandScreenState extends State<NightstandScreen> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
+        if (settings.nightstandClock) ...[
+          const _Clock(),
+          const SizedBox(height: 32),
+        ],
         if (cover != null) Flexible(child: cover),
+        const SizedBox(height: 24),
         ..._panel(context, item),
       ],
     );
@@ -155,10 +169,6 @@ class _NightstandScreenState extends State<NightstandScreen> {
         (mode == NightstandControls.onTouch && _awake);
 
     return [
-      if (settings.nightstandClock) ...[
-        const _Clock(),
-        const SizedBox(height: 24),
-      ],
       if (settings.nightstandTitle)
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32),
