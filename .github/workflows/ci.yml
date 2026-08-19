@@ -1,0 +1,38 @@
+name: CI
+
+# Every push, on any branch. Pull requests are deliberately not a trigger:
+# the branches here are all our own, so a PR would run the same commit twice.
+on:
+  push:
+  workflow_dispatch:
+
+# A second push supersedes the first. Without this the older run keeps burning
+# minutes on a commit nobody is waiting for any more.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Analyze and test
+    runs-on: ubuntu-latest
+    # The default is six hours, which is long enough for one hung job to eat a
+    # private repository's whole monthly allowance.
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      # Pinned rather than tracking stable. This toolchain is particular —
+      # permission_handler is held below 14 and compileSdk is 37 — so an SDK
+      # that moves on its own would turn an unrelated morning into a bisect.
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.41.6
+          channel: stable
+          cache: true
+
+      # No gen-l10n step: the generated localisations are committed, and
+      # `pub get` regenerates them anyway.
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
