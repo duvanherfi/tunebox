@@ -29,6 +29,8 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
   alto de las barras viaja como `padding` del `MediaQuery` y cada scrollable lo
   suma a su relleno inferior: el contenido llega al borde y pasa por detrás.
 
+> Los cinco commits de este bloque están en `main`, **sin subir a `origin`**.
+
 ## Pendiente
 
 1. **Separar los ajustes por dominio.** Hoy "Playback and sound" mezcla
