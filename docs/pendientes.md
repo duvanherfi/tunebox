@@ -36,7 +36,7 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
   alto de las barras viaja como `padding` del `MediaQuery` y cada scrollable lo
   suma a su relleno inferior: el contenido llega al borde y pasa por detrás.
 
-> Los commits de este bloque están en `main`, **sin subir a `origin`**.
+> Todo este bloque está en `main` y **subido a `origin`** (18 de agosto de 2026).
 
 ## Pendiente
 
