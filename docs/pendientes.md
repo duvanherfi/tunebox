@@ -121,8 +121,10 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
   versión que lo estrene tienen que decirlo.
   Verificado en local: `.dmg` de 24 MB construido, montado, la app de dentro
   universal (`x86_64 arm64`) y con el sello bueno, y el camino de fallo probado
-  metiendo un archivo dentro del bundle — lo rechaza. En CI no se ha ejecutado
-  nunca.
+  metiendo un archivo dentro del bundle — lo rechaza. Y por fin **instalada y
+  reproduciendo**: hasta ahora macOS solo constaba como que compila, que no dice
+  nada sobre el proxy ni la caché; instalada desde el `.dmg` a `/Applications`,
+  suena. En CI el job no se ha ejecutado nunca.
 
 - **Actualizaciones desde la propia app** (pasos 5-8 del diseño). El updater
   entero, menos publicar la release que lo estrena. `lib/data/updates.dart`
@@ -271,15 +273,14 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
 Cosas que funcionan a medias y conviene mirar antes de dar por cerrada una
 versión.
 
-- **Nadie ha instalado nunca el `.dmg`.** Está comprobado como archivo — monta,
-  el bundle de dentro verifica su sello y trae las dos arquitecturas — y no como
-  aplicación: no se ha arrastrado a `/Applications` ni se ha abierto desde ahí.
-  Lo que ve además quien lo baja de GitHub —el aviso de Gatekeeper y dónde está
-  el botón para autorizarlo— tampoco lo ha mirado nadie, y `spctl` no sirve para
-  contestarlo: rechaza una firma ad-hoc siempre, con cuarentena y sin ella.
-- **La app de macOS no se ha ejercitado nunca.** Se construye en cada push, pero
-  que compile no dice si reproduce: el proxy, la caché y las credenciales en el
-  keychain están probados en Android.
+- **El `.dmg` solo se ha instalado sin cuarentena.** Montado, arrastrado a
+  `/Applications` y abierto desde ahí, funciona (19 de agosto de 2026, macOS
+  26.6). Lo que no se ha visto es el otro camino, que es el único que recorre un
+  lector: un archivo que baja de GitHub trae el atributo de cuarentena y
+  Gatekeeper lo para, y en macOS 26 el ctrl-clic ya no lo salva — hay que
+  autorizarlo desde Ajustes. Falta ver el aviso para poder describirlo en las
+  notas. `spctl` no contesta esto: rechaza una firma ad-hoc siempre, con
+  cuarentena y sin ella.
 - **Las carátulas no cargan en el navegador del emulador Automotive.** Salen
   como el marcador azul de siempre, y es cosa del emulador: el 18 de agosto de
   2026 se probó la proyección con el DHU sobre un teléfono real y un APK de
