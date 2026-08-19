@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The one directory the installer is allowed to read from: where the updater
+     puts the APK it just downloaded. Everything else in this app's storage
+     stays private. -->
+<paths>
+    <cache-path name="updates" path="updates/"/>
+</paths>

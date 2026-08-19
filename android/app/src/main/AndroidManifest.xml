@@ -12,6 +12,9 @@
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32"/>
+    <!-- To hand the system installer an APK this app downloaded. There is no
+         store here, so an update arrives no other way. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
 
     <application
         android:label="Tunebox"
@@ -73,6 +76,19 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/tunebox_widget_info"/>
         </receiver>
+
+        <!-- Lends the system installer a read grant on the downloaded APK.
+             Its own authority rather than share_plus's, so the installer sees
+             only the updates directory and nothing that gets shared. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.updates"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/update_file_paths"/>
+        </provider>
 
         <!-- Declares the app as a media source for Android Auto. The session
              and browsing tree are the same ones the phone uses. -->

@@ -28,6 +28,12 @@ class MainActivity : AudioServiceActivity() {
             DeviceAccounts.CHANNEL,
         ).setMethodCallHandler { call, result -> accounts.handle(call, result) }
 
+        val installer = Installer(this)
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            Installer.CHANNEL,
+        ).setMethodCallHandler { call, result -> installer.handle(call, result) }
+
         // Asking the launcher to place the widget, rather than making someone
         // find it in a picker and drag it. Android 8 and up only; older
         // launchers have no way to be asked.
