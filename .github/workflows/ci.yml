@@ -50,7 +50,7 @@ jobs:
       # Pinned to what the app compiles against (build.gradle.kts asks for
       # source and target 17). The runner image ships more than one JDK and
       # picks its own default, which is exactly the kind of thing that moves.
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
