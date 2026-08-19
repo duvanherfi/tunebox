@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/services.dart';
+
 import 'package:just_audio_platform_interface/just_audio_platform_interface.dart';
 
 /// A [JustAudioPlatform] that decodes nothing.
@@ -11,12 +13,19 @@ import 'package:just_audio_platform_interface/just_audio_platform_interface.dart
 class FakeJustAudio extends JustAudioPlatform {
   final players = <String, FakeAudioPlayer>{};
 
+  /// How many loads every player of this platform refuses before accepting
+  /// one, as a real player refuses a container it cannot decode. Set before
+  /// anything plays: the app builds its player lazily on the first track, and
+  /// the audio it is handed is a proxy URL that says nothing about the format.
+  int rejectLoads = 0;
+
   /// The player the app is using, once it has created one.
   FakeAudioPlayer get player => players.values.single;
 
   @override
   Future<AudioPlayerPlatform> init(InitRequest request) async =>
-      players[request.id] = FakeAudioPlayer(request.id);
+      players[request.id] = FakeAudioPlayer(request.id)
+        ..rejectLoads = rejectLoads;
 
   @override
   Future<DisposePlayerResponse> disposePlayer(
@@ -43,6 +52,9 @@ class FakeAudioPlayer extends AudioPlayerPlatform {
   /// Every URI the player was asked to load, in order. The test's window onto
   /// which track the queue actually reached for.
   final loaded = <String>[];
+
+  /// Loads still to be refused before one is accepted.
+  int rejectLoads = 0;
 
   Duration duration = const Duration(minutes: 3);
   Duration position = Duration.zero;
@@ -77,7 +89,12 @@ class FakeAudioPlayer extends AudioPlayerPlatform {
   @override
   Future<LoadResponse> load(LoadRequest request) async {
     final source = request.audioSourceMessage;
-    loaded.add(source is UriAudioSourceMessage ? source.uri : source.id);
+    final uri = source is UriAudioSourceMessage ? source.uri : source.id;
+    loaded.add(uri);
+    if (rejectLoads > 0) {
+      rejectLoads--;
+      throw PlatformException(code: 'abort', message: 'Cannot Open');
+    }
     position = request.initialPosition ?? Duration.zero;
     state = ProcessingStateMessage.ready;
     _emit();

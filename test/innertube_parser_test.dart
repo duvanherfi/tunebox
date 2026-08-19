@@ -192,4 +192,139 @@ void main() {
       expect(readPath(const {'a': [{'b': 'ok'}]}, ['a', 0, 'b']), 'ok');
     });
   });
+
+  // AVFoundation cannot decode WebM at all, and YouTube's highest-bitrate audio
+  // is Opus in WebM — so on Apple platforms "best" has to mean "best of what
+  // this one can open", or every track dies with AVErrorFileFormatNotRecognized
+  // (-11828). ExoPlayer plays both, which is why Android never saw it.
+  group('parseBestAudioStream', () {
+    final response = {
+      'streamingData': {
+        'adaptiveFormats': [
+          {
+            'mimeType': 'audio/mp4; codecs="mp4a.40.2"',
+            'url': 'https://example.invalid/m4a',
+            'bitrate': 128000,
+          },
+          {
+            'mimeType': 'audio/webm; codecs="opus"',
+            'url': 'https://example.invalid/opus',
+            'bitrate': 160000,
+          },
+        ],
+      },
+    };
+
+    test('takes the highest bitrate when any container will do', () {
+      expect(
+        parseBestAudioStream(response)!.url,
+        'https://example.invalid/opus',
+      );
+    });
+
+    test('prefers mp4 over a higher-bitrate webm when asked', () {
+      expect(
+        parseBestAudioStream(response, preferMp4: true)!.url,
+        'https://example.invalid/m4a',
+      );
+    });
+
+    test('still answers with webm when mp4 is the one missing', () {
+      final webmOnly = {
+        'streamingData': {
+          'adaptiveFormats': [
+            {
+              'mimeType': 'audio/webm; codecs="opus"',
+              'url': 'https://example.invalid/opus',
+              'bitrate': 160000,
+            },
+          ],
+        },
+      };
+
+      expect(
+        parseBestAudioStream(webmOnly, preferMp4: true)!.url,
+        'https://example.invalid/opus',
+      );
+    });
+  });
+
+  // One pick is one chance: a format the player cannot open loses the whole
+  // track even when the same response carried another it could have played.
+  // The candidates come out ranked so the caller can walk them.
+  group('parseAudioStreams', () {
+    Map<String, dynamic> withFormats(List<Map<String, Object?>> formats) => {
+          'streamingData': {'adaptiveFormats': formats},
+        };
+
+    test('ranks by bitrate, then by codec', () {
+      final streams = parseAudioStreams(withFormats([
+        {
+          'mimeType': 'audio/mp4; codecs="mp4a.40.2"',
+          'url': 'https://example.invalid/m4a',
+          'bitrate': 128000,
+        },
+        {
+          'mimeType': 'audio/webm; codecs="opus"',
+          'url': 'https://example.invalid/opus',
+          'bitrate': 160000,
+        },
+      ]));
+
+      expect(
+        streams.map((s) => s.url),
+        ['https://example.invalid/opus', 'https://example.invalid/m4a'],
+      );
+    });
+
+    test('puts mp4 first when asked, keeping the rest as fallbacks', () {
+      final streams = parseAudioStreams(
+        withFormats([
+          {
+            'mimeType': 'audio/webm; codecs="opus"',
+            'url': 'https://example.invalid/opus',
+            'bitrate': 160000,
+          },
+          {
+            'mimeType': 'audio/mp4; codecs="mp4a.40.2"',
+            'url': 'https://example.invalid/m4a',
+            'bitrate': 128000,
+          },
+        ]),
+        preferMp4: true,
+      );
+
+      expect(
+        streams.map((s) => s.url),
+        ['https://example.invalid/m4a', 'https://example.invalid/opus'],
+      );
+    });
+
+    test('drops what could never play: no url, no bitrate, not audio', () {
+      final streams = parseAudioStreams(withFormats([
+        {
+          'mimeType': 'audio/mp4; codecs="mp4a.40.2"',
+          'signatureCipher': 'locked',
+          'bitrate': 128000,
+        },
+        {
+          'mimeType': 'audio/webm; codecs="opus"',
+          'url': 'https://example.invalid/zero',
+          'bitrate': 0,
+        },
+        {
+          'mimeType': 'video/mp4; codecs="avc1"',
+          'url': 'https://example.invalid/video',
+          'bitrate': 900000,
+        },
+        {
+          'mimeType': 'audio/mp4; codecs="mp4a.40.2"',
+          'url': 'https://example.invalid/good',
+          'bitrate': 128000,
+        },
+      ]));
+
+      expect(streams.map((s) => s.url), ['https://example.invalid/good']);
+    });
+  });
 }

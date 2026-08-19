@@ -177,4 +177,47 @@ void main() {
       );
     });
   });
+
+  // A single pick loses the track when the player refuses that one format, so
+  // the client hands back every stream the answering client offered — same
+  // nonce, same identity — for the caller to walk.
+  group('resolveStreams', () {
+    test('returns every playable format, best first, sharing one nonce',
+        () async {
+      final innertube = InnertubeClient(
+        preferMp4: false,
+        httpClient: MockClient((request) async {
+          if (request.method == 'GET') return http.Response('', 206);
+          return http.Response(
+            jsonEncode({
+              'playabilityStatus': {'status': 'OK'},
+              'streamingData': {
+                'adaptiveFormats': [
+                  {
+                    'mimeType': 'audio/mp4; codecs="mp4a.40.2"',
+                    'url': 'https://example.invalid/m4a',
+                    'bitrate': 128000,
+                  },
+                  {
+                    'mimeType': 'audio/webm; codecs="opus"',
+                    'url': 'https://example.invalid/opus',
+                    'bitrate': 160000,
+                  },
+                ],
+              },
+            }),
+            200,
+          );
+        }),
+      );
+
+      final streams = await innertube.resolveStreams('abc');
+
+      expect(streams, hasLength(2));
+      expect(streams.first.url, startsWith('https://example.invalid/opus'));
+      expect(streams.last.url, startsWith('https://example.invalid/m4a'));
+      expect(streams.first.cpn, streams.last.cpn);
+      expect(streams.first.userAgent, isNotEmpty);
+    });
+  });
 }

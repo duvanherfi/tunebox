@@ -498,16 +498,29 @@ List<Playlist> parseMoodChips(Map<String, dynamic> json) {
   return chips;
 }
 
-/// Picks the best audio-only stream from a player response.
+/// Every audio-only stream a player response offers, best first.
+///
+/// A list rather than a pick because "best" is a guess until something opens
+/// it: a format the player refuses would otherwise lose the whole track, even
+/// when the same response carried one it could have played. The caller walks
+/// these in order and keeps the first that loads.
 ///
 /// Only formats carrying a ready `url` are considered; anything behind a
 /// `signatureCipher` would need a JavaScript interpreter to unscramble, and
 /// the iOS client is used precisely so that never happens.
-AudioStream? parseBestAudioStream(Map<String, dynamic> json) {
+///
+/// [preferMp4] moves mp4 to the front for players that cannot decode anything
+/// else. YouTube's highest-bitrate audio is Opus in WebM, which AVFoundation
+/// refuses outright; ExoPlayer plays both, so Android asks for no preference
+/// and keeps the better stream at the head.
+List<AudioStream> parseAudioStreams(
+  Map<String, dynamic> json, {
+  bool preferMp4 = false,
+}) {
   final formats = readPath(json, ['streamingData', 'adaptiveFormats']);
-  if (formats is! List) return null;
+  if (formats is! List) return const [];
 
-  AudioStream? best;
+  final streams = <AudioStream>[];
   for (final format in formats) {
     final mimeType = readPath(format, ['mimeType']);
     final url = readPath(format, ['url']);
@@ -515,9 +528,37 @@ AudioStream? parseBestAudioStream(Map<String, dynamic> json) {
       continue;
     }
     final bitrate = (readPath(format, ['bitrate']) as num?)?.toInt() ?? 0;
-    if (best == null || bitrate > best.bitrate) {
-      best = AudioStream(url: url, bitrate: bitrate, mimeType: mimeType);
-    }
+    // A format that claims no bitrate has never turned out to be a real one.
+    if (bitrate <= 0) continue;
+    streams.add(AudioStream(url: url, bitrate: bitrate, mimeType: mimeType));
   }
-  return best;
+
+  streams.sort((a, b) {
+    if (preferMp4) {
+      final byContainer = _mp4First(b).compareTo(_mp4First(a));
+      if (byContainer != 0) return byContainer;
+    }
+    final byBitrate = b.bitrate.compareTo(a.bitrate);
+    if (byBitrate != 0) return byBitrate;
+    return _codecRank(b.mimeType).compareTo(_codecRank(a.mimeType));
+  });
+  return streams;
 }
+
+int _mp4First(AudioStream stream) => stream.mimeType.startsWith('audio/mp4') ? 1 : 0;
+
+/// Breaks a bitrate tie towards the codec that sounds better at it. Opus beats
+/// AAC at equal bitrate, and both beat whatever else turns up.
+int _codecRank(String mimeType) {
+  final lower = mimeType.toLowerCase();
+  if (lower.contains('opus')) return 3;
+  if (lower.contains('mp4a')) return 2;
+  return 1;
+}
+
+/// The single best stream, for callers with nowhere to fall back to.
+AudioStream? parseBestAudioStream(
+  Map<String, dynamic> json, {
+  bool preferMp4 = false,
+}) =>
+    parseAudioStreams(json, preferMp4: preferMp4).firstOrNull;

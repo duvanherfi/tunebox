@@ -87,6 +87,11 @@ class DeviceSongs extends ChangeNotifier {
   /// only the blanket one. Asking for both and accepting either keeps this
   /// working in both worlds.
   Future<bool> _permitted() async {
+    // Android's feature, and only Android's: the roots above are Android paths,
+    // and permission_handler ships no desktop implementation — asking there
+    // throws MissingPluginException out of the library tab rather than
+    // answering no.
+    if (!Platform.isAndroid) return false;
     if (await Permission.audio.request().isGranted) return true;
     return Permission.storage.request().isGranted;
   }

@@ -29,6 +29,13 @@ class _StubInnertube extends InnertubeClient {
   final asked = <String>[];
 
   @override
+  Future<List<AudioStream>> resolveStreams(
+    String videoId, {
+    int passes = 2,
+  }) async =>
+      [await resolveStream(videoId, passes: passes)];
+
+  @override
   Future<AudioStream> resolveStream(String videoId, {int passes = 2}) async {
     asked.add(videoId);
     if (unplayable.contains(videoId)) {

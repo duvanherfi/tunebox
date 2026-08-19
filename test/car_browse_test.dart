@@ -42,6 +42,13 @@ class _LibraryInnertube extends InnertubeClient {
       _maybe([_song('$playlistId-a'), _song('$playlistId-b')]);
 
   @override
+  Future<List<AudioStream>> resolveStreams(
+    String videoId, {
+    int passes = 2,
+  }) async =>
+      [await resolveStream(videoId, passes: passes)];
+
+  @override
   Future<AudioStream> resolveStream(String videoId, {int passes = 2}) async =>
       AudioStream(
         url: 'https://example.invalid/$videoId',

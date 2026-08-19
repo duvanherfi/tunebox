@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:http/http.dart' as http;
@@ -193,7 +194,9 @@ class InnertubeClient {
     this.session,
     this.hl = 'es',
     this.gl = 'CO',
-  }) : _http = httpClient ?? http.Client();
+    bool? preferMp4,
+  })  : _http = httpClient ?? http.Client(),
+        preferMp4 = preferMp4 ?? (Platform.isMacOS || Platform.isIOS);
 
   /// Language and region asked of InnerTube.
   ///
@@ -671,11 +674,30 @@ class InnertubeClient {
     ];
   }
 
-  /// Resolves the highest-bitrate audio stream for a track.
+  /// Whether this platform's player needs mp4 rather than the best stream.
+  ///
+  /// Apple's AVFoundation cannot decode WebM, which is the container YouTube's
+  /// highest-bitrate audio comes in. Set on the client rather than read inside
+  /// the parser so this file's rules stay measurable from a recorded response.
+  final bool preferMp4;
+
+  /// Resolves the best audio stream for a track this platform can open.
   ///
   /// The returned URL is signed and expires within a few minutes, so it is
   /// fetched at playback time and never cached.
-  Future<AudioStream> resolveStream(String videoId, {int passes = 2}) async {
+  Future<AudioStream> resolveStream(String videoId, {int passes = 2}) async =>
+      (await resolveStreams(videoId, passes: passes)).first;
+
+  /// Every stream the answering client offered for a track, best first.
+  ///
+  /// One pick is one chance: a format the player refuses would lose the track
+  /// even when the same response carried another it could have opened. They all
+  /// carry the same nonce and the same identity, because they came from one
+  /// answer to one request — walking them costs nothing extra on the wire.
+  Future<List<AudioStream>> resolveStreams(
+    String videoId, {
+    int passes = 2,
+  }) async {
     String? lastReason;
     final visitor = await visitorData();
 
@@ -714,37 +736,47 @@ class InnertubeClient {
           continue;
         }
 
-        final stream = parseBestAudioStream(json);
-        if (stream == null) continue;
+        final streams = parseAudioStreams(json, preferMp4: preferMp4);
+        if (streams.isEmpty) continue;
 
         // Minted here rather than at report time so the audio request and the
         // reports about it carry the same nonce, which is what lets the server
-        // recognise them as one listen.
+        // recognise them as one listen. One nonce for the whole answer: the
+        // alternates are the same listen by another container.
         final cpn = _playbackNonce();
+        // The music client's beacon when there is one, since only that one is
+        // counted as a listen; the serving client's otherwise, which is better
+        // than nothing and is all there is signed out.
+        final trackingUrl = (await beacon).$1 ??
+            readPath(json, [
+              'playbackTracking',
+              'videostatsPlaybackUrl',
+              'baseUrl',
+            ]) as String?;
+        final watchtimeUrl = (await beacon).$2 ??
+            readPath(json, [
+              'playbackTracking',
+              'videostatsWatchtimeUrl',
+              'baseUrl',
+            ]) as String?;
 
-        final candidate = AudioStream(
-          url: '${stream.url}&cpn=$cpn',
-          bitrate: stream.bitrate,
-          mimeType: stream.mimeType,
-          userAgent: client.userAgent,
-          cpn: cpn,
-          // The music client's beacon when there is one, since only that one
-          // is counted as a listen; the serving client's otherwise, which is
-          // better than nothing and is all there is signed out.
-          trackingUrl: (await beacon).$1 ??
-              readPath(json, [
-                'playbackTracking',
-                'videostatsPlaybackUrl',
-                'baseUrl',
-              ]) as String?,
-          watchtimeUrl: (await beacon).$2 ??
-              readPath(json, [
-                'playbackTracking',
-                'videostatsWatchtimeUrl',
-                'baseUrl',
-              ]) as String?,
-        );
-        if (await _servesWholeTrack(candidate)) return candidate;
+        final candidates = [
+          for (final stream in streams)
+            AudioStream(
+              url: '${stream.url}&cpn=$cpn',
+              bitrate: stream.bitrate,
+              mimeType: stream.mimeType,
+              userAgent: client.userAgent,
+              cpn: cpn,
+              trackingUrl: trackingUrl,
+              watchtimeUrl: watchtimeUrl,
+            ),
+        ];
+
+        // Probed on the head alone. They come from one client and one URL host,
+        // so a client that truncates truncates all of them, and probing each
+        // would triple the requests before the first note.
+        if (await _servesWholeTrack(candidates.first)) return candidates;
       }
     }
 

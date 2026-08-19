@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/foundation.dart';
@@ -76,20 +77,45 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     String radio,
   }) _browseLabels;
 
+  /// Whether this platform has the effects at all.
+  ///
+  /// They are Android's own, and just_audio activates every effect in the
+  /// pipeline regardless of platform — it filters which ones it *sends* on
+  /// load, but not which ones it activates. Carried onto macOS they make
+  /// `MissingPluginException` out of every `setAudioSource`, which `_playIndex`
+  /// reads as a track YouTube refused: the queue steps over the whole list in
+  /// silence, one skip per track. Measured on macOS, invisible on Android.
+  static final bool supportsEqualizer = Platform.isAndroid;
+
+  /// Whether caching a stream while it plays works here.
+  ///
+  /// `LockCachingAudioSource` hands the audio to the platform through
+  /// just_audio's own stream source, and AVFoundation cannot open what comes
+  /// out: every track dies with `AVErrorFileFormatNotRecognized` (-11828) even
+  /// when the format is the mp4 it asked for. Measured on macOS by turning this
+  /// one thing off — with it off the same track plays. Elsewhere the audio
+  /// still goes through [StreamProxy]; it just is not written to disk on the
+  /// way past.
+  static final bool supportsStreamCaching = Platform.isAndroid;
+
   /// Effects sit in the pipeline whether or not they are switched on: Android
   /// attaches them when the audio session opens, so one added later would not
   /// take hold until the next track.
-  final _equalizer = AndroidEqualizer();
-  final _loudness = AndroidLoudnessEnhancer();
+  final AndroidEqualizer? _equalizer =
+      supportsEqualizer ? AndroidEqualizer() : null;
+  final AndroidLoudnessEnhancer? _loudness =
+      supportsEqualizer ? AndroidLoudnessEnhancer() : null;
 
   late final _player = AudioPlayer(
     audioPipeline: AudioPipeline(
-      androidAudioEffects: [_loudness, _equalizer],
+      androidAudioEffects: [?_loudness, ?_equalizer],
     ),
   );
   final _proxy = StreamProxy();
 
-  AndroidEqualizer get equalizer => _equalizer;
+  /// Null where the platform has no equalizer; the settings screen offers the
+  /// bands only where there is something behind them.
+  AndroidEqualizer? get equalizer => _equalizer;
 
   /// The queue in the order it will play, which is what the queue screen shows
   /// and what shuffling rearranges.
@@ -137,9 +163,11 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   /// Android has opened an audio session, so this waits — possibly for minutes,
   /// until the first track plays — and then applies them.
   Future<void> _restoreEqualizer() async {
+    final equalizer = _equalizer;
+    if (equalizer == null) return;
     final gains = _settings.bandGains;
     if (gains.isEmpty) return;
-    final parameters = await _equalizer.parameters;
+    final parameters = await equalizer.parameters;
     for (var i = 0; i < parameters.bands.length && i < gains.length; i++) {
       await parameters.bands[i].setGain(gains[i]);
     }
@@ -148,11 +176,11 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   void _applySettings() {
     _player.setSpeed(_settings.speed);
     _player.setSkipSilenceEnabled(_settings.skipSilence);
-    _loudness.setEnabled(_settings.normalizeVolume);
+    _loudness?.setEnabled(_settings.normalizeVolume);
     // A few decibels: enough to lift a quiet master to meet a loud one, not so
     // much that anything clips.
-    _loudness.setTargetGain(_settings.normalizeVolume ? 0.5 : 0);
-    _equalizer.setEnabled(_settings.equalizerEnabled);
+    _loudness?.setTargetGain(_settings.normalizeVolume ? 0.5 : 0);
+    _equalizer?.setEnabled(_settings.equalizerEnabled);
   }
 
   int _savedAt = -1;
@@ -596,39 +624,58 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   Future<AudioStream?> _resolve(Song song) async {
     // A downloaded track never touches the network — not to resolve it, not to
     // report it. That is the whole promise of a download.
-    AudioStream? stream;
     if (DeviceSongs.isLocal(song.videoId)) {
       // Already a file on this phone: nothing to resolve, nothing to report.
       await _player.setFilePath(DeviceSongs.pathOf(song.videoId));
     } else if (_downloads.has(song.videoId)) {
       await _player.setFilePath(_downloads.fileFor(song.videoId).path);
     } else {
-      stream = await _innertube.resolveStream(song.videoId);
-
-      // Routed through the proxy so the request carries a Range header, which
-      // googlevideo requires and ExoPlayer omits on its first request. The user
-      // agent travels along because the URL was issued to one particular client
-      // and is fetched wearing that same identity.
+      // Every format the answering client offered, best first. Walked rather
+      // than trusted: which containers a player can open is a property of the
+      // platform, not of the answer, and losing a track because the best
+      // stream happens to be one this device cannot decode is a bug the queue
+      // used to hide as a skip.
+      final candidates = await _innertube.resolveStreams(song.videoId);
       await _proxy.start();
-      final source = _proxy.wrap(stream.url, userAgent: stream.userAgent);
 
-      if (_settings.cacheEnabled) {
-        // The same bytes are written to disk as they play, so hearing a track
-        // twice costs one download. Keyed by video id rather than by URL: the
-        // URL is signed and different every time, the track is not.
-        // just_audio marks this experimental; it has been in every release for
-        // years and there is no other way to cache while streaming.
-        // ignore: experimental_member_use
-        await _player.setAudioSource(LockCachingAudioSource(
-          source,
-          cacheFile: _cache.fileFor(song.videoId),
-        ));
-        unawaited(_cache.prune(_settings.cacheLimitMb * 1024 * 1024));
-      } else {
-        await _player.setUrl(source.toString());
+      Object? refusal;
+      for (final candidate in candidates) {
+        // Routed through the proxy so the request carries a Range header, which
+        // googlevideo requires and ExoPlayer omits on its first request. The
+        // user agent travels along because the URL was issued to one particular
+        // client and is fetched wearing that same identity.
+        final source = _proxy.wrap(candidate.url, userAgent: candidate.userAgent);
+        try {
+          if (_settings.cacheEnabled && supportsStreamCaching) {
+            // The same bytes are written to disk as they play, so hearing a
+            // track twice costs one download. Keyed by video id rather than by
+            // URL: the URL is signed and different every time, the track is
+            // not. just_audio marks this experimental; it has been in every
+            // release for years and there is no other way to cache while
+            // streaming.
+            // ignore: experimental_member_use
+            await _player.setAudioSource(LockCachingAudioSource(
+              source,
+              cacheFile: _cache.fileFor(song.videoId),
+            ));
+            unawaited(_cache.prune(_settings.cacheLimitMb * 1024 * 1024));
+          } else {
+            await _player.setUrl(source.toString());
+          }
+          return candidate;
+        } catch (error) {
+          refusal = error;
+          // Whatever the refused format managed to write is not this track in
+          // any container the next attempt will use, and the cache is keyed by
+          // track: left behind it would be served as the real thing forever.
+          final partial = _cache.fileFor(song.videoId);
+          if (partial.existsSync()) await partial.delete();
+        }
       }
+      throw refusal ?? InnertubeException('Ningún formato se pudo abrir');
     }
-    return stream;
+    // A file on this device: nothing to resolve, nothing to report.
+    return null;
   }
 
   /// The browsing tree a car stereo asks for.

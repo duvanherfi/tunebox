@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 
+import '../../core/audio/player_service.dart';
+
 import '../../core/theme/app_theme.dart';
 import '../../data/home_widget_bridge.dart';
 import '../../l10n/app_localizations.dart';
@@ -61,22 +63,33 @@ class SettingsScreen extends StatelessWidget {
               value: settings.keepAwake,
               onChanged: settings.setKeepAwake,
             ),
-            _Label(l10n.settingsEqualizer),
-            SwitchListTile(
-              title: Text(l10n.settingsEqualizerOn),
-              value: settings.equalizerEnabled,
-              onChanged: settings.setEqualizerEnabled,
-            ),
-            if (settings.equalizerEnabled) const EqualizerBands(),
+            // The equalizer belongs to Android's audio session; nothing behind
+            // it exists elsewhere, and a switch that cannot change anything is
+            // worse than no switch.
+            if (PlayerService.supportsEqualizer) ...[
+              _Label(l10n.settingsEqualizer),
+              SwitchListTile(
+                title: Text(l10n.settingsEqualizerOn),
+                value: settings.equalizerEnabled,
+                onChanged: settings.setEqualizerEnabled,
+              ),
+              if (settings.equalizerEnabled) const EqualizerBands(),
+            ],
             _Label(l10n.settingsStorage),
             const _StorageSummary(),
-            SwitchListTile(
-              title: Text(l10n.settingsCache),
-              subtitle: Text(l10n.settingsCacheBody),
-              value: settings.cacheEnabled,
-              onChanged: settings.setCacheEnabled,
-            ),
-            if (settings.cacheEnabled) const _CacheLimit(),
+            // Offered only where it can do something: caching while streaming
+            // is the one thing Apple's player refuses to open, so elsewhere the
+            // switch would be a promise the audio path cannot keep. What is
+            // already on disk still has its size and its clear button below.
+            if (PlayerService.supportsStreamCaching) ...[
+              SwitchListTile(
+                title: Text(l10n.settingsCache),
+                subtitle: Text(l10n.settingsCacheBody),
+                value: settings.cacheEnabled,
+                onChanged: settings.setCacheEnabled,
+              ),
+              if (settings.cacheEnabled) const _CacheLimit(),
+            ],
             const _ClearCache(),
             ListTile(
               leading: const Icon(Icons.widgets_outlined),
@@ -138,7 +151,7 @@ class EqualizerBands extends StatelessWidget {
     final theme = Theme.of(context);
 
     return FutureBuilder<AndroidEqualizerParameters>(
-      future: playerService.equalizer.parameters,
+      future: playerService.equalizer?.parameters,
       builder: (context, snapshot) {
         final parameters = snapshot.data;
         if (parameters == null) {
