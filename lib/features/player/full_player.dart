@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
+import '../nightstand/idle_watcher.dart';
+import '../nightstand/nightstand.dart';
 import '../shared/song_menu.dart';
 import 'lyrics_view.dart';
 import 'playback_sheet.dart';
@@ -51,54 +53,66 @@ class _FullPlayerState extends State<FullPlayer> {
     // there is height for one of the two, and it is not the picture.
     final sideBySide = size.width > size.height;
 
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        if (art != null) _Backdrop(url: art),
-        SafeArea(
-          child: Column(
-            children: [
-              _Handle(onCollapse: widget.onCollapse),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: sideBySide
-                      ? Row(
-                          children: [
-                            Expanded(child: _stage(art)),
-                            const SizedBox(width: 32),
-                            Expanded(
-                              // Scrollable rather than fixed: on a short
-                              // landscape screen the panel is a couple of
-                              // pixels taller than the space, and a player
-                              // that reports an overflow to its user is worse
-                              // than one that lets them nudge it.
-                              child: SingleChildScrollView(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: _panel(),
+    // This widget is only built once the panel is past a quarter of its
+    // travel, so "the player is open" — one of the two conditions for the
+    // nightstand to come up by itself — comes free with being mounted.
+    return StreamBuilder<PlaybackState>(
+      stream: playerService.playbackState,
+      builder: (context, playback) => IdleWatcher(
+        seconds: settings.nightstandIdleSeconds,
+        enabled: playback.data?.playing ?? false,
+        onIdle: () => openNightstand(context),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (art != null) _Backdrop(url: art),
+            SafeArea(
+              child: Column(
+                children: [
+                  _Handle(onCollapse: widget.onCollapse),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: sideBySide
+                          ? Row(
+                              children: [
+                                Expanded(child: _stage(art)),
+                                const SizedBox(width: 32),
+                                Expanded(
+                                  // Scrollable rather than fixed: on a
+                                  // short landscape screen the panel is a
+                                  // couple of pixels taller than the space,
+                                  // and a player that reports an overflow to
+                                  // its user is worse than one that lets
+                                  // them nudge it.
+                                  child: SingleChildScrollView(
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: _panel(),
+                                    ),
+                                  ),
                                 ),
-                              ),
+                              ],
+                            )
+                          : Column(
+                              children: [
+                                Expanded(child: _stage(art)),
+                                const SizedBox(height: 16),
+                                ..._panel(),
+                                const SizedBox(height: 8),
+                              ],
                             ),
-                          ],
-                        )
-                      : Column(
-                          children: [
-                            Expanded(child: _stage(art)),
-                            const SizedBox(height: 16),
-                            ..._panel(),
-                            const SizedBox(height: 8),
-                          ],
-                        ),
-                ),
+                    ),
+                  ),
+                  // What is coming, one tap away, named rather than
+                  // hidden behind an icon nobody presses to find out.
+                  const _QueueHandle(),
+                ],
               ),
-              // What is coming, one tap away, named rather than hidden behind
-              // an icon nobody presses to find out.
-              const _QueueHandle(),
-            ],
-          ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
@@ -129,16 +143,16 @@ class _FullPlayerState extends State<FullPlayer> {
   }
 
   List<Widget> _panel() => [
-        _Title(item: widget.item),
-        const SizedBox(height: 16),
-        _QuickActions(
-          showingLyrics: _showLyrics,
-          onToggleLyrics: () => setState(() => _showLyrics = !_showLyrics),
-        ),
-        const SizedBox(height: 8),
-        _ProgressBar(total: widget.item.duration ?? Duration.zero),
-        const _Controls(),
-      ];
+    _Title(item: widget.item),
+    const SizedBox(height: 16),
+    _QuickActions(
+      showingLyrics: _showLyrics,
+      onToggleLyrics: () => setState(() => _showLyrics = !_showLyrics),
+    ),
+    const SizedBox(height: 8),
+    _ProgressBar(total: widget.item.duration ?? Duration.zero),
+    const _Controls(),
+  ];
 }
 
 /// The cover, blurred to a wash of its own colours, under a scrim heavy enough
@@ -301,25 +315,24 @@ class _QuickActions extends StatelessWidget {
             final saved = song != null && downloads.has(song.videoId);
             final busy = song != null && downloads.isDownloading(song.videoId);
             return _RoundAction(
-              icon:
-                  saved ? Icons.download_done_rounded : Icons.download_outlined,
+              icon: saved
+                  ? Icons.download_done_rounded
+                  : Icons.download_outlined,
               tooltip: saved ? l10n.menuRemoveDownload : l10n.menuDownload,
               selected: saved,
               busy: busy,
               onPressed: song == null || busy
                   ? null
                   : () => saved
-                      ? downloads.remove(song.videoId)
-                      : playerService.download(song),
+                        ? downloads.remove(song.videoId)
+                        : playerService.download(song),
             );
           },
         ),
         ValueListenableBuilder<DateTime?>(
           valueListenable: playerService.sleepAt,
           builder: (context, sleeping, _) => _RoundAction(
-            icon: sleeping == null
-                ? Icons.tune_rounded
-                : Icons.bedtime_rounded,
+            icon: sleeping == null ? Icons.tune_rounded : Icons.bedtime_rounded,
             tooltip: l10n.playbackControls,
             selected: sleeping != null,
             onPressed: () => showPlaybackSheet(context),
@@ -330,8 +343,9 @@ class _QuickActions extends StatelessWidget {
           builder: (context, _) {
             final liked = song != null && likes.isLiked(song.videoId);
             return _RoundAction(
-              icon:
-                  liked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+              icon: liked
+                  ? Icons.favorite_rounded
+                  : Icons.favorite_border_rounded,
               tooltip: l10n.menuLike,
               selected: liked,
               onPressed: song == null || !session.isSignedIn
@@ -428,7 +442,7 @@ class _Controls extends StatelessWidget {
         final playing = state?.playing ?? false;
         final busy =
             state?.processingState == AudioProcessingState.loading ||
-                state?.processingState == AudioProcessingState.buffering;
+            state?.processingState == AudioProcessingState.buffering;
 
         return Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -461,8 +475,9 @@ class _Controls extends StatelessWidget {
                             ? Icons.pause_rounded
                             : Icons.play_arrow_rounded,
                       ),
-                      onPressed:
-                          playing ? playerService.pause : playerService.play,
+                      onPressed: playing
+                          ? playerService.pause
+                          : playerService.play,
                     ),
             ),
             const SizedBox(width: 4),
@@ -512,8 +527,9 @@ class _ProgressBar extends StatelessWidget {
                 trackHeight: 4,
                 thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
                 overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
-                inactiveTrackColor:
-                    theme.colorScheme.onSurface.withValues(alpha: 0.18),
+                inactiveTrackColor: theme.colorScheme.onSurface.withValues(
+                  alpha: 0.18,
+                ),
               ),
               child: Slider(
                 value: max <= 0 ? 0 : value,
@@ -521,8 +537,8 @@ class _ProgressBar extends StatelessWidget {
                 onChanged: max <= 0
                     ? null
                     : (next) => playerService.seek(
-                          Duration(milliseconds: next.round()),
-                        ),
+                        Duration(milliseconds: next.round()),
+                      ),
               ),
             ),
             Padding(
@@ -572,7 +588,9 @@ class _QueueHandle extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    next == null ? l10n.queueTitle : '${l10n.queueTitle}: $next',
+                    next == null
+                        ? l10n.queueTitle
+                        : '${l10n.queueTitle}: $next',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodySmall?.copyWith(
