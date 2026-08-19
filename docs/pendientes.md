@@ -291,13 +291,15 @@ versión.
 - **Los PNG heredados de Android no se han visto en un lanzador.** Sólo los lee
   API 25 y anterior; el emulador a mano es API 36 y sirve el adaptive icon en su
   lugar. Están comprobados como archivo, no como icono en una pantalla.
-- **El icono de macOS está a medias en Tahoe.** macOS 26 mete un icono del
-  estilo antiguo dentro de su propio squircle y lo pone sobre una placa, así que
-  el cuadrado de 824 se hunde una segunda vez y la marca sale pequeña sobre
-  fondo oscuro. Darle el arte a sangre lo arregla ahí y lo rompe en macOS 15 y
-  anteriores, donde nadie lo recorta y cae en el Dock como un cuadrado duro. Con
-  el destino en 10.15 se queda en la rejilla clásica. La salida buena es un
-  `.icon` de Icon Composer, que Tahoe lee de forma nativa.
+- **El icono de macOS en Tahoe: mirado, y se ve bien.** El aviso anterior decía
+  que macOS 26 mete el icono del estilo antiguo dentro de su propio squircle y
+  sobre una placa, así que el cuadrado de 824 se hundiría una segunda vez y la
+  marca saldría pequeña. Con la app instalada desde el `.dmg` en macOS 26.6, el
+  19 de agosto de 2026, se ve normal en el Dock. Queda como nota, no como
+  defecto: darle el arte a sangre lo rompería en macOS 15 y anteriores, donde
+  nadie lo recorta y cae en el Dock como un cuadrado duro, y con el destino en
+  10.15 se queda en la rejilla clásica de todos modos. La salida buena, si algún
+  día se ve mal de verdad, es un `.icon` de Icon Composer, que Tahoe lee nativo.
 - **Escribir en la cuenta solo se ha ejercitado con el "me gusta".** Crear
   playlists, añadir canciones y suscribirse (`subscription/subscribe`) están
   implementados y no se han ejecutado nunca contra una cuenta real, para no
