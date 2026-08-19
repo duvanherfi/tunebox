@@ -42,13 +42,18 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
   necesita certificado y no produce nada distribuible. Está porque macOS es la
   plataforma que nadie corre a mano: los entitlements, los pods y el catálogo de
   iconos se rompen en silencio hasta que alguien los construye.
-  Java pineado a Temurin 17 con `setup-java`, que es contra lo que compila
-  `build.gradle.kts`; la imagen del runner trae varios JDK y elige el suyo.
+  Java pineado a Temurin 17 con `setup-java@v5`, que es contra lo que compila
+  `build.gradle.kts`; la imagen del runner trae varios JDK y elige el suyo. La
+  v4 apunta a Node 20, que los runners ya no llevan, y dejaba dos anotaciones de
+  deprecación en cada build.
   **Sin pinear las acciones por SHA**: este workflow no lee ningún secret. Esa
   condición es del de firma, que sigue pendiente.
-  Verificado en local antes de subir: los doce drawables vivos en un
+  Verificado en local antes de subir — los doce drawables vivos en un
   `build apk --release` de verdad, el camino de fallo probado metiendo un nombre
-  que no existe, y `tunebox.app` construido.
+  que no existe, y `tunebox.app` construido — y después en el runner: los tres
+  jobs en verde y el mismo "all 12 pinned drawables survived". Android tarda
+  unos 7 min 30 s y macOS unos 4 min 15 s, en paralelo con el minuto y medio de
+  analyze/test.
 
 - **Actualizaciones desde la propia app** (pasos 5-8 del diseño). El updater
   entero, menos publicar la release que lo estrena. `lib/data/updates.dart`
