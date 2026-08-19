@@ -323,6 +323,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsTitle => 'Settings';
 
   @override
+  String get settingsSound => 'Playback and sound';
+
+  @override
+  String get settingsSoundBody => 'Autoplay, speed, fade, equalizer';
+
+  @override
+  String get settingsStorageBody => 'Downloads, cache and what they take up';
+
+  @override
+  String get settingsBackupBody => 'Daily copy, write one now, restore';
+
+  @override
+  String get settingsAppearanceBody => 'Theme, colours and the bars';
+
+  @override
+  String get settingsSystem => 'System';
+
+  @override
+  String get settingsSystemBody => 'The home screen widget';
+
+  @override
   String get settingsPlayback => 'Playback';
 
   @override
@@ -369,9 +390,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String settingsSleepPending(int minutes) {
     return 'Stopping in $minutes min';
   }
-
-  @override
-  String get accountSettings => 'Playback and sound';
 
   @override
   String get settingsEqualizerIdle =>

@@ -20,7 +20,12 @@ class SheetBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
+    // heightFactor rather than a bare Center: a sheet is handed a bounded
+    // height and Center takes all of it, so a short sheet came out as tall as
+    // a long one with its rows floating in the middle of the dead space.
+    return Align(
+      alignment: Alignment.topCenter,
+      heightFactor: 1,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: maxWidth),
         child: SafeArea(

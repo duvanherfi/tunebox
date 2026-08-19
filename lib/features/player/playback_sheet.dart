@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
-import '../settings/settings_screen.dart';
+import '../settings/playback_settings_screen.dart';
 import '../shared/sheet_body.dart';
 
 /// The three things that change how the music sounds and how long it lasts,

@@ -5,6 +5,13 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
 
 ## Hecho
 
+- **Ajustes por dominio** (punto 1). La hoja de cuenta lleva una sola entrada
+  "Settings" a un índice con cinco puertas: Playback and sound, Storage,
+  Backups, Appearance y System (esta última solo en Android, que es donde el
+  widget existe). Apariencia sale de la hoja a pantalla propia. El temporizador
+  se va de ajustes: ya vivía en la hoja del reproductor, que es donde está la
+  música. De paso, `SheetBody` se ajusta a su contenido — el `Center` se comía
+  toda la altura que le dieran y la hoja recortada salía medio vacía.
 - **Acciones de colección** (v0.1.3, publicado). Cabecera compartida con ♡ · 📻 · ⋮
   en playlist, álbum y artista; guardar colecciones en local con sincronización a
   YouTube cuando hay sesión; radio de lista (`RDAMPL`); menú con reproducir,
@@ -23,32 +30,28 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
 - **Mini reproductor siempre visible**. Las pestañas empujan en un Navigator
   anidado; las 13 hojas y diálogos pasan `useRootNavigator: true`.
 - **Fondo de las barras configurable**: sólido, cristal esmerilado, translúcido,
-  transparente. En Apariencia, dentro de la hoja de cuenta.
+  transparente. En Apariencia, dentro de Ajustes.
 - **Contenido a sangre bajo las barras.** El armazón recortaba el viewport con un
   `Padding`, dejando una franja del color del Scaffold bajo cada lista. Ahora el
   alto de las barras viaja como `padding` del `MediaQuery` y cada scrollable lo
   suma a su relleno inferior: el contenido llega al borde y pasa por detrás.
 
-> Los cinco commits de este bloque están en `main`, **sin subir a `origin`**.
+> Los commits de este bloque están en `main`, **sin subir a `origin`**.
 
 ## Pendiente
 
-1. **Separar los ajustes por dominio.** Hoy "Playback and sound" mezcla
-   reproducción, ecualizador, almacenamiento, widget del sistema y copias de
-   seguridad bajo un título que solo describe lo primero. Partir en entradas
-   distintas de la hoja de cuenta. Sin lógica nueva.
-2. **Opciones de artista.** Falta radio, compartir y **suscribirse**. Esta última
+1. **Opciones de artista.** Falta radio, compartir y **suscribirse**. Esta última
    no existe en el repo: hace falta endpoint nuevo, como pasó con guardar listas.
-3. **AOD.** Copiar el modo mesita de noche de OpenTune
+2. **AOD.** Copiar el modo mesita de noche de OpenTune
    (`AlwaysOnDisplayScreen.kt`): fondo oscuro, reloj, carátula, progreso,
    controles, activación automática. No es el AOD del sistema, es una pantalla
    propia, así que es portable: `wakelock_plus` (ya en pubspec) y `SystemChrome`.
    Necesita spec antes de empezar.
-4. **Iconos en todas las plataformas.** Recordar que el shrinker del release
+3. **Iconos en todas las plataformas.** Recordar que el shrinker del release
    borra los `drawable/` que solo se nombran desde Dart — `res/raw/keep.xml` y
    `test/android_icon_resources_test.dart` los mantienen en pareja. Revisar
    además el icono de la app en macOS (`.icns`).
-5. **Workflow de CI.** `flutter analyze`, `flutter test` y build de Android y
+4. **Workflow de CI.** `flutter analyze`, `flutter test` y build de Android y
    macOS en cada push. Opcionalmente un job de Linux en `continue-on-error` para
    medir cuánto falta, sin bloquear.
 

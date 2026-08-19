@@ -686,6 +686,48 @@ abstract class AppLocalizations {
   /// **'Settings'**
   String get settingsTitle;
 
+  /// No description provided for @settingsSound.
+  ///
+  /// In en, this message translates to:
+  /// **'Playback and sound'**
+  String get settingsSound;
+
+  /// No description provided for @settingsSoundBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Autoplay, speed, fade, equalizer'**
+  String get settingsSoundBody;
+
+  /// No description provided for @settingsStorageBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloads, cache and what they take up'**
+  String get settingsStorageBody;
+
+  /// No description provided for @settingsBackupBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily copy, write one now, restore'**
+  String get settingsBackupBody;
+
+  /// No description provided for @settingsAppearanceBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme, colours and the bars'**
+  String get settingsAppearanceBody;
+
+  /// No description provided for @settingsSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'System'**
+  String get settingsSystem;
+
+  /// No description provided for @settingsSystemBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The home screen widget'**
+  String get settingsSystemBody;
+
   /// No description provided for @settingsPlayback.
   ///
   /// In en, this message translates to:
@@ -763,12 +805,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Stopping in {minutes} min'**
   String settingsSleepPending(int minutes);
-
-  /// No description provided for @accountSettings.
-  ///
-  /// In en, this message translates to:
-  /// **'Playback and sound'**
-  String get accountSettings;
 
   /// No description provided for @settingsEqualizerIdle.
   ///

@@ -325,6 +325,28 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsTitle => 'Ajustes';
 
   @override
+  String get settingsSound => 'Reproducción y sonido';
+
+  @override
+  String get settingsSoundBody =>
+      'Continuar solo, velocidad, fundido, ecualizador';
+
+  @override
+  String get settingsStorageBody => 'Descargas, caché y lo que ocupan';
+
+  @override
+  String get settingsBackupBody => 'Copia diaria, escribir una, restaurar';
+
+  @override
+  String get settingsAppearanceBody => 'Tema, colores y las barras';
+
+  @override
+  String get settingsSystem => 'Sistema';
+
+  @override
+  String get settingsSystemBody => 'El widget de la pantalla de inicio';
+
+  @override
   String get settingsPlayback => 'Reproducción';
 
   @override
@@ -371,9 +393,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String settingsSleepPending(int minutes) {
     return 'Se detiene en $minutes min';
   }
-
-  @override
-  String get accountSettings => 'Reproducción y sonido';
 
   @override
   String get settingsEqualizerIdle =>
