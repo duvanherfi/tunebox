@@ -28,6 +28,7 @@ import 'data/recent_searches.dart';
 import 'data/resume_point.dart';
 import 'data/settings.dart';
 import 'features/home/home_screen.dart';
+import 'features/nightstand/charge_watcher.dart';
 import 'l10n/app_localizations.dart';
 
 /// Single shared instances. The audio handler is a process-wide singleton by
@@ -51,6 +52,12 @@ late final SavedCollections savedCollections;
 final DeviceSongs deviceSongs = DeviceSongs();
 late final RecentSearches recentSearches;
 late final ResumePoint resumePoint;
+
+/// The navigator, reachable from things that are not widgets. The nightstand's
+/// charge watcher is the first of them: it lives on a stream, not on a screen.
+final navigatorKey = GlobalKey<NavigatorState>();
+
+late final ChargeWatcher chargeWatcher;
 final LyricsClient lyricsClient = LyricsClient();
 
 Future<void> main() async {
@@ -184,6 +191,10 @@ Future<void> main() async {
     (item) => themeController.adoptArtwork(item?.artUri?.toString()),
   );
 
+  // Started before the first frame; the key it holds is only read once a
+  // battery event arrives, which is long after the navigator exists.
+  chargeWatcher = ChargeWatcher(navigatorKey: navigatorKey)..start();
+
   runApp(const TuneboxApp());
 
   // Asked after the first frame is on its way, so the dialog has a window to
@@ -217,6 +228,7 @@ class TuneboxApp extends StatelessWidget {
       listenable: themeController,
       builder: (context, _) => MaterialApp(
         title: 'Tunebox',
+        navigatorKey: navigatorKey,
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light(
           themeController.lightFromArtwork,
