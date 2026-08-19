@@ -47,8 +47,7 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
   alto de las barras viaja como `padding` del `MediaQuery` y cada scrollable lo
   suma a su relleno inferior: el contenido llega al borde y pasa por detrás.
 
-> Todo el bloque salvo las opciones de artista está en `main` y **subido a
-> `origin`** (18 de agosto de 2026).
+> Todo este bloque está en `main` y **subido a `origin`** (18 de agosto de 2026).
 
 ## Pendiente
 
