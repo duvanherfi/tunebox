@@ -273,14 +273,20 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
 Cosas que funcionan a medias y conviene mirar antes de dar por cerrada una
 versión.
 
-- **El `.dmg` solo se ha instalado sin cuarentena.** Montado, arrastrado a
-  `/Applications` y abierto desde ahí, funciona (19 de agosto de 2026, macOS
-  26.6). Lo que no se ha visto es el otro camino, que es el único que recorre un
-  lector: un archivo que baja de GitHub trae el atributo de cuarentena y
-  Gatekeeper lo para, y en macOS 26 el ctrl-clic ya no lo salva — hay que
-  autorizarlo desde Ajustes. Falta ver el aviso para poder describirlo en las
-  notas. `spctl` no contesta esto: rechaza una firma ad-hoc siempre, con
-  cuarentena y sin ella.
+- **El paso de Gatekeeper, comprobado: hay que autorizarla a mano.** Los dos
+  caminos probados en macOS 26.6 el 19 de agosto de 2026. Sin cuarentena
+  —montada, arrastrada a `/Applications` y abierta desde ahí— funciona y suena.
+  Con cuarentena, que es lo que trae cualquier copia bajada de un navegador,
+  macOS se niega a abrirla y hay que ir a **Ajustes › Privacidad y seguridad** a
+  permitirla; el ctrl-clic de siempre ya no vale en macOS 26. Las notas de la
+  versión que estrene el `.dmg` tienen que explicar ese paso.
+  Para diagnosticar esto **`spctl` no sirve**: rechaza una firma ad-hoc siempre,
+  con cuarentena y sin ella. El que contesta es `syspolicy_check distribution`,
+  que es de Apple y dice por qué: `Adhoc Signed App` como aviso y
+  `Notary Ticket Missing` como **Fatal**. Quitarlo pide notarizar, y notarizar
+  pide el Developer Program de pago y firmar con Developer ID en vez de ad-hoc.
+  La salida gratis, si el paso manual molesta, es un cask de Homebrew: `brew`
+  quita el atributo de cuarentena por su cuenta.
 - **Las carátulas no cargan en el navegador del emulador Automotive.** Salen
   como el marcador azul de siempre, y es cosa del emulador: el 18 de agosto de
   2026 se probó la proyección con el DHU sobre un teléfono real y un APK de
