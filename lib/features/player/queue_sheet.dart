@@ -15,6 +15,8 @@ import '../shared/sheet_body.dart';
 Future<void> showQueueSheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
+    // Above the shell, or it opens under the player bar.
+    useRootNavigator: true,
     showDragHandle: true,
     isScrollControlled: true,
     // Tall enough to be a list rather than a peek, short enough to keep the

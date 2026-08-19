@@ -20,6 +20,8 @@ import '../stats/stats_screen.dart';
 Future<void> showAccountSheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
+    // Above the shell, or it opens under the player bar.
+    useRootNavigator: true,
     showDragHandle: true,
     isScrollControlled: true,
     builder: (_) => const _AccountSheet(),

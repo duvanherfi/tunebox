@@ -15,6 +15,8 @@ import '../shared/sheet_body.dart';
 Future<void> showPlaybackSheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
+    // Above the shell, or it opens under the player bar.
+    useRootNavigator: true,
     showDragHandle: true,
     isScrollControlled: true,
     constraints: BoxConstraints(
@@ -148,6 +150,8 @@ class SleepTimerControls extends StatelessWidget {
   Future<void> _pick(BuildContext context) async {
     final chosen = await showDialog<Duration>(
       context: context,
+      // Above the shell, or it opens under the player bar.
+      useRootNavigator: true,
       builder: (_) => const _DurationDialog(),
     );
     if (chosen != null) playerService.sleepAfter(chosen);

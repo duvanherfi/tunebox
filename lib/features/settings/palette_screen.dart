@@ -112,6 +112,8 @@ class _GradientColours extends StatelessWidget {
     Future<void> edit(int index) async {
       final picked = await showDialog<int>(
         context: context,
+        // Above the shell, or it opens under the player bar.
+        useRootNavigator: true,
         builder: (_) => _ColourDialog(colour: Color(colours[index])),
       );
       if (picked == null) return;

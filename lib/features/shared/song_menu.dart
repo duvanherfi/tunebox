@@ -18,6 +18,8 @@ import 'sheet_body.dart';
 Future<void> showSongMenu(BuildContext context, Song song) {
   return showModalBottomSheet<void>(
     context: context,
+    // Above the shell, or it opens under the player bar.
+    useRootNavigator: true,
     showDragHandle: true,
     isScrollControlled: true,
     builder: (_) => _SongMenu(song: song),
@@ -228,6 +230,8 @@ class _SongMenu extends StatelessWidget {
 Future<void> showPlaylistPicker(BuildContext context, List<Song> songs) {
   return showModalBottomSheet<void>(
     context: context,
+    // Above the shell, or it opens under the player bar.
+    useRootNavigator: true,
     showDragHandle: true,
     isScrollControlled: true,
     constraints: BoxConstraints(
@@ -284,6 +288,8 @@ class _PlaylistPickerState extends State<_PlaylistPicker> {
     final controller = TextEditingController();
     final name = await showDialog<String>(
       context: context,
+      // Above the shell, or it opens under the player bar.
+      useRootNavigator: true,
       builder: (context) => AlertDialog(
         title: Text(l10n.playlistLocalNew),
         content: TextField(

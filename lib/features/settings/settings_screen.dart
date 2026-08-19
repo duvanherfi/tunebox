@@ -432,6 +432,8 @@ class _BackupsState extends State<_Backups> {
 
     final chosen = await showModalBottomSheet<File>(
       context: context,
+      // Above the shell, or it opens under the player bar.
+      useRootNavigator: true,
       showDragHandle: true,
       builder: (context) => SafeArea(
         child: Column(

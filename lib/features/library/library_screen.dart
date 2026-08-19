@@ -153,6 +153,8 @@ class _Playlists extends StatelessWidget {
 
     final name = await showDialog<String>(
       context: context,
+      // Above the shell, or it opens under the player bar.
+      useRootNavigator: true,
       builder: (context) => AlertDialog(
         title: Text(l10n.playlistLocalNew),
         content: TextField(
