@@ -53,6 +53,11 @@ dependencies:
   # Pinned: 14.x ships a Gradle script that our toolchain refuses to compile.
   permission_handler: ^11.3.1
   home_widget:
+  # Real backlight rather than a black veil over the page: on an OLED in a dark
+  # room that is the whole difference the nightstand screen is for.
+  screen_brightness:
+  # The only way to know the phone has been plugged in.
+  battery_plus:
 
 dev_dependencies:
   flutter_test:
