@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import 'appearance_screen.dart';
 import 'backup_settings_screen.dart';
+import 'nightstand_settings_screen.dart';
 import 'playback_settings_screen.dart';
 import 'storage_settings_screen.dart';
 import 'system_settings_screen.dart';
@@ -55,6 +56,12 @@ class SettingsScreen extends StatelessWidget {
             title: l10n.accountAppearance,
             body: l10n.settingsAppearanceBody,
             onTap: () => open(const AppearanceScreen()),
+          ),
+          _Entry(
+            icon: Icons.bedtime_outlined,
+            title: l10n.settingsNightstand,
+            body: l10n.settingsNightstandBody,
+            onTap: () => open(const NightstandSettingsScreen()),
           ),
           // The widget is the only thing behind this door, and it is Android's
           // alone; elsewhere the row would open on nothing.

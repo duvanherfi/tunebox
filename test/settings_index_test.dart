@@ -12,6 +12,7 @@ import 'package:tunebox/data/play_history.dart';
 import 'package:tunebox/data/settings.dart';
 import 'package:tunebox/features/settings/appearance_screen.dart';
 import 'package:tunebox/features/settings/backup_settings_screen.dart';
+import 'package:tunebox/features/settings/nightstand_settings_screen.dart';
 import 'package:tunebox/features/settings/playback_settings_screen.dart';
 import 'package:tunebox/features/settings/settings_screen.dart';
 import 'package:tunebox/features/settings/storage_settings_screen.dart';
@@ -60,6 +61,7 @@ void main() {
     expect(find.text('Storage'), findsOneWidget);
     expect(find.text('Backups'), findsOneWidget);
     expect(find.text('Appearance'), findsOneWidget);
+    expect(find.text('Nightstand'), findsOneWidget);
   });
 
   // Opened from a fresh tree each time rather than walked back to: pageBack
@@ -70,6 +72,7 @@ void main() {
     ('Storage', StorageSettingsScreen),
     ('Backups', BackupSettingsScreen),
     ('Appearance', AppearanceScreen),
+    ('Nightstand', NightstandSettingsScreen),
   ]) {
     testWidgets('$row opens its own screen', (tester) async {
       await open(tester);

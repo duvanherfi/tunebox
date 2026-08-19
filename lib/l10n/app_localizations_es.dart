@@ -838,4 +838,89 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get nightstandNothing => 'No suena nada';
+
+  @override
+  String get settingsNightstand => 'Mesita de noche';
+
+  @override
+  String get settingsNightstandBody =>
+      'Un reloj y la carátula mientras el teléfono descansa junto a la cama';
+
+  @override
+  String get nightstandShows => 'Qué se ve';
+
+  @override
+  String get nightstandClock => 'Reloj';
+
+  @override
+  String get nightstandArt => 'Carátula';
+
+  @override
+  String get nightstandTrack => 'Título y artista';
+
+  @override
+  String get nightstandProgress => 'Progreso';
+
+  @override
+  String get nightstandControlsLabel => 'Controles';
+
+  @override
+  String get nightstandControlsAlways => 'Siempre';
+
+  @override
+  String get nightstandControlsOnTouch => 'Al tocar';
+
+  @override
+  String get nightstandControlsNever => 'Ocultos';
+
+  @override
+  String get nightstandControlsBody =>
+      'Ocultos significa que cualquier toque sale al reproductor.';
+
+  @override
+  String get nightstandScreenLabel => 'Pantalla';
+
+  @override
+  String nightstandDim(int percent) {
+    return 'Brillo: $percent %';
+  }
+
+  @override
+  String get nightstandBurnIn => 'Mover el contenido';
+
+  @override
+  String get nightstandBurnInBody =>
+      'Desplaza todo unos píxeles cada minuto, para que una pantalla quieta no marque un OLED.';
+
+  @override
+  String get nightstandEnters => 'Entrar solo';
+
+  @override
+  String get nightstandIdle => 'Tras no hacer nada';
+
+  @override
+  String get nightstandIdleNever => 'Nunca';
+
+  @override
+  String nightstandIdleSeconds(int seconds) {
+    return '$seconds s';
+  }
+
+  @override
+  String nightstandIdleMinutes(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String get nightstandIdleBody => 'Con el reproductor abierto y algo sonando.';
+
+  @override
+  String get nightstandOnCharge => 'Al empezar a cargar';
+
+  @override
+  String get nightstandOnChargeBody =>
+      'Con algo sonando y el teléfono enchufado.';
+
+  @override
+  String get nightstandOpen => 'Modo mesita de noche';
 }

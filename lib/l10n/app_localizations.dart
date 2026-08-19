@@ -1621,6 +1621,156 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Nothing playing'**
   String get nightstandNothing;
+
+  /// No description provided for @settingsNightstand.
+  ///
+  /// In en, this message translates to:
+  /// **'Nightstand'**
+  String get settingsNightstand;
+
+  /// No description provided for @settingsNightstandBody.
+  ///
+  /// In en, this message translates to:
+  /// **'A clock and the cover while the phone rests by the bed'**
+  String get settingsNightstandBody;
+
+  /// No description provided for @nightstandShows.
+  ///
+  /// In en, this message translates to:
+  /// **'What it shows'**
+  String get nightstandShows;
+
+  /// No description provided for @nightstandClock.
+  ///
+  /// In en, this message translates to:
+  /// **'Clock'**
+  String get nightstandClock;
+
+  /// No description provided for @nightstandArt.
+  ///
+  /// In en, this message translates to:
+  /// **'Cover'**
+  String get nightstandArt;
+
+  /// No description provided for @nightstandTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'Title and artist'**
+  String get nightstandTrack;
+
+  /// No description provided for @nightstandProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Progress'**
+  String get nightstandProgress;
+
+  /// No description provided for @nightstandControlsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Controls'**
+  String get nightstandControlsLabel;
+
+  /// No description provided for @nightstandControlsAlways.
+  ///
+  /// In en, this message translates to:
+  /// **'Always'**
+  String get nightstandControlsAlways;
+
+  /// No description provided for @nightstandControlsOnTouch.
+  ///
+  /// In en, this message translates to:
+  /// **'On touch'**
+  String get nightstandControlsOnTouch;
+
+  /// No description provided for @nightstandControlsNever.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden'**
+  String get nightstandControlsNever;
+
+  /// No description provided for @nightstandControlsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden means any touch leaves for the player.'**
+  String get nightstandControlsBody;
+
+  /// No description provided for @nightstandScreenLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Screen'**
+  String get nightstandScreenLabel;
+
+  /// No description provided for @nightstandDim.
+  ///
+  /// In en, this message translates to:
+  /// **'Brightness: {percent}%'**
+  String nightstandDim(int percent);
+
+  /// No description provided for @nightstandBurnIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Move the content'**
+  String get nightstandBurnIn;
+
+  /// No description provided for @nightstandBurnInBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Shifts everything a few pixels every minute, so a still screen does not mark an OLED.'**
+  String get nightstandBurnInBody;
+
+  /// No description provided for @nightstandEnters.
+  ///
+  /// In en, this message translates to:
+  /// **'Coming up on its own'**
+  String get nightstandEnters;
+
+  /// No description provided for @nightstandIdle.
+  ///
+  /// In en, this message translates to:
+  /// **'After doing nothing'**
+  String get nightstandIdle;
+
+  /// No description provided for @nightstandIdleNever.
+  ///
+  /// In en, this message translates to:
+  /// **'Never'**
+  String get nightstandIdleNever;
+
+  /// No description provided for @nightstandIdleSeconds.
+  ///
+  /// In en, this message translates to:
+  /// **'{seconds} s'**
+  String nightstandIdleSeconds(int seconds);
+
+  /// No description provided for @nightstandIdleMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} min'**
+  String nightstandIdleMinutes(int minutes);
+
+  /// No description provided for @nightstandIdleBody.
+  ///
+  /// In en, this message translates to:
+  /// **'With the player open and something playing.'**
+  String get nightstandIdleBody;
+
+  /// No description provided for @nightstandOnCharge.
+  ///
+  /// In en, this message translates to:
+  /// **'When it starts charging'**
+  String get nightstandOnCharge;
+
+  /// No description provided for @nightstandOnChargeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'With something playing and the phone plugged in.'**
+  String get nightstandOnChargeBody;
+
+  /// No description provided for @nightstandOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Nightstand mode'**
+  String get nightstandOpen;
 }
 
 class _AppLocalizationsDelegate

@@ -834,4 +834,90 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get nightstandNothing => 'Nothing playing';
+
+  @override
+  String get settingsNightstand => 'Nightstand';
+
+  @override
+  String get settingsNightstandBody =>
+      'A clock and the cover while the phone rests by the bed';
+
+  @override
+  String get nightstandShows => 'What it shows';
+
+  @override
+  String get nightstandClock => 'Clock';
+
+  @override
+  String get nightstandArt => 'Cover';
+
+  @override
+  String get nightstandTrack => 'Title and artist';
+
+  @override
+  String get nightstandProgress => 'Progress';
+
+  @override
+  String get nightstandControlsLabel => 'Controls';
+
+  @override
+  String get nightstandControlsAlways => 'Always';
+
+  @override
+  String get nightstandControlsOnTouch => 'On touch';
+
+  @override
+  String get nightstandControlsNever => 'Hidden';
+
+  @override
+  String get nightstandControlsBody =>
+      'Hidden means any touch leaves for the player.';
+
+  @override
+  String get nightstandScreenLabel => 'Screen';
+
+  @override
+  String nightstandDim(int percent) {
+    return 'Brightness: $percent%';
+  }
+
+  @override
+  String get nightstandBurnIn => 'Move the content';
+
+  @override
+  String get nightstandBurnInBody =>
+      'Shifts everything a few pixels every minute, so a still screen does not mark an OLED.';
+
+  @override
+  String get nightstandEnters => 'Coming up on its own';
+
+  @override
+  String get nightstandIdle => 'After doing nothing';
+
+  @override
+  String get nightstandIdleNever => 'Never';
+
+  @override
+  String nightstandIdleSeconds(int seconds) {
+    return '$seconds s';
+  }
+
+  @override
+  String nightstandIdleMinutes(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String get nightstandIdleBody =>
+      'With the player open and something playing.';
+
+  @override
+  String get nightstandOnCharge => 'When it starts charging';
+
+  @override
+  String get nightstandOnChargeBody =>
+      'With something playing and the phone plugged in.';
+
+  @override
+  String get nightstandOpen => 'Nightstand mode';
 }
