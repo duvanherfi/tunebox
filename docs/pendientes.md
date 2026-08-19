@@ -22,6 +22,43 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
   shrinker los respetara, y ese fallo solo aparece en release, donde ningún
   emulador lo enseña.
 
+- **Actualizaciones desde la propia app** (pasos 5-8 del diseño). El updater
+  entero, menos publicar la release que lo estrena. `lib/data/updates.dart`
+  pregunta a la API pública de GitHub y **nunca lanza**: un túnel, un rate
+  limit, una release sin APK y un cuerpo que no es JSON son todos "no hay
+  novedad", y una bandera `failed` distingue el silencio que es respuesta del
+  que es fallo — la comprobación automática lo ignora, la hoja abierta a mano
+  lo dice. La comparación es de `versionCode`, que es lo que Android aplica al
+  instalar, y viaja en el nombre del asset (`tunebox-0.1.4+5.apk`) porque una
+  release de GitHub no tiene dónde ponerlo; si el nombre no se deja leer se cae
+  al tag como semver. Las releases publicadas hasta ahora se llaman
+  `tunebox-0.1.3.apk`, sin build, así que la 0.1.4 es la primera que estrena el
+  nombre nuevo.
+  **El control que hace seguro descargar de un sitio público es la firma**, y
+  vive en `Installer.kt`, donde están los certificados: un APK cuyo firmante no
+  es el nuestro se rechaza en seco, no se instala "avisando". Desde Android 9 se
+  usa `hasSigningCertificate`, que entiende una llave rotada; antes hay que
+  comparar los certificados a pelo. También se comprueba el `packageName`: un
+  APK de otro paquete se instalaría **al lado** de la app, que es justo cómo
+  entra un imitador. El `FileProvider` tiene autoridad propia
+  (`${applicationId}.updates`) en vez de reusar la de share_plus, para que el
+  instalador vea el directorio de descargas y nada más.
+  El aviso automático **nace encendido**, al revés que la mesita de noche: allí
+  lo automático te secuestra la pantalla, aquí es una hoja que se descarta.
+  Verificado en el emulador contra la API real: silencio al arrancar (0.1.3+4
+  instalado, v0.1.3 publicada) y "You are on the latest version" al pulsar
+  Ajustes › System › Buscar ahora. 21 tests nuevos entre `updates_test.dart` y
+  `update_sheet_test.dart`.
+
+- **`tool/release.sh`.** Construye, firma, etiqueta y publica. Comprueba las dos
+  cosas que producen una release inservible sin decirlo: que el APK **no** cayó
+  en la llave de debug (compara el SHA-256 de `apksigner` con el del keystore) y
+  que el shrinker no borró ningún drawable que Dart alcanza por nombre (los
+  busca dentro del APK con `aapt2`, no en `keep.xml` — el test unitario ya
+  vigila que `keep.xml` y Dart vayan en paralelo, lo que no puede saber es si el
+  shrinker le hizo caso). Ambas comprobaciones ejecutadas contra un
+  `build apk --release` de verdad: firma correcta y los doce drawables vivos.
+
 - **Iconos en todas las plataformas** (punto 1). La marca — la caja blanca con
   la nota sobre el rosa `#C2185B` — solo existía en el adaptive icon de Android;
   el resto de plataformas seguía enseñando el logo de Flutter del `flutter
@@ -106,16 +143,19 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
   alto de las barras viaja como `padding` del `MediaQuery` y cada scrollable lo
   suma a su relleno inferior: el contenido llega al borde y pasa por detrás.
 
-> Todo este bloque está en `main` y subido a `origin` (19 de agosto de 2026).
+> Todo este bloque está en `main` y subido a `origin` (19 de agosto de 2026),
+> salvo el updater y `tool/release.sh`, que están sin commitear.
 
 ## Pendiente
 
-- **Actualizaciones desde la propia app.** Diseño en
-  `docs/superpowers/specs/2026-08-19-in-app-updates-design.md`, con el orden de
-  trabajo. Los pasos 1-3 están hechos (auditoría, licencia, repo abierto) y el 4
-  también (este párrafo de CI). Queda del 5 en adelante: `lib/data/updates.dart`
-  con su test, `Installer.kt` con el `FileProvider`, la interfaz en Ajustes ›
-  System, `tool/release.sh` y publicar la v0.1.4.
+- **Publicar la v0.1.4 y recorrer el ciclo** (paso 9, el último del diseño en
+  `docs/superpowers/specs/2026-08-19-in-app-updates-design.md`). El código está
+  hecho y verificado hasta donde se puede sin una release nueva ahí fuera.
+  Falta: subir `pubspec.yaml` a `0.1.4+5`, escribir las notas, correr
+  `tool/release.sh <notas>` y luego instalar un build con el número bajado a
+  `0.1.3+4` — mismo código, solo la versión, y ese build no se publica — para
+  recorrer aviso, descarga, comprobación de firma, instalador y app
+  actualizada.
 - **Job de build en CI.** Ahora que sale gratis: `build apk --release` mirando
   los drawables dentro del APK, y `build macos`. Hilo aparte, no depende del
   updater.
@@ -173,6 +213,10 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
   Ahora que hay CI esto sale en rojo de tanto en tanto sin significar nada;
   el arreglo es el `tearDown`, no un reintento, que escondería los fallos
   de verdad.
+- **El aviso de Play Protect no sale en el emulador**, que no lleva Google Play
+  Services. Al instalar un APK de fuera, un teléfono con Play muestra un aviso
+  propio antes del instalador; dónde aparece y qué dice es cosa suya, no
+  nuestra, pero conviene verlo una vez para que no sorprenda.
 - **El brillo por aplicación no se puede verificar en el emulador.** La llamada
   se hace y no falla, pero un `screencap` no captura la retroiluminación, así
   que el 20 % está probado como código y no como luz. Falta mirarlo en un

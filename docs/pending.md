@@ -1,22 +1,9 @@
 # Pendiente
 
-Lo que falta de la lista de funcionalidades y, sobre todo, **qué bloquea cada
-cosa**.
-
-## Actualizaciones desde la propia app
-
-Mirar la última release, comparar con el `versionCode` de `pubspec.yaml`,
-descargar el APK y lanzar el instalador (`REQUEST_INSTALL_PACKAGES`).
-
-**Bloqueado por:** el repositorio es privado, y los assets de una release
-privada no se descargan sin un token. Meter un token dentro del APK es
-regalarlo — y además ese token da lectura al código, que es justo lo que el
-repo privado protege.
-
-**Decisión pendiente:** publicar las releases en un repo público aparte
-(`tunebox-releases`, sin código: solo tag, changelog y el APK firmado), que la
-app consulta sin credencial ninguna. Falta decidir dónde se firma: keystore
-como secret de Actions, o seguir construyendo en local y solo publicar.
+> Lo que quedaba abierto aquí — las actualizaciones desde la app, bloqueadas
+> por un repositorio privado — dejó de estarlo el 19 de agosto de 2026, cuando
+> el repo se abrió. **El estado vive ahora en `docs/pendientes.md`**; este
+> archivo se queda por lo descartado y los cabos sueltos, que siguen valiendo.
 
 # Descartado
 
