@@ -90,8 +90,39 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
   por los dos caminos contra un `build apk --release` de verdad (acepta el APK
   de release, rechaza el de debug), y el paso que reconstruye la llave en CI
   simulado con el keystore real — los bytes salen idénticos tras el
-  base64 round-trip y la huella SHA-256 coincide. El workflow entero no se ha
-  ejecutado nunca: su primera vez es la v0.1.5.
+  base64 round-trip y la huella SHA-256 coincide. **Ejecutado de verdad el 19
+  de agosto de 2026 con la v0.1.5**: aprobación del environment, build, firma,
+  las dos comprobaciones y `gh release create`, todo en verde a la primera, con
+  `tunebox-0.1.5+6.apk` publicado.
+
+- **La release lleva también macOS**, como imagen de disco. El build de macOS ya
+  corría en cada push para probar que compila, pero no salía nada de él.
+  `tool/package_dmg.sh` envuelve `tunebox.app` con el enlace a `/Applications`
+  —que es todo el procedimiento de instalación— y **lee la imagen de vuelta** en
+  vez de fiarse de haberla escrito: la monta, comprueba que el bundle de dentro
+  verifica su propio sello, que trae las dos arquitecturas y que la versión
+  coincide con el nombre. Lo de las arquitecturas no es teórico: el runner es
+  arm64 y un build solo para el anfitrión se instala en un Mac Intel y se niega
+  a abrir allí, que es justo lo que no puede ver quien lo compiló.
+  Eso obligó a partir el único job en cuatro. Los dos builds quieren runners
+  distintos, así que publicar se fue a un job propio que espera a los dos — y
+  así se conserva gratis la propiedad que tenía la forma anterior: que
+  `gh release create` es lo último y un fallo más arriba deja el tag sin
+  release. El job de macOS **no toma environment ni secrets**: la firma es
+  ad-hoc, así que no tiene nada que filtrar ni nada que esperar, y construye
+  mientras el APK sigue esperando su aprobación. Y el tag y el pubspec ahora
+  tienen que coincidir **antes** de que empiece ningún build, en vez de después
+  de diez minutos de uno.
+  **La firma es ad-hoc, no Developer ID, y la imagen no está notarizada.** Una
+  copia que llega por un navegador trae el atributo de cuarentena y Gatekeeper
+  la para hasta que el lector la autoriza a mano; en macOS 26 ya no vale el
+  ctrl-clic, hay que ir a Ajustes › Privacidad y seguridad. Notarizar es lo
+  único que quita ese paso y pide el certificado de pago. Las notas de la
+  versión que lo estrene tienen que decirlo.
+  Verificado en local: `.dmg` de 24 MB construido, montado, la app de dentro
+  universal (`x86_64 arm64`) y con el sello bueno, y el camino de fallo probado
+  metiendo un archivo dentro del bundle — lo rechaza. En CI no se ha ejecutado
+  nunca.
 
 - **Actualizaciones desde la propia app** (pasos 5-8 del diseño). El updater
   entero, menos publicar la release que lo estrena. `lib/data/updates.dart`
@@ -224,27 +255,31 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
   suma a su relleno inferior: el contenido llega al borde y pasa por detrás.
 
 > Todo este bloque está en `main` y subido a `origin` (19 de agosto de 2026).
-> **La v0.1.4 está publicada**, con el asset ya nombrado `tunebox-0.1.4+5.apk`,
-> que es el primero que lleva el número de compilación en el nombre.
+> **La v0.1.5 está publicada**, y es la primera que salió de CI en vez del
+> portátil: `tunebox-0.1.5+6.apk`, firmada con la llave del environment.
 
 ## Pendiente
 
-- **La v0.1.4 salió con el changelog en Markdown crudo.** El arreglo está en
-  `main` (`plainNotes`), pero la que la gente tiene instalada es la de antes:
-  quien actualice desde la 0.1.4 verá los asteriscos una vez más, y a partir de
-  la 0.1.5 no. No hay nada que hacer con la release ya publicada — el cuerpo en
-  GitHub es Markdown y ahí está bien.
+- **El `.dmg` de macOS está escrito y sin estrenar.** El job existe en
+  `release.yml` desde la v0.1.5 pero la v0.1.5 se publicó con el workflow
+  anterior, así que la primera imagen de disco saldrá con la siguiente versión.
+  Cuando salga, las notas tienen que explicar el paso de Gatekeeper: sin
+  notarizar, quien la descargue tiene que autorizarla a mano.
 
 ## Suelto, sin diagnosticar
 
 Cosas que funcionan a medias y conviene mirar antes de dar por cerrada una
 versión.
 
-- **El workflow de release no se ha ejecutado nunca.** Está escrito y sus
-  piezas están probadas por separado, pero nada ha pasado todavía por la
-  aprobación del environment, por `setup-java` en el runner ni por
-  `gh release create` con el token del job. La v0.1.5 es su primera vez, y el
-  orden de los pasos es la red: si falla, queda el tag y ninguna release.
+- **Nadie ha instalado nunca el `.dmg`.** Está comprobado como archivo — monta,
+  el bundle de dentro verifica su sello y trae las dos arquitecturas — y no como
+  aplicación: no se ha arrastrado a `/Applications` ni se ha abierto desde ahí.
+  Lo que ve además quien lo baja de GitHub —el aviso de Gatekeeper y dónde está
+  el botón para autorizarlo— tampoco lo ha mirado nadie, y `spctl` no sirve para
+  contestarlo: rechaza una firma ad-hoc siempre, con cuarentena y sin ella.
+- **La app de macOS no se ha ejercitado nunca.** Se construye en cada push, pero
+  que compile no dice si reproduce: el proxy, la caché y las credenciales en el
+  keychain están probados en Android.
 - **Las carátulas no cargan en el navegador del emulador Automotive.** Salen
   como el marcador azul de siempre, y es cosa del emulador: el 18 de agosto de
   2026 se probó la proyección con el DHU sobre un teléfono real y un APK de
