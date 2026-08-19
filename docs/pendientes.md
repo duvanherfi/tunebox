@@ -119,12 +119,17 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
   ctrl-clic, hay que ir a Ajustes › Privacidad y seguridad. Notarizar es lo
   único que quita ese paso y pide el certificado de pago. Las notas de la
   versión que lo estrene tienen que decirlo.
+  **Publicada en la v0.1.6**, junto a un tap de Homebrew
+  (`duvanherfi/homebrew-tunebox`) que **tira** de las releases en vez de recibir
+  un empujón desde aquí: así publicar no necesita permiso de escritura sobre el
+  otro repo y este no gana ningún secret — que es la regla que protege la llave
+  de firma. El cask se genera entero desde `tool/render_cask.sh`, que vive allí.
   Verificado en local: `.dmg` de 24 MB construido, montado, la app de dentro
   universal (`x86_64 arm64`) y con el sello bueno, y el camino de fallo probado
   metiendo un archivo dentro del bundle — lo rechaza. Y por fin **instalada y
   reproduciendo**: hasta ahora macOS solo constaba como que compila, que no dice
   nada sobre el proxy ni la caché; instalada desde el `.dmg` a `/Applications`,
-  suena. En CI el job no se ha ejecutado nunca.
+  suena. El job de CI se estrenó con la v0.1.6, en verde.
 
 - **Actualizaciones desde la propia app** (pasos 5-8 del diseño). El updater
   entero, menos publicar la release que lo estrena. `lib/data/updates.dart`
@@ -262,11 +267,14 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
 
 ## Pendiente
 
-- **El `.dmg` de macOS está escrito y sin estrenar.** El job existe en
-  `release.yml` desde la v0.1.5 pero la v0.1.5 se publicó con el workflow
-  anterior, así que la primera imagen de disco saldrá con la siguiente versión.
-  Cuando salga, las notas tienen que explicar el paso de Gatekeeper: sin
-  notarizar, quien la descargue tiene que autorizarla a mano.
+- **Notarizar es lo único que queda por decidir en macOS.** Todo lo demás está
+  hecho: la v0.1.6 publicó la primera imagen de disco, y el tap
+  `duvanherfi/homebrew-tunebox` la sirve y se mantiene solo. Lo que no se
+  resuelve sin pagar es que macOS pide autorización a mano en cada instalación
+  y en cada actualización. Son 99 USD/año, y a cambio desaparece el paso, el
+  `.dmg` deja de necesitar explicación en las notas y brew deja de re-marcar
+  cada versión. Mientras tanto está documentado en los dos sitios donde alguien
+  se lo va a encontrar.
 
 ## Suelto, sin diagnosticar
 
@@ -285,8 +293,13 @@ versión.
   que es de Apple y dice por qué: `Adhoc Signed App` como aviso y
   `Notary Ticket Missing` como **Fatal**. Quitarlo pide notarizar, y notarizar
   pide el Developer Program de pago y firmar con Developer ID en vez de ad-hoc.
-  La salida gratis, si el paso manual molesta, es un cask de Homebrew: `brew`
-  quita el atributo de cuarentena por su cuenta.
+  **Homebrew no es una salida a esto**, aunque lo pareciera: brew pone el
+  atributo de cuarentena él mismo, y solo lo libera al actualizar si la
+  identidad de firma de la versión nueva coincide con la de la vieja. La de una
+  firma ad-hoc es el `cdhash` del binario (`designated => cdhash H"…"`), que
+  cambia en cada build, así que el aviso vuelve en **cada** actualización. Una
+  firma Developer ID daría una identidad estable
+  (`certificate leaf[subject.OU] = …`) y arreglaría las dos cosas a la vez.
 - **Las carátulas no cargan en el navegador del emulador Automotive.** Salen
   como el marcador azul de siempre, y es cosa del emulador: el 18 de agosto de
   2026 se probó la proyección con el DHU sobre un teléfono real y un APK de
