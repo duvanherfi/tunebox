@@ -62,9 +62,9 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
   alto de las barras viaja como `padding` del `MediaQuery` y cada scrollable lo
   suma a su relleno inferior: el contenido llega al borde y pasa por detrás.
 
-> Todo este bloque está en `main` y **subido a `origin`** (18 de agosto de
-> 2026), salvo la mesita de noche, que vive en la rama `nightstand` sin
-> fusionar.
+> Todo este bloque está en `main`. Hasta la mesita de noche, subido a `origin`
+> (18 de agosto de 2026); la mesita está fusionada pero **sin empujar** (19 de
+> agosto de 2026).
 
 ## Pendiente
 
