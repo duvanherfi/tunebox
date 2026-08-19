@@ -13,13 +13,14 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
   para que un segundo push cancele al primero, y `timeout-minutes: 15` porque
   el defecto son seis horas y un job colgado se come el mes. Sin `pull_request`:
   las ramas son todas nuestras y correría el mismo commit dos veces.
-  **Los builds pesados se quedan fuera a propósito** — el repo es privado, así
-  que los minutos salen de una cuota fija y los runners de macOS facturan 10×:
-  macOS en cada push agota el mes en unos veinte. El de Android sería asequible
-  pero no dice nada: el APK que se publica va firmado con la llave de release,
-  que CI no tiene, así que un artefacto con firma debug solo probaría que
-  compila. Si algún día se quiere que CI publique, la puerta es meter el
-  keystore y las contraseñas como secrets y construir sobre el tag.
+  **Los builds pesados se quedaron fuera por dinero, y ese motivo caducó el 19
+  de agosto de 2026**, cuando el repo se abrió: en repos públicos los runners
+  estándar son gratis, macOS incluido. Lo que falta ahora no es presupuesto sino
+  escribir el job. El que más vale es un `build apk --release` que compruebe que
+  el shrinker no borró los drawables pinnados: `android_icon_resources_test`
+  verifica que `keep.xml` y los nombres en Dart van en paralelo, **no** que el
+  shrinker los respetara, y ese fallo solo aparece en release, donde ningún
+  emulador lo enseña.
 
 - **Iconos en todas las plataformas** (punto 1). La marca — la caja blanca con
   la nota sobre el rosa `#C2185B` — solo existía en el adaptive icon de Android;
@@ -69,6 +70,18 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
   se va de ajustes: ya vivía en la hoja del reproductor, que es donde está la
   música. De paso, `SheetBody` se ajusta a su contenido — el `Center` se comía
   toda la altura que le dieran y la hoja recortada salía medio vacía.
+- **Repositorio abierto y licenciado** (19 de agosto de 2026). El updater estaba
+  parado porque los assets de una release privada piden token y un token dentro
+  del APK se extrae en dos minutos — y ese token da lectura al código que lo
+  privado protegía. Abrir el repo quita el secreto en vez de esconderlo, que es
+  lo que hacen NewPipe, InnerTune y OuterTune. Antes se barrieron los 91 commits,
+  no solo el árbol: nunca se commiteó `key.properties` ni un `.jks`, no hay
+  cookies ni claves reales — los aciertos del grep son código que las maneja y
+  fixtures (`secret123`), las de Last.fm las pone el usuario en runtime, y las
+  dos fixtures de 400 KB se grabaron sin sesión (sin `datasyncId` ni
+  `loggedIn:true`). Cero issues y cero PRs que revisar. **GPL-3.0**, copyleft
+  fuerte, para que un fork no se pueda cerrar. La llave de firma no se movió:
+  sigue en `android/key.properties`, fuera de git.
 - **Acciones de colección** (v0.1.3, publicado). Cabecera compartida con ♡ · 📻 · ⋮
   en playlist, álbum y artista; guardar colecciones en local con sincronización a
   YouTube cuando hay sesión; radio de lista (`RDAMPL`); menú con reproducir,
@@ -97,10 +110,18 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
 
 ## Pendiente
 
-- **Actualizaciones desde la propia app.** Diseño validado y escrito en
-  `docs/superpowers/specs/2026-08-19-in-app-updates-design.md`; ahí está el
-  orden de trabajo y lo que hace el humano. Sin implementar todavía. El primer
-  paso es de Duvan y es irreversible: abrir el repositorio.
+- **Actualizaciones desde la propia app.** Diseño en
+  `docs/superpowers/specs/2026-08-19-in-app-updates-design.md`, con el orden de
+  trabajo. Los pasos 1-3 están hechos (auditoría, licencia, repo abierto) y el 4
+  también (este párrafo de CI). Queda del 5 en adelante: `lib/data/updates.dart`
+  con su test, `Installer.kt` con el `FileProvider`, la interfaz en Ajustes ›
+  System, `tool/release.sh` y publicar la v0.1.4.
+- **Job de build en CI.** Ahora que sale gratis: `build apk --release` mirando
+  los drawables dentro del APK, y `build macos`. Hilo aparte, no depende del
+  updater.
+- **Decisión abierta: firmar en CI.** Los cuatro secrets del keystore no están
+  subidos todavía; falta elegir entre environment con revisor (un clic por
+  release) o solo tag con las acciones pineadas por SHA.
 
 ## Sabido y descartado
 
