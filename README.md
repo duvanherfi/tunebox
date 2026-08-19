@@ -25,7 +25,6 @@ Versión **0.1.4**: usable a diario, en Android y macOS.
 | Música del propio teléfono, playlists locales, tema y degradados a medida | Hecho |
 | Modo mesita de noche | Hecho |
 | Actualizaciones desde la propia app | Hecho |
-| Reconocer canciones, importar de Spotify | Descartado |
 
 El historial **no** se escribe en la cuenta de YouTube: los pings se envían tal
 y como los manda la web, YouTube responde 204 y no aparece nada en
@@ -87,7 +86,7 @@ release con el APK nombrado por su número de compilación.
   **Léelo antes de tocar `core/innertube` o `core/audio`**: casi toda
   simplificación evidente de ahí ya se probó y falló.
 - [`docs/pendientes.md`](docs/pendientes.md) — qué está hecho, qué falta y qué
-  se descartó, con el motivo.
+  quedó a medias.
 
 Si la reproducción deja de funcionar de golpe —`player` respondiendo 400 o
 `LOGIN_REQUIRED` para todo—, no es un bloqueo ni un problema de cookies: es que

@@ -210,20 +210,18 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
   saltarte tu propia aprobación. Contra un tercero protege; contra un descuido
   propio, no. Se apaga desde la configuración del environment si molesta.
 
-## Sabido y descartado
-
-- **media_kit / just_audio_media_kit para escritorio.** No trae ecualizador
-  (lo dice su propia matriz de funciones) y además pierde skip silence y volume
-  boost, que sí usamos. macOS ya lo soporta just_audio de forma nativa.
-- **Windows y Linux.** `audio_service` y `just_audio` solo declaran android, ios,
-  macos y web. `PlayerService` **es** un `BaseAudioHandler`, así que esas
-  plataformas compilarían pero morirían en `AudioService.init`. No es una
-  verificación, es un proyecto.
-- **`deviceSupportsMimeType` de OpenTune.** Es `MediaCodecList` de Android; no
-  hay equivalente en Dart. Lo suple el orden de candidatos.
-
 ## Suelto, sin diagnosticar
 
+Cosas que funcionan a medias y conviene mirar antes de dar por cerrada una
+versión.
+
+- **Las carátulas no cargan en el navegador del emulador Automotive.** Salen
+  como el marcador azul de siempre, y es cosa del emulador: el 18 de agosto de
+  2026 se probó la proyección con el DHU sobre un teléfono real y un APK de
+  release, y los seis estantes, las carátulas, los cuatro botones propios del
+  reproductor y la reproducción desde una lista salieron bien. De ahí salió el
+  arreglo de `playFromMediaId`, que se queda sin el estante cuando Android mata
+  la app y el coche conserva el árbol.
 - **Los PNG heredados de Android no se han visto en un lanzador.** Sólo los lee
   API 25 y anterior; el emulador a mano es API 36 y sirve el adaptive icon en su
   lugar. Están comprobados como archivo, no como icono en una pantalla.
@@ -234,10 +232,11 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
   anteriores, donde nadie lo recorta y cae en el Dock como un cuadrado duro. Con
   el destino en 10.15 se queda en la rejilla clásica. La salida buena es un
   `.icon` de Icon Composer, que Tahoe lee de forma nativa.
-- **Suscribirse solo se probó sin sesión.** En el emulador la marca local, la
-  radio del artista y compartir salieron bien, pero la escritura a la cuenta
-  (`subscription/subscribe`) no se ha ejecutado nunca contra una real — el mismo
-  hueco que ya tienen crear playlists y añadir canciones.
+- **Escribir en la cuenta solo se ha ejercitado con el "me gusta".** Crear
+  playlists, añadir canciones y suscribirse (`subscription/subscribe`) están
+  implementados y no se han ejecutado nunca contra una cuenta real, para no
+  ensuciar la biblioteca de nadie. De suscribirse, en el emulador salieron bien
+  la marca local, la radio del artista y compartir; la escritura, no.
 - **`player_queue_test.dart` falla de vez en cuando** al borrar su directorio
   temporal: `FileSystemException: Deletion failed … Directory not empty`. Salió
   una vez en una tanda y no volvió en siete pasadas seguidas, ni antes ni
