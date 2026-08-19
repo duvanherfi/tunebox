@@ -58,6 +58,9 @@ dependencies:
   screen_brightness:
   # The only way to know the phone has been plugged in.
   battery_plus:
+  # The installed build number, which is what Android compares when it
+  # decides whether an APK may be installed over another.
+  package_info_plus:
 
 dev_dependencies:
   flutter_test:
