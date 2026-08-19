@@ -278,5 +278,7 @@
   "libraryDeviceDenied": "Without access to your audio there is nothing to look through.",
   "settingsWidget": "Add the home screen widget",
   "settingsWidgetBody": "What is playing, with its controls, without opening the app.",
-  "settingsWidgetManual": "This launcher cannot be asked; add it by holding the home screen and choosing Widgets."
+  "settingsWidgetManual": "This launcher cannot be asked; add it by holding the home screen and choosing Widgets.",
+  "nightstandExit": "Leave the nightstand",
+  "nightstandNothing": "Nothing playing"
 }

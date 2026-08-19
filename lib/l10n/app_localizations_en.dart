@@ -828,4 +828,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get settingsWidgetManual =>
       'This launcher cannot be asked; add it by holding the home screen and choosing Widgets.';
+
+  @override
+  String get nightstandExit => 'Leave the nightstand';
+
+  @override
+  String get nightstandNothing => 'Nothing playing';
 }

@@ -1609,6 +1609,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This launcher cannot be asked; add it by holding the home screen and choosing Widgets.'**
   String get settingsWidgetManual;
+
+  /// No description provided for @nightstandExit.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave the nightstand'**
+  String get nightstandExit;
+
+  /// No description provided for @nightstandNothing.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing playing'**
+  String get nightstandNothing;
 }
 
 class _AppLocalizationsDelegate

@@ -832,4 +832,10 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get settingsWidgetManual =>
       'A este lanzador no se le puede pedir; añádelo manteniendo pulsada la pantalla de inicio y eligiendo Widgets.';
+
+  @override
+  String get nightstandExit => 'Salir de la mesita';
+
+  @override
+  String get nightstandNothing => 'No suena nada';
 }
