@@ -119,9 +119,24 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
 - **Job de build en CI.** Ahora que sale gratis: `build apk --release` mirando
   los drawables dentro del APK, y `build macos`. Hilo aparte, no depende del
   updater.
-- **Decisión abierta: firmar en CI.** Los cuatro secrets del keystore no están
-  subidos todavía; falta elegir entre environment con revisor (un clic por
-  release) o solo tag con las acciones pineadas por SHA.
+- **Firmar en CI: secrets subidos, workflow por escribir.** La llave vive en el
+  environment `release` como `KEYSTORE_BASE64` (el `.jks` en base64, round-trip
+  verificado contra el SHA-256 del original), `KEYSTORE_PASSWORD`,
+  `KEY_PASSWORD` y `KEY_ALIAS`. **A nivel de repo no hay ningún secret**, que es
+  lo que impide que un workflow cualquiera los lea. El environment exige revisor
+  (`duvanherfi`) y su política de despliegue solo admite tags `v*`.
+  El workflow que falta tiene tres condiciones que no son opcionales, porque la
+  llave de release es lo único del proyecto que **no se puede rotar** — si se
+  filtra, cualquiera firma un APK que Android instala encima del tuyo:
+  1. `environment: release` en el job, que es lo que activa la aprobación.
+  2. **Acciones de terceros pineadas por SHA, no por tag.** `flutter-action@v2`
+     es una etiqueta móvil: quien controle ese repo publica y lee los secrets en
+     el build siguiente. Es la vía de fuga realista.
+  3. Disparo solo por tag, `permissions:` mínimos e
+     `if: github.repository == 'duvanherfi/tunebox'`.
+  Nota: el environment nace con `can_admins_bypass: true`, así que tú puedes
+  saltarte tu propia aprobación. Contra un tercero protege; contra un descuido
+  propio, no. Se apaga desde la configuración del environment si molesta.
 
 ## Sabido y descartado
 
