@@ -28,6 +28,20 @@ void main() {
     );
   });
 
+  test('plugged in but not taking charge still counts', () {
+    // What Android reports at 100%, with a charge limit, or with adaptive
+    // charging paused — which is exactly the phone that has been on the
+    // nightstand all night.
+    expect(
+      shouldEnterOnCharge(
+        state: BatteryState.connectedNotCharging,
+        enabled: true,
+        playing: true,
+      ),
+      isTrue,
+    );
+  });
+
   test('unplugging is an event too, and not one that opens anything', () {
     expect(
       shouldEnterOnCharge(
