@@ -75,7 +75,11 @@ class _AlbumScreenState extends State<AlbumScreen> {
                   itemBuilder: (context, index) =>
                       SongRow(songs: page.songs, index: index, numbered: true),
                 ),
-              const SliverToBoxAdapter(child: SizedBox(height: 24)),
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: 24 + MediaQuery.paddingOf(context).bottom,
+                ),
+              ),
             ],
           );
         },

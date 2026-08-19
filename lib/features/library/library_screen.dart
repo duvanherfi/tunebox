@@ -187,7 +187,7 @@ class _Playlists extends StatelessWidget {
     return ListenableBuilder(
       listenable: localPlaylists,
       builder: (context, _) => ListView(
-        padding: const EdgeInsets.only(bottom: 24),
+        padding: EdgeInsets.only(bottom: 24 + MediaQuery.paddingOf(context).bottom),
         children: [
           ListTile(
             leading: const Icon(Icons.add_rounded),
@@ -445,7 +445,7 @@ class _CollectionList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView.builder(
-      padding: const EdgeInsets.only(bottom: 24),
+      padding: EdgeInsets.only(bottom: 24 + MediaQuery.paddingOf(context).bottom),
       itemCount: collections.length,
       itemBuilder: (context, index) {
         final collection = collections[index];

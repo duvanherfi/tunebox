@@ -228,6 +228,7 @@ class _Suggestions extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView.builder(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom),
       itemCount: suggestions.length,
       itemBuilder: (context, index) => ListTile(
         leading: const Icon(Icons.search_rounded),
@@ -253,6 +254,7 @@ class _Recents extends StatelessWidget {
       listenable: recentSearches,
       builder: (context, _) => ListView(
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom),
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 8, 8, 4),

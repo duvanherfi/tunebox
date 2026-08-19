@@ -81,7 +81,11 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                 // read: a playlist that ends in a wall is a dead end.
                 SliverToBoxAdapter(child: Suggestions(seed: songs.first)),
               ],
-              const SliverToBoxAdapter(child: SizedBox(height: 24)),
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: 24 + MediaQuery.paddingOf(context).bottom,
+                ),
+              ),
             ],
           );
         },

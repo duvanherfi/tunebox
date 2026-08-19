@@ -92,7 +92,7 @@ class LocalPlaylistScreen extends StatelessWidget {
                     ),
                     Expanded(
                       child: ReorderableListView.builder(
-                        padding: const EdgeInsets.only(bottom: 24),
+                        padding: EdgeInsets.only(bottom: 24 + MediaQuery.paddingOf(context).bottom),
                         itemCount: playlist.songs.length,
                         onReorder: (from, to) => localPlaylists.move(
                           id,

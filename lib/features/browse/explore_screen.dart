@@ -82,7 +82,7 @@ class _Shelves extends StatelessWidget {
         if (shelves.isEmpty) return _Empty(text: l10n.homeEmptyBody);
 
         return ListView.builder(
-          padding: const EdgeInsets.only(bottom: 16),
+          padding: EdgeInsets.only(bottom: 16 + MediaQuery.paddingOf(context).bottom),
           itemCount: shelves.length,
           itemBuilder: (context, index) => ShelfRow(shelf: shelves[index]),
         );
@@ -112,7 +112,12 @@ class _Moods extends StatelessWidget {
         if (moods.isEmpty) return _Empty(text: l10n.homeEmptyBody);
 
         return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+          padding: EdgeInsets.fromLTRB(
+            16,
+            16,
+            16,
+            24 + MediaQuery.paddingOf(context).bottom,
+          ),
           child: Wrap(
             spacing: 8,
             runSpacing: 8,

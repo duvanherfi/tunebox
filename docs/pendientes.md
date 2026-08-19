@@ -24,6 +24,10 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
   anidado; las 13 hojas y diálogos pasan `useRootNavigator: true`.
 - **Fondo de las barras configurable**: sólido, cristal esmerilado, translúcido,
   transparente. En Apariencia, dentro de la hoja de cuenta.
+- **Contenido a sangre bajo las barras.** El armazón recortaba el viewport con un
+  `Padding`, dejando una franja del color del Scaffold bajo cada lista. Ahora el
+  alto de las barras viaja como `padding` del `MediaQuery` y cada scrollable lo
+  suma a su relleno inferior: el contenido llega al borde y pasa por detrás.
 
 ## Pendiente
 

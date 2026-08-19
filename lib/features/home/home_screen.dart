@@ -71,6 +71,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final media = MediaQuery.of(context);
 
     // The header lives in the body rather than in the Scaffold, so the player
     // can rise over it: a full-screen now-playing view with the app's title
@@ -103,8 +104,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     // The bar plus the air under it, so a list ends above the
                     // pair rather than behind either of them.
                     : PlayerSheetState.collapsedHeight + PlayerSheetState.gap;
-                return Padding(
-                  padding: EdgeInsets.only(bottom: _navHeight + playerHeight),
+                // Handed down rather than cut off: padding here would shrink
+                // the viewport and leave the app's own background showing as a
+                // band under every list. The content runs to the bottom edge
+                // and passes behind the bars — which is the whole point of
+                // letting them be see-through — while each list adds this to
+                // its own bottom padding so its last row is still reachable.
+                return MediaQuery(
+                  data: media.copyWith(
+                    padding: media.padding.copyWith(
+                      bottom: media.padding.bottom + _navHeight + playerHeight,
+                    ),
+                  ),
                   child: Navigator(
                     key: _tabs,
                     onGenerateRoute: (_) => MaterialPageRoute(

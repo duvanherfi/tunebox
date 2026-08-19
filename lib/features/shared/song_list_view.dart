@@ -25,7 +25,9 @@ class SongListView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView.builder(
-      padding: padding ?? const EdgeInsets.only(bottom: 8),
+      padding:
+          padding ??
+          EdgeInsets.only(bottom: 8 + MediaQuery.paddingOf(context).bottom),
       itemCount: songs.length,
       itemBuilder: (context, index) => SongRow(songs: songs, index: index),
     );

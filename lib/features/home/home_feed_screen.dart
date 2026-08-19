@@ -71,7 +71,7 @@ class _HomeFeedScreenState extends State<HomeFeedScreen>
             await _future;
           },
           child: ListView.builder(
-            padding: const EdgeInsets.only(bottom: 16),
+            padding: EdgeInsets.only(bottom: 16 + MediaQuery.paddingOf(context).bottom),
             itemCount: shelves.length,
             itemBuilder: (context, index) => ShelfRow(shelf: shelves[index]),
           ),

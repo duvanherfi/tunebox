@@ -75,7 +75,11 @@ class _ArtistScreenState extends State<ArtistScreen> {
                 itemBuilder: (context, index) =>
                     ShelfRow(shelf: page.shelves[index]),
               ),
-              const SliverToBoxAdapter(child: SizedBox(height: 24)),
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: 24 + MediaQuery.paddingOf(context).bottom,
+                ),
+              ),
             ],
           );
         },
