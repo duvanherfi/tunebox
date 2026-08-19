@@ -47,13 +47,51 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
   v4 apunta a Node 20, que los runners ya no llevan, y dejaba dos anotaciones de
   deprecación en cada build.
   **Sin pinear las acciones por SHA**: este workflow no lee ningún secret. Esa
-  condición es del de firma, que sigue pendiente.
+  condición es del de firma, y ahí sí se cumple.
   Verificado en local antes de subir — los doce drawables vivos en un
   `build apk --release` de verdad, el camino de fallo probado metiendo un nombre
   que no existe, y `tunebox.app` construido — y después en el runner: los tres
   jobs en verde y el mismo "all 12 pinned drawables survived". Android tarda
   unos 7 min 30 s y macOS unos 4 min 15 s, en paralelo con el minuto y medio de
   analyze/test.
+
+- **Firmar y publicar desde CI** (`.github/workflows/release.yml`). El portátil
+  dejó de firmar releases. `tool/release.sh` se queda con lo que tiene que ser
+  cierto **antes** del tag — árbol limpio, rama `main`, versión con número de
+  compilación, tag libre, release no publicada, notas escritas en
+  `docs/releases/vX.Y.Z.md`, `analyze` y `test` — y termina empujando el tag.
+  Eso despierta al workflow, que construye, firma, comprueba y publica.
+  El corte está en el tag porque un tag empujado es el único paso de una
+  release que no se retira limpiamente; todo lo barato de comprobar se hace
+  antes, y lo que necesita la llave, después.
+  Las notas se buscan por tag en vez de pasarse como ruta: el workflow no
+  recibe argumentos, así que una ruta equivocada solo se descubriría con el tag
+  ya subido. Lo comprueban los dos: `release.sh` antes de empujar el tag, y el
+  workflow en su segundo paso, antes de los diez minutos de build.
+  Las tres condiciones que hacían falta, cumplidas: `environment: release` en el
+  job, que es lo que activa la aprobación y lo único que da acceso a la llave;
+  las tres acciones de terceros **pineadas por SHA**, no por tag — un tag lo
+  mueve su dueño, y ese es el camino realista por el que se fuga una llave que
+  no se puede rotar; y disparo solo por tag `v*`, `permissions: contents: write`
+  y nada más, y `if: github.repository == 'duvanherfi/tunebox'`, que apaga el
+  workflow entero en un fork.
+  La comprobación de firma salió de `release.sh` a `tool/check_signature.sh`,
+  por el mismo motivo que en su día salió `check_drawables.sh`: que un build
+  local y uno publicado se miren con el mismo código. Los dos scripts los llama
+  ahora el workflow.
+  `gh release create` es el **último** paso, así que un fallo en cualquier otro
+  deja el tag sin release, que es el estado del que un tag todavía se borra. La
+  llave se borra del disco en un paso con `if: always()`, antes de publicar.
+  De paso, `ci.yml` disparaba con `on: push:` sin filtro, que incluye los tags:
+  publicar habría corrido los tres jobs por segunda vez sobre un commit que ya
+  pasó por ellos al entrar en `main`, en paralelo con el build de la release.
+  Ahora filtra `branches: ['**']`.
+  Verificado en local hasta donde se puede sin publicar: `check_signature.sh`
+  por los dos caminos contra un `build apk --release` de verdad (acepta el APK
+  de release, rechaza el de debug), y el paso que reconstruye la llave en CI
+  simulado con el keystore real — los bytes salen idénticos tras el
+  base64 round-trip y la huella SHA-256 coincide. El workflow entero no se ha
+  ejecutado nunca: su primera vez es la v0.1.5.
 
 - **Actualizaciones desde la propia app** (pasos 5-8 del diseño). El updater
   entero, menos publicar la release que lo estrena. `lib/data/updates.dart`
@@ -196,30 +234,17 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
   quien actualice desde la 0.1.4 verá los asteriscos una vez más, y a partir de
   la 0.1.5 no. No hay nada que hacer con la release ya publicada — el cuerpo en
   GitHub es Markdown y ahí está bien.
-- **Firmar en CI: secrets subidos, workflow por escribir.** La llave vive en el
-  environment `release` como `KEYSTORE_BASE64` (el `.jks` en base64, round-trip
-  verificado contra el SHA-256 del original), `KEYSTORE_PASSWORD`,
-  `KEY_PASSWORD` y `KEY_ALIAS`. **A nivel de repo no hay ningún secret**, que es
-  lo que impide que un workflow cualquiera los lea. El environment exige revisor
-  (`duvanherfi`) y su política de despliegue solo admite tags `v*`.
-  El workflow que falta tiene tres condiciones que no son opcionales, porque la
-  llave de release es lo único del proyecto que **no se puede rotar** — si se
-  filtra, cualquiera firma un APK que Android instala encima del tuyo:
-  1. `environment: release` en el job, que es lo que activa la aprobación.
-  2. **Acciones de terceros pineadas por SHA, no por tag.** `flutter-action@v2`
-     es una etiqueta móvil: quien controle ese repo publica y lee los secrets en
-     el build siguiente. Es la vía de fuga realista.
-  3. Disparo solo por tag, `permissions:` mínimos e
-     `if: github.repository == 'duvanherfi/tunebox'`.
-  Nota: el environment nace con `can_admins_bypass: true`, así que tú puedes
-  saltarte tu propia aprobación. Contra un tercero protege; contra un descuido
-  propio, no. Se apaga desde la configuración del environment si molesta.
 
 ## Suelto, sin diagnosticar
 
 Cosas que funcionan a medias y conviene mirar antes de dar por cerrada una
 versión.
 
+- **El workflow de release no se ha ejecutado nunca.** Está escrito y sus
+  piezas están probadas por separado, pero nada ha pasado todavía por la
+  aprobación del environment, por `setup-java` en el runner ni por
+  `gh release create` con el token del job. La v0.1.5 es su primera vez, y el
+  orden de los pasos es la red: si falla, queda el tag y ninguna release.
 - **Las carátulas no cargan en el navegador del emulador Automotive.** Salen
   como el marcador azul de siempre, y es cosa del emulador: el 18 de agosto de
   2026 se probó la proyección con el DHU sobre un teléfono real y un APK de

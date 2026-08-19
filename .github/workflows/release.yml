@@ -1,0 +1,134 @@
+name: Release
+
+# A tag, and nothing else. There is no branch trigger and no manual one: this
+# is the only job in the repository that can read the signing key, and the
+# environment's deployment policy only admits refs matching v*, so a tag is
+# also the only ref that would get past it.
+on:
+  push:
+    tags:
+      - 'v*'
+
+# Deliberately no concurrency group. Two releases never race — a tag is
+# published once — and cancelling a run that is halfway through publishing is
+# worse than letting it finish.
+
+jobs:
+  release:
+    name: Build, sign and publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    # In a fork this does nothing at all: the secrets live here, and a job that
+    # cannot reach them would only produce a debug-signed apk under someone
+    # else's release page.
+    if: github.repository == 'duvanherfi/tunebox'
+
+    # The whole point of the file. The signing key is not a repository secret —
+    # it belongs to this environment, so no other workflow can read it — and
+    # the environment asks a reviewer before the job starts.
+    environment: release
+
+    # Enough to create the release and upload the apk to it. Nothing writes
+    # code, opens a pull request or touches packages.
+    permissions:
+      contents: write
+
+    steps:
+      # Third-party actions are pinned by commit, not by tag. A tag is a label
+      # its owner can move: whoever controls one of these repositories could
+      # point v2 at a commit that prints the keystore, and the next release
+      # would hand it over. This is the realistic way the key leaks, and it is
+      # the reason it cannot leak the same way out of ci.yml — that workflow
+      # reads no secrets.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      # Before the ten minutes of build, not after them. release.sh checks this
+      # too, but a tag can also be pushed by hand, and the notes are the one
+      # input the workflow takes that is not derived from the commit.
+      - name: Check the release notes exist
+        run: |
+          notes="docs/releases/${GITHUB_REF_NAME}.md"
+          [[ -s "$notes" ]] || { echo "no release notes at $notes" >&2; exit 1; }
+
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: 3.41.6
+          channel: stable
+          cache: true
+
+      # The same two files a laptop has, written from the environment's
+      # secrets. storeFile is relative because Gradle resolves it against
+      # android/, and the keystore is removed again at the end of the job.
+      - name: Restore the signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          printenv KEYSTORE_BASE64 | base64 -d > android/tunebox.jks
+          cat > android/key.properties <<PROPERTIES
+          storeFile=tunebox.jks
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          PROPERTIES
+
+      - run: flutter pub get
+
+      - run: flutter build apk --release
+
+      # The build number rides in the file name because a GitHub release has
+      # nowhere else to put it, and the in-app updater reads it from there to
+      # decide whether it is looking at something newer.
+      - name: Name the asset after the version
+        id: version
+        run: |
+          full=$(sed -n 's/^version: *//p' pubspec.yaml | tr -d '[:space:]')
+          tag="v${full%%+*}"
+          [[ "$tag" == "${GITHUB_REF_NAME}" ]] || {
+            echo "pubspec says $tag but the tag is ${GITHUB_REF_NAME}" >&2
+            exit 1
+          }
+          cp build/app/outputs/flutter-apk/app-release.apk "build/tunebox-$full.apk"
+          echo "asset=build/tunebox-$full.apk" >> "$GITHUB_OUTPUT"
+
+      # The two failures that produce a release nobody can use without saying
+      # so. Both run the same scripts a local build runs.
+      #
+      # The asset path arrives through the environment rather than through
+      # ${{ }}, here and below: an expression is pasted into the script before
+      # the shell sees it, and this is the one workflow where a value that
+      # turned out to be attacker-shaped would be pasted next to the key.
+      - name: Check the signature
+        env:
+          ASSET: ${{ steps.version.outputs.asset }}
+        run: tool/check_signature.sh "$ASSET"
+
+      - name: Check the pinned drawables
+        env:
+          ASSET: ${{ steps.version.outputs.asset }}
+        run: tool/check_drawables.sh "$ASSET"
+
+      # Off the disk before anything else can read it. The runner is thrown
+      # away regardless, but the steps after this one do not need the key.
+      - name: Forget the signing key
+        if: always()
+        run: rm -f android/tunebox.jks android/key.properties
+
+      # Last, so a failure anywhere above leaves the tag without a release —
+      # which is the state a tag can still be deleted from.
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ASSET: ${{ steps.version.outputs.asset }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" "$ASSET#$(basename "$ASSET")" \
+            --notes-file "docs/releases/${GITHUB_REF_NAME}.md" \
+            --title "Tunebox ${GITHUB_REF_NAME#v}"

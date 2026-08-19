@@ -2,8 +2,13 @@ name: CI
 
 # Every push, on any branch. Pull requests are deliberately not a trigger:
 # the branches here are all our own, so a PR would run the same commit twice.
+# Tags are excluded because an unfiltered `push` includes them, and a release
+# tag would run all three jobs a second time on a commit that already passed
+# them on its way into main — while release.yml is building the same commit.
 on:
   push:
+    branches:
+      - '**'
   workflow_dispatch:
 
 # A second push supersedes the first. Without this the older run keeps burning
