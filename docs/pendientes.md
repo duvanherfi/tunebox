@@ -5,6 +5,22 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
 
 ## Hecho
 
+- **CI en cada push** (`.github/workflows/ci.yml`). Un job en `ubuntu-latest`:
+  `flutter pub get`, `analyze` y `test`, unos tres minutos. Flutter va
+  **pineado a 3.41.6**, no siguiendo `stable`: este toolchain es particular
+  — `permission_handler` por debajo de 14, `compileSdk` 37 — y un SDK que se
+  mueve solo se lee como bug nuestro. `concurrency` con `cancel-in-progress`
+  para que un segundo push cancele al primero, y `timeout-minutes: 15` porque
+  el defecto son seis horas y un job colgado se come el mes. Sin `pull_request`:
+  las ramas son todas nuestras y correría el mismo commit dos veces.
+  **Los builds pesados se quedan fuera a propósito** — el repo es privado, así
+  que los minutos salen de una cuota fija y los runners de macOS facturan 10×:
+  macOS en cada push agota el mes en unos veinte. El de Android sería asequible
+  pero no dice nada: el APK que se publica va firmado con la llave de release,
+  que CI no tiene, así que un artefacto con firma debug solo probaría que
+  compila. Si algún día se quiere que CI publique, la puerta es meter el
+  keystore y las contraseñas como secrets y construir sobre el tag.
+
 - **Iconos en todas las plataformas** (punto 1). La marca — la caja blanca con
   la nota sobre el rosa `#C2185B` — solo existía en el adaptive icon de Android;
   el resto de plataformas seguía enseñando el logo de Flutter del `flutter
@@ -81,9 +97,8 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
 
 ## Pendiente
 
-1. **Workflow de CI.** `flutter analyze`, `flutter test` y build de Android y
-   macOS en cada push. Opcionalmente un job de Linux en `continue-on-error` para
-   medir cuánto falta, sin bloquear.
+Nada abierto. Lo siguiente sale de "Suelto, sin diagnosticar" o de una idea
+nueva.
 
 ## Sabido y descartado
 
@@ -117,6 +132,9 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
   temporal: `FileSystemException: Deletion failed … Directory not empty`. Salió
   una vez en una tanda y no volvió en siete pasadas seguidas, ni antes ni
   después de tocar nada. Es una carrera del `tearDown`, no del reproductor.
+  Ahora que hay CI esto sale en rojo de tanto en tanto sin significar nada;
+  el arreglo es el `tearDown`, no un reintento, que escondería los fallos
+  de verdad.
 - **El brillo por aplicación no se puede verificar en el emulador.** La llamada
   se hace y no falla, pero un `screencap` no captura la retroiluminación, así
   que el 20 % está probado como código y no como luz. Falta mirarlo en un
