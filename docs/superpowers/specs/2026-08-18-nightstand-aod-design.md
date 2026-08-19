@@ -121,9 +121,10 @@ sin pintar nada.
    el brillo a `nightstand_dim`.
 3. Empuja una `PageRouteBuilder` opaca con fade sobre el `rootNavigator`.
 
-El `dispose` de la pantalla deshace las tres cosas y baja el flag. Está en el
-`dispose` y no en el `await` del push precisamente para que una excepción o un
-`pop` que no venga de nuestro botón dejen el teléfono como estaba.
+Un `finally` alrededor del push deshace las tres cosas y baja el flag. En un
+`finally` y no en el `dispose` de la pantalla porque el `await` del push termina
+como termine la ruta — nuestro chevron, el gesto de atrás, un `pop` de otro
+sitio — y además cubre el caso de que nunca llegara a abrirse.
 
 ### Las tres activaciones
 
