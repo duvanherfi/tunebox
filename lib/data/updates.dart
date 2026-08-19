@@ -6,6 +6,70 @@ import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 
+/// Turns a GitHub release body into something a bottom sheet can draw.
+///
+/// The body is Markdown, which is right for the release page and wrong here:
+/// nothing renders it, so the reader gets asterisks and backticks in the
+/// middle of the sentence, and every line the author wrapped by hand breaks
+/// again where the sheet is narrower. Rather than pull in a renderer for one
+/// paragraph, the marks come off and the paragraphs are rejoined.
+///
+/// Structure that carries meaning survives: a heading stays its own line, and
+/// a list stays one item per line with a bullet.
+String plainNotes(String markdown) {
+  final blocks = <String>[];
+
+  for (final block in markdown.trim().split(RegExp(r'\n\s*\n'))) {
+    final lines = <String>[];
+    var paragraph = <String>[];
+
+    void flush() {
+      if (paragraph.isEmpty) return;
+      lines.add(paragraph.join(' '));
+      paragraph = [];
+    }
+
+    for (final raw in block.split('\n')) {
+      final line = raw.trim();
+      if (line.isEmpty) continue;
+
+      // The markers are read off the raw line and only then taken off the
+      // text: an item written `* thing` would otherwise lose its bullet to
+      // the italics rule before anything knew it was a list.
+      final heading = RegExp(r'^#{1,6}\s+').firstMatch(line);
+      final item = RegExp(r'^[-*+]\s+').firstMatch(line);
+      if (heading != null) {
+        flush();
+        lines.add(_demark(line.substring(heading.end)));
+      } else if (item != null) {
+        flush();
+        lines.add('\u2022 ${_demark(line.substring(item.end))}');
+      } else if (lines.isNotEmpty && lines.last.startsWith('\u2022 ')) {
+        // A wrapped continuation of the item above, not a paragraph of its own.
+        lines[lines.length - 1] = '${lines.last} ${_demark(line)}';
+      } else {
+        paragraph.add(_demark(line));
+      }
+    }
+    flush();
+
+    if (lines.isNotEmpty) blocks.add(lines.join('\n'));
+  }
+
+  return blocks.join('\n\n');
+}
+
+/// `**bold**`, `*emphasis*`, `` `code` `` and `[words](url)` down to what they
+/// say. Underscores are left alone: `snake_case` is far likelier here than
+/// somebody emphasising with them.
+String _demark(String text) => text
+    .replaceAllMapped(
+      RegExp(r'\[([^\]]*)\]\([^)]*\)'),
+      (match) => match.group(1)!,
+    )
+    .replaceAll(RegExp(r'\*\*|__|`'), '')
+    .replaceAllMapped(RegExp(r'\*([^*]+)\*'), (match) => match.group(1)!);
+
 /// The build running right now, in the two numbers a release carries.
 ///
 /// [build] is what Android compares when it decides whether an APK may be
@@ -197,7 +261,7 @@ class Updates extends ChangeNotifier {
     return Release(
       version: version,
       build: build == null ? null : int.parse(build.group(1)!),
-      notes: ((json['body'] as String?) ?? '').trim(),
+      notes: plainNotes((json['body'] as String?) ?? ''),
       url: Uri.parse(url),
       size: (asset['size'] as num?)?.toInt() ?? 0,
     );

@@ -171,6 +171,59 @@ void main() {
     expect(store.progress, isNull);
   });
 
+  group('release notes', () {
+    // GitHub keeps the body as Markdown, which is right for the release page
+    // and wrong for a bottom sheet: unrendered, the reader gets asterisks and
+    // backticks in the middle of the sentence.
+    test('drops the marks the sheet cannot draw', () {
+      expect(
+        plainNotes('Ya **se actualiza sola**, con `--split-per-abi` fuera.'),
+        'Ya se actualiza sola, con --split-per-abi fuera.',
+      );
+    });
+
+    test('takes emphasis off without eating a bullet written with one', () {
+      expect(
+        plainNotes('No es el *always-on*.\n\n* Lo uno\n* Lo otro'),
+        'No es el always-on.\n\n\u2022 Lo uno\n\u2022 Lo otro',
+      );
+    });
+
+    test('leaves snake_case alone', () {
+      expect(plainNotes('Mira `key_properties` y foo_bar_baz.'),
+          'Mira key_properties y foo_bar_baz.');
+    });
+
+    test('reads a link as the words, not the address', () {
+      expect(
+        plainNotes('Ver [las notas](https://example.com/x) completas.'),
+        'Ver las notas completas.',
+      );
+    });
+
+    test('joins a paragraph the author wrapped by hand', () {
+      expect(
+        plainNotes('Una frase que sigue\nen la linea siguiente.'),
+        'Una frase que sigue en la linea siguiente.',
+      );
+    });
+
+    test('keeps one item per line and marks it', () {
+      expect(
+        plainNotes('### Que cambia\n\n- Lo uno\n- Lo otro'),
+        'Que cambia\n\n\u2022 Lo uno\n\u2022 Lo otro',
+      );
+    });
+
+    test('keeps the blank line between paragraphs', () {
+      expect(plainNotes('Uno.\n\nDos.'), 'Uno.\n\nDos.');
+    });
+
+    test('answers empty for a release with nothing written', () {
+      expect(plainNotes('   \n\n  '), '');
+    });
+  });
+
   test('clears an apk left behind by an earlier run', () async {
     File('${directory.path}/tunebox-0.1.4+5.apk').writeAsBytesSync([1, 2, 3]);
 

@@ -47,8 +47,17 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
   lo automático te secuestra la pantalla, aquí es una hoja que se descarta.
   Verificado en el emulador contra la API real: silencio al arrancar (0.1.3+4
   instalado, v0.1.3 publicada) y "You are on the latest version" al pulsar
-  Ajustes › System › Buscar ahora. 21 tests nuevos entre `updates_test.dart` y
-  `update_sheet_test.dart`.
+  Ajustes › System › Buscar ahora, y el **ciclo entero** con la v0.1.4 ya
+  publicada y un build con el número bajado a `0.1.3+4`: aviso automático,
+  permiso de fuentes desconocidas, descarga con progreso, comprobación de firma,
+  instalador del sistema y la app en `versionCode=5`. 27 tests nuevos entre
+  `updates_test.dart` y `update_sheet_test.dart`.
+  De ahí salió `plainNotes`: el cuerpo de una release es Markdown, y sin nadie
+  que lo pinte el lector se come los asteriscos y los acentos graves en mitad de
+  la frase, además de los saltos de línea que el autor puso a mano y la hoja
+  vuelve a romper donde es más estrecha. Se quitan las marcas y se rejuntan los
+  párrafos en vez de meter un renderizador entero por un párrafo; lo que
+  significa algo — un título, una lista — sobrevive.
 
 - **`tool/release.sh`.** Construye, firma, etiqueta y publica. Comprueba las dos
   cosas que producen una release inservible sin decirlo: que el APK **no** cayó
@@ -143,19 +152,17 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
   alto de las barras viaja como `padding` del `MediaQuery` y cada scrollable lo
   suma a su relleno inferior: el contenido llega al borde y pasa por detrás.
 
-> Todo este bloque está en `main` y subido a `origin` (19 de agosto de 2026),
-> salvo el updater y `tool/release.sh`, que están sin commitear.
+> Todo este bloque está en `main` y subido a `origin` (19 de agosto de 2026).
+> **La v0.1.4 está publicada**, con el asset ya nombrado `tunebox-0.1.4+5.apk`,
+> que es el primero que lleva el número de compilación en el nombre.
 
 ## Pendiente
 
-- **Publicar la v0.1.4 y recorrer el ciclo** (paso 9, el último del diseño en
-  `docs/superpowers/specs/2026-08-19-in-app-updates-design.md`). El código está
-  hecho y verificado hasta donde se puede sin una release nueva ahí fuera.
-  Falta: subir `pubspec.yaml` a `0.1.4+5`, escribir las notas, correr
-  `tool/release.sh <notas>` y luego instalar un build con el número bajado a
-  `0.1.3+4` — mismo código, solo la versión, y ese build no se publica — para
-  recorrer aviso, descarga, comprobación de firma, instalador y app
-  actualizada.
+- **La v0.1.4 salió con el changelog en Markdown crudo.** El arreglo está en
+  `main` (`plainNotes`), pero la que la gente tiene instalada es la de antes:
+  quien actualice desde la 0.1.4 verá los asteriscos una vez más, y a partir de
+  la 0.1.5 no. No hay nada que hacer con la release ya publicada — el cuerpo en
+  GitHub es Markdown y ahí está bien.
 - **Job de build en CI.** Ahora que sale gratis: `build apk --release` mirando
   los drawables dentro del APK, y `build macos`. Hilo aparte, no depende del
   updater.
