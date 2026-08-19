@@ -108,6 +108,7 @@ class _AccountSheetState extends State<_AccountSheet> {
             ),
           ),
           const _Palette(),
+          const _BarBackgroundOptions(),
           const SizedBox(height: 12),
         ],
       ),
@@ -202,6 +203,65 @@ class _AccountCard extends StatelessWidget {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+/// How much of the app shows through the two bars that are always on screen.
+///
+/// Offered rather than decided: reading a label over a bright cover and seeing
+/// the list move behind the bar want opposite things, and the blur that
+/// reconciles them costs something on a slow device.
+class _BarBackgroundOptions extends StatelessWidget {
+  const _BarBackgroundOptions();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+
+    String name(BarBackground kind) => switch (kind) {
+      BarBackground.solid => l10n.barSolid,
+      BarBackground.glass => l10n.barGlass,
+      BarBackground.translucent => l10n.barTranslucent,
+      BarBackground.clear => l10n.barClear,
+    };
+    String body(BarBackground kind) => switch (kind) {
+      BarBackground.solid => l10n.barSolidBody,
+      BarBackground.glass => l10n.barGlassBody,
+      BarBackground.translucent => l10n.barTranslucentBody,
+      BarBackground.clear => l10n.barClearBody,
+    };
+
+    return ListenableBuilder(
+      listenable: themeController,
+      builder: (context, _) => RadioGroup<BarBackground>(
+        groupValue: themeController.barBackground,
+        onChanged: (picked) {
+          if (picked != null) themeController.setBarBackground(picked);
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              child: Text(
+                l10n.appearanceBars,
+                style: theme.textTheme.labelLarge?.copyWith(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            for (final kind in BarBackground.values)
+              RadioListTile<BarBackground>(
+                value: kind,
+                title: Text(name(kind)),
+                subtitle: Text(body(kind)),
+              ),
+          ],
+        ),
       ),
     );
   }

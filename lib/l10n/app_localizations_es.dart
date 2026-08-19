@@ -383,6 +383,36 @@ class AppLocalizationsEs extends AppLocalizations {
   String get themeDynamic => 'Colores de la portada';
 
   @override
+  String get appearanceBars => 'Barras del reproductor y la navegación';
+
+  @override
+  String get barSolid => 'Sólido';
+
+  @override
+  String get barSolidBody => 'Opaco, como ha sido siempre.';
+
+  @override
+  String get barGlass => 'Cristal esmerilado';
+
+  @override
+  String get barGlassBody =>
+      'Se ve a través con el fondo desenfocado, así el texto sigue legible sobre cualquier portada.';
+
+  @override
+  String get barTranslucent => 'Translúcido';
+
+  @override
+  String get barTranslucentBody =>
+      'Se ve a través sin desenfocar. Más barato, y más sucio sobre una portada con mucho detalle.';
+
+  @override
+  String get barClear => 'Transparente';
+
+  @override
+  String get barClearBody =>
+      'Sin fondo ninguno. Sobre una portada clara el texto puede desaparecer.';
+
+  @override
   String get themeDynamicBody =>
       'Repintar la app con los colores de la carátula que suena.';
 

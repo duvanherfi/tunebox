@@ -2,6 +2,45 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// The shapes a background wash can take.
+/// How much of the app shows through the mini player and the navigation bar.
+///
+/// They float over the content all day, so this trades two things against each
+/// other: seeing the list move behind them, and reading their labels when what
+/// moves behind is a bright cover. Which one matters more is taste, and on a
+/// slow device the blur has a price, so it is offered rather than decided.
+enum BarBackground {
+  /// The surface colour, opaque. What the app has always looked like.
+  solid,
+
+  /// Translucent with the content blurred behind it: the list shows through and
+  /// the labels stay readable over anything.
+  glass,
+
+  /// Translucent with nothing behind it done: cheap, and muddy over a busy
+  /// cover.
+  translucent,
+
+  /// No background at all — just the text and the icons.
+  clear;
+
+  /// How opaque the bar is when the player sheet is [t] of the way open.
+  ///
+  /// Always opaque by the time it is a full screen: a now-playing view with the
+  /// queue showing through it is not a view.
+  double opacityAt(double t) {
+    final collapsed = switch (this) {
+      BarBackground.solid => 1.0,
+      BarBackground.glass => 0.72,
+      BarBackground.translucent => 0.55,
+      BarBackground.clear => 0.0,
+    };
+    return collapsed + (1 - collapsed) * t;
+  }
+
+  /// Whether what is behind is blurred.
+  bool get blurs => this == BarBackground.glass;
+}
+
 enum AppGradient {
   /// A flat surface, which is what Material expects and what reads best behind
   /// dense lists.
@@ -27,6 +66,7 @@ class ThemeController extends ChangeNotifier {
   static const _dynamicKey = 'theme_dynamic';
   static const _seedKey = 'theme_seed';
   static const _gradientKey = 'theme_gradient';
+  static const _barBackgroundKey = 'theme_bar_background';
   static const _gradientColoursKey = 'theme_gradient_colours';
   static const _gradientAngleKey = 'theme_gradient_angle';
 
@@ -66,6 +106,16 @@ class ThemeController extends ChangeNotifier {
 
   /// Whether the app sits on a flat colour or a wash, and of what shape.
   AppGradient gradient = AppGradient.none;
+
+  /// How much shows through the bars that float over everything.
+  BarBackground barBackground = BarBackground.solid;
+
+  Future<void> setBarBackground(BarBackground value) async {
+    barBackground = value;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_barBackgroundKey, value.name);
+  }
 
   /// The colours the wash runs through, in order. Two or more; anything less
   /// is a flat colour, which is what [AppGradient.none] is for.
@@ -120,6 +170,10 @@ class ThemeController extends ChangeNotifier {
     _mode = _decode(prefs.getString(_key));
     _dynamic = prefs.getBool(_dynamicKey) ?? false;
     _seed = prefs.getInt(_seedKey);
+    barBackground = BarBackground.values.firstWhere(
+      (kind) => kind.name == prefs.getString(_barBackgroundKey),
+      orElse: () => BarBackground.solid,
+    );
     gradient = AppGradient.values.firstWhere(
       (kind) => kind.name == prefs.getString(_gradientKey),
       orElse: () => AppGradient.none,

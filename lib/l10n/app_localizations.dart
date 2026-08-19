@@ -782,6 +782,60 @@ abstract class AppLocalizations {
   /// **'Colours from the cover'**
   String get themeDynamic;
 
+  /// No description provided for @appearanceBars.
+  ///
+  /// In en, this message translates to:
+  /// **'Player and navigation bars'**
+  String get appearanceBars;
+
+  /// No description provided for @barSolid.
+  ///
+  /// In en, this message translates to:
+  /// **'Solid'**
+  String get barSolid;
+
+  /// No description provided for @barSolidBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Opaque, as it has always been.'**
+  String get barSolidBody;
+
+  /// No description provided for @barGlass.
+  ///
+  /// In en, this message translates to:
+  /// **'Frosted glass'**
+  String get barGlass;
+
+  /// No description provided for @barGlassBody.
+  ///
+  /// In en, this message translates to:
+  /// **'See-through with the content blurred behind, so labels stay readable over any cover.'**
+  String get barGlassBody;
+
+  /// No description provided for @barTranslucent.
+  ///
+  /// In en, this message translates to:
+  /// **'Translucent'**
+  String get barTranslucent;
+
+  /// No description provided for @barTranslucentBody.
+  ///
+  /// In en, this message translates to:
+  /// **'See-through with nothing blurred. Cheaper, and muddier over a busy cover.'**
+  String get barTranslucentBody;
+
+  /// No description provided for @barClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Transparent'**
+  String get barClear;
+
+  /// No description provided for @barClearBody.
+  ///
+  /// In en, this message translates to:
+  /// **'No background at all. Over a bright cover the labels can disappear.'**
+  String get barClearBody;
+
   /// No description provided for @themeDynamicBody.
   ///
   /// In en, this message translates to:

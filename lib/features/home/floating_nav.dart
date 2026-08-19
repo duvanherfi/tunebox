@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../main.dart';
+import '../shared/bar_surface.dart';
 
 /// One destination of the floating navigation bar.
 class NavDestination {
@@ -38,35 +40,54 @@ class FloatingNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
-    return Center(
-      // Capped and centred: stretched across a landscape screen the four
-      // destinations end up a hand's width apart, which is a longer reach than
-      // any of them is worth.
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 520),
-        child: Material(
-          color: colors.surfaceContainerHigh,
-          elevation: 3,
-          shadowColor: Colors.black.withValues(alpha: 0.3),
-          surfaceTintColor: Colors.transparent,
-          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-          clipBehavior: Clip.antiAlias,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                for (var i = 0; i < destinations.length; i++)
-                  _Destination(
-                    destination: destinations[i],
-                    selected: i == index,
-                    onTap: () => onSelected(i),
+    // Rebuilt when the choice changes: this bar is drawn from a global, and a
+    // global that nobody listens to only takes effect on the next restart.
+    return ListenableBuilder(
+      listenable: themeController,
+      builder: (context, _) {
+        final background = themeController.barBackground;
+        final opacity = background.opacityAt(0);
+
+        return Center(
+          // Capped and centred: stretched across a landscape screen the four
+          // destinations end up a hand's width apart, which is a longer reach than
+          // any of them is worth.
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: BarSurface(
+              background: background,
+              radius: AppTheme.radiusPill,
+              child: Material(
+                color: colors.surfaceContainerHigh.withValues(alpha: opacity),
+                // A shadow under a see-through bar draws the edge it is trying to
+                // hide, so it goes when the fill does.
+                elevation: opacity == 1 ? 3 : 0,
+                shadowColor: Colors.black.withValues(alpha: 0.3),
+                surfaceTintColor: Colors.transparent,
+                borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                clipBehavior: Clip.antiAlias,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 8,
                   ),
-              ],
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      for (var i = 0; i < destinations.length; i++)
+                        _Destination(
+                          destination: destinations[i],
+                          selected: i == index,
+                          onTap: () => onSelected(i),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

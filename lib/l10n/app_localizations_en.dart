@@ -381,6 +381,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String get themeDynamic => 'Colours from the cover';
 
   @override
+  String get appearanceBars => 'Player and navigation bars';
+
+  @override
+  String get barSolid => 'Solid';
+
+  @override
+  String get barSolidBody => 'Opaque, as it has always been.';
+
+  @override
+  String get barGlass => 'Frosted glass';
+
+  @override
+  String get barGlassBody =>
+      'See-through with the content blurred behind, so labels stay readable over any cover.';
+
+  @override
+  String get barTranslucent => 'Translucent';
+
+  @override
+  String get barTranslucentBody =>
+      'See-through with nothing blurred. Cheaper, and muddier over a busy cover.';
+
+  @override
+  String get barClear => 'Transparent';
+
+  @override
+  String get barClearBody =>
+      'No background at all. Over a bright cover the labels can disappear.';
+
+  @override
   String get themeDynamicBody =>
       'Repaint the app around the artwork that is playing.';
 

@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/theme_controller.dart';
 import '../../main.dart';
+import '../shared/bar_surface.dart';
 import 'full_player.dart';
 import 'mini_player.dart';
 import 'swipe_to_change.dart';
@@ -114,14 +116,17 @@ class PlayerSheetState extends State<PlayerSheet>
         final item = snapshot.data;
         if (item == null) return const SizedBox.shrink();
 
+        // Both: the animation moves it, and the appearance setting changes how
+        // much of the app shows through it.
         return AnimatedBuilder(
-          animation: _controller,
+          animation: Listenable.merge([_controller, themeController]),
           builder: (context, _) {
             final t = _controller.value;
-            final height =
-                lerpDouble(collapsedHeight, screenHeight, t)!;
+            final height = lerpDouble(collapsedHeight, screenHeight, t)!;
             final bottom = lerpDouble(widget.bottomInset + gap, 0, t)!;
             final radius = lerpDouble(AppTheme.radiusCard, 0, t)!;
+            // See-through while it is a bar, solid by the time it is a screen.
+            final opacity = themeController.barBackground.opacityAt(t);
             final margin = lerpDouble(_sideMargin, 0, t)!;
 
             // Fades tuned so the two layouts never overlap visibly: the bar is
@@ -153,40 +158,54 @@ class PlayerSheetState extends State<PlayerSheet>
                   onVerticalDragUpdate: _onDrag,
                   onVerticalDragEnd: _onDragEnd,
                   onVerticalDragCancel: _settle,
-                  child: Material(
-                    color: colors.surfaceContainerHigh,
-                    // Rounded on all four corners while it is a floating bar,
-                    // squaring off as it grows into the screen.
-                    borderRadius: BorderRadius.circular(radius),
-                    elevation: lerpDouble(3, 0, t)!,
-                    shadowColor: Colors.black.withValues(alpha: 0.3),
-                    surfaceTintColor: Colors.transparent,
-                    clipBehavior: Clip.antiAlias,
-                    child: Stack(
-                      children: [
-                        if (panelOpacity > 0)
-                          Opacity(
-                            opacity: panelOpacity,
-                            child: FullPlayer(item: item, onCollapse: collapse),
-                          ),
-                        if (barOpacity > 0)
-                          Opacity(
-                            opacity: barOpacity,
-                            child: SizedBox(
-                              height: collapsedHeight,
-                              // Swiping the bar changes track, the same way
-                              // swiping the cover does. This is the surface
-                              // that is on screen all day, so it is the one
-                              // the gesture is really for.
-                              child: SwipeToChangeTrack(
-                                key: ValueKey(item.id),
-                                travel: MediaQuery.sizeOf(context).width,
-                                fade: false,
-                                child: MiniPlayerBar(item: item),
+                  child: BarSurface(
+                    // Blurred only while it is still a bar: by the time it is a
+                    // screen it is opaque, and a filter under an opaque fill is
+                    // a cost with nothing to show for it.
+                    background: opacity < 1
+                        ? themeController.barBackground
+                        : BarBackground.solid,
+                    radius: radius,
+                    child: Material(
+                      color: colors.surfaceContainerHigh.withValues(
+                        alpha: opacity,
+                      ),
+                      // Rounded on all four corners while it is a floating bar,
+                      // squaring off as it grows into the screen.
+                      borderRadius: BorderRadius.circular(radius),
+                      elevation: opacity == 1 ? lerpDouble(3, 0, t)! : 0,
+                      shadowColor: Colors.black.withValues(alpha: 0.3),
+                      surfaceTintColor: Colors.transparent,
+                      clipBehavior: Clip.antiAlias,
+                      child: Stack(
+                        children: [
+                          if (panelOpacity > 0)
+                            Opacity(
+                              opacity: panelOpacity,
+                              child: FullPlayer(
+                                item: item,
+                                onCollapse: collapse,
                               ),
                             ),
-                          ),
-                      ],
+                          if (barOpacity > 0)
+                            Opacity(
+                              opacity: barOpacity,
+                              child: SizedBox(
+                                height: collapsedHeight,
+                                // Swiping the bar changes track, the same way
+                                // swiping the cover does. This is the surface
+                                // that is on screen all day, so it is the one
+                                // the gesture is really for.
+                                child: SwipeToChangeTrack(
+                                  key: ValueKey(item.id),
+                                  travel: MediaQuery.sizeOf(context).width,
+                                  fade: false,
+                                  child: MiniPlayerBar(item: item),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
