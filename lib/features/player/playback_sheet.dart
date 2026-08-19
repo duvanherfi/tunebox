@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
+import '../nightstand/nightstand.dart';
 import '../settings/playback_settings_screen.dart';
 import '../shared/sheet_body.dart';
 
@@ -40,6 +41,20 @@ class _PlaybackSheet extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
+            // First because it is the one thing here that takes you somewhere
+            // rather than turning a knob, and because it belongs beside the
+            // sleep timer: both are what this sheet is opened for at night.
+            ListTile(
+              leading: const Icon(Icons.bedtime_outlined),
+              title: Text(l10n.nightstandOpen),
+              onTap: () {
+                // Closed before the route is pushed: both take the root
+                // navigator, and pushing first would leave the sheet on top.
+                Navigator.of(context).pop();
+                openNightstand(context);
+              },
+            ),
+            const Divider(height: 1),
             _Label(l10n.settingsSleep),
             const SleepTimerControls(),
             _Label(l10n.settingsSpeed(settings.speed.toStringAsFixed(2))),
