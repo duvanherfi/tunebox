@@ -347,6 +347,38 @@ List<Song> parseCardSongs(Map<String, dynamic> json) {
   return (title: '', subtitle: '', thumbnailUrl: null);
 }
 
+/// What an artist's page offers besides their music: the mix YouTube builds
+/// around them, and whether the account already follows them.
+///
+/// The radio comes from the header's own radio button rather than from the play
+/// button next to it — that one carries the artist's top tracks, which is a
+/// list, not a mix. When the header is shaped some other way, any `RD` id on
+/// the page will do: every one of them is a radio of something related, and a
+/// mix that is nearly right beats a button that does nothing.
+({String? radioPlaylistId, bool? subscribed, String? channelId})
+parseArtistDetails(Map<String, dynamic> json) {
+  var radio = readPath(
+    findFirst(findFirst(json, 'startRadioButton'), 'watchEndpoint'),
+    ['playlistId'],
+  ) as String?;
+
+  if (radio == null) {
+    for (final id in findAll(json, 'playlistId').whereType<String>()) {
+      if (id.startsWith('RD')) {
+        radio = id;
+        break;
+      }
+    }
+  }
+
+  final button = findFirst(json, 'subscribeButtonRenderer');
+  return (
+    radioPlaylistId: radio,
+    subscribed: readPath(button, ['subscribed']) as bool?,
+    channelId: readPath(button, ['channelId']) as String?,
+  );
+}
+
 /// The containers YouTube builds a page's sections out of.
 ///
 /// A carousel scrolls sideways, a grid wraps, a shelf is a plain list — but

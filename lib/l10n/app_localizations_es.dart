@@ -223,6 +223,21 @@ class AppLocalizationsEs extends AppLocalizations {
   String get menuAddToPlaylist => 'Añadir a una playlist';
 
   @override
+  String get menuShare => 'Compartir';
+
+  @override
+  String get artistSubscribe => 'Suscribirse';
+
+  @override
+  String get artistUnsubscribe => 'Cancelar suscripción';
+
+  @override
+  String get artistSubscribed => 'Te has suscrito';
+
+  @override
+  String get artistUnsubscribed => 'Suscripción cancelada';
+
+  @override
   String get menuCopyLink => 'Copiar enlace';
 
   @override

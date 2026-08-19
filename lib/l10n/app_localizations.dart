@@ -500,6 +500,36 @@ abstract class AppLocalizations {
   /// **'Add to playlist'**
   String get menuAddToPlaylist;
 
+  /// No description provided for @menuShare.
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get menuShare;
+
+  /// No description provided for @artistSubscribe.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscribe'**
+  String get artistSubscribe;
+
+  /// No description provided for @artistUnsubscribe.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsubscribe'**
+  String get artistUnsubscribe;
+
+  /// No description provided for @artistSubscribed.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscribed'**
+  String get artistSubscribed;
+
+  /// No description provided for @artistUnsubscribed.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription cancelled'**
+  String get artistUnsubscribed;
+
   /// No description provided for @menuCopyLink.
   ///
   /// In en, this message translates to:

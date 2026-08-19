@@ -1,6 +1,7 @@
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../data/models/playlist.dart';
@@ -15,10 +16,14 @@ import 'song_menu.dart';
 /// The mark is the listener's and stands even when the account cannot be told;
 /// the snackbar reports which of the two happened rather than pretending the
 /// write succeeded or undoing the mark.
+///
+/// [artist] only changes the words: keeping an artist is subscribing to them,
+/// and "saved to your library" is not what anyone would call it.
 Future<void> toggleCollectionSaved(
   BuildContext context,
-  Playlist collection,
-) async {
+  Playlist collection, {
+  bool artist = false,
+}) async {
   final messenger = ScaffoldMessenger.of(context);
   final l10n = AppLocalizations.of(context)!;
   final saving = !savedCollections.isSaved(collection.browseId);
@@ -26,7 +31,11 @@ Future<void> toggleCollectionSaved(
     await savedCollections.toggle(collection);
     messenger.showSnackBar(
       SnackBar(
-        content: Text(saving ? l10n.collectionSaved : l10n.collectionRemoved),
+        content: Text(
+          artist
+              ? (saving ? l10n.artistSubscribed : l10n.artistUnsubscribed)
+              : (saving ? l10n.collectionSaved : l10n.collectionRemoved),
+        ),
       ),
     );
   } catch (error) {
@@ -41,14 +50,21 @@ Future<void> toggleCollectionSaved(
 /// The radio is a network call, so it can arrive late or not at all: the
 /// failure is reported where the listener is looking rather than thrown into
 /// the void.
+///
+/// [radioId] is for the collections whose mix is not derived from their own id:
+/// an artist's radio is an `RDEM` id their page hands out, and their browse id
+/// names a channel, which seeds nothing.
 Future<void> startCollectionRadio(
   BuildContext context,
-  Playlist collection,
-) async {
+  Playlist collection, {
+  String? radioId,
+}) async {
   final messenger = ScaffoldMessenger.of(context);
   final l10n = AppLocalizations.of(context)!;
   try {
-    final songs = await innertube.collectionRadio(collection.browseId);
+    final songs = await innertube.collectionRadio(
+      radioId ?? collection.browseId,
+    );
     if (songs.isEmpty) {
       messenger.showSnackBar(SnackBar(content: Text(l10n.libraryPlaylistEmpty)));
       return;
@@ -71,6 +87,8 @@ Future<void> showCollectionMenu(
   BuildContext context, {
   required Playlist collection,
   required List<Song> songs,
+  bool artist = false,
+  String? radioId,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -81,15 +99,29 @@ Future<void> showCollectionMenu(
     constraints: BoxConstraints(
       maxHeight: MediaQuery.sizeOf(context).height * 0.8,
     ),
-    builder: (_) => _CollectionMenu(collection: collection, songs: songs),
+    builder: (_) => _CollectionMenu(
+      collection: collection,
+      songs: songs,
+      artist: artist,
+      radioId: radioId,
+    ),
   );
 }
 
 class _CollectionMenu extends StatelessWidget {
-  const _CollectionMenu({required this.collection, required this.songs});
+  const _CollectionMenu({
+    required this.collection,
+    required this.songs,
+    this.artist = false,
+    this.radioId,
+  });
 
   final Playlist collection;
   final List<Song> songs;
+
+  /// An artist is kept by subscribing, and their mix has an id of its own.
+  final bool artist;
+  final String? radioId;
 
   /// Runs an action after the sheet is gone, reporting on the surface that is
   /// still on screen rather than on the sheet's own dead context.
@@ -167,7 +199,7 @@ class _CollectionMenu extends StatelessWidget {
             title: Text(l10n.menuRadio),
             onTap: () {
               Navigator.of(context).pop();
-              startCollectionRadio(context, collection);
+              startCollectionRadio(context, collection, radioId: radioId);
             },
           ),
           ListTile(
@@ -215,17 +247,15 @@ class _CollectionMenu extends StatelessWidget {
             builder: (context, _) {
               final saved = savedCollections.isSaved(collection.browseId);
               return ListTile(
-                leading: Icon(
-                  saved
-                      ? Icons.favorite_rounded
-                      : Icons.favorite_border_rounded,
-                ),
+                leading: Icon(_keepIcon(saved: saved, artist: artist)),
                 title: Text(
-                  saved ? l10n.collectionRemove : l10n.collectionSave,
+                  artist
+                      ? (saved ? l10n.artistUnsubscribe : l10n.artistSubscribe)
+                      : (saved ? l10n.collectionRemove : l10n.collectionSave),
                 ),
                 onTap: () {
                   Navigator.of(context).pop();
-                  toggleCollectionSaved(context, collection);
+                  toggleCollectionSaved(context, collection, artist: artist);
                 },
               );
             },
@@ -247,6 +277,21 @@ class _CollectionMenu extends StatelessWidget {
             ),
           ),
           ListTile(
+            leading: const Icon(Icons.ios_share_rounded),
+            title: Text(l10n.menuShare),
+            onTap: () {
+              Navigator.of(context).pop();
+              SharePlus.instance.share(
+                ShareParams(
+                  // The title alongside the address, because a bare
+                  // music.youtube.com link says nothing about what it opens.
+                  text: '${collection.title}\n'
+                      '${collectionLink(collection.browseId)}',
+                ),
+              );
+            },
+          ),
+          ListTile(
             leading: const Icon(Icons.link_rounded),
             title: Text(l10n.menuCopyLink),
             onTap: () => _run(
@@ -264,13 +309,25 @@ class _CollectionMenu extends StatelessWidget {
   }
 }
 
+/// The mark that keeps something: a heart for a list, a person for an artist.
+IconData _keepIcon({required bool saved, required bool artist}) {
+  if (artist) {
+    return saved ? Icons.how_to_reg_rounded : Icons.person_add_alt_1_rounded;
+  }
+  return saved ? Icons.favorite_rounded : Icons.favorite_border_rounded;
+}
+
 /// The web address of a collection.
 ///
-/// Albums are browse ids and everything else is a playlist, which are two
-/// different paths on music.youtube.com; a link to the wrong one opens nothing.
+/// Albums are browse ids, artists are channels and everything else is a
+/// playlist — three different paths on music.youtube.com, and a link to the
+/// wrong one opens nothing.
 String collectionLink(String browseId) {
   if (browseId.startsWith('MPRE')) {
     return 'https://music.youtube.com/browse/$browseId';
+  }
+  if (browseId.startsWith('UC')) {
+    return 'https://music.youtube.com/channel/$browseId';
   }
   final id = browseId.startsWith('VL') ? browseId.substring(2) : browseId;
   return 'https://music.youtube.com/playlist?list=$id';

@@ -78,6 +78,19 @@ class SavedCollections extends ChangeNotifier {
   static String _key(String browseId) =>
       browseId.startsWith('VL') ? browseId.substring(2) : browseId;
 
+  /// Records something the account already keeps, without telling it again.
+  ///
+  /// An artist's page says whether the account follows them, and that answer is
+  /// older than this shelf: someone who subscribed on the web would otherwise
+  /// be offered "subscribe" here and would send the same write a second time.
+  /// Nothing is removed on the strength of this — the mark is the listener's,
+  /// and a page that answers signed out says nothing about it.
+  Future<void> remember(Playlist collection) async {
+    if (isSaved(collection.browseId)) return;
+    _collections.insert(0, collection);
+    await _save();
+  }
+
   Future<void> _save() async {
     notifyListeners();
     final file = await _resolve();

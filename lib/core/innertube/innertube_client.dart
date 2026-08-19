@@ -504,7 +504,10 @@ class InnertubeClient {
   Future<List<Song>> collectionRadio(String playlistId) async {
     final id = _bareId(playlistId);
     final json = await _post(_musicBase, 'next', _webRemix, {
-      'playlistId': id.startsWith('RDAMPL') ? id : 'RDAMPL$id',
+      // Anything that already starts a radio — `RDAMPL` for a list, `RDEM` for
+      // an artist — is asked for as it stands: prefixing it again names a mix
+      // that does not exist.
+      'playlistId': id.startsWith('RD') ? id : 'RDAMPL$id',
       'isAudioOnly': true,
     });
     return parseWatchQueue(json);
@@ -514,7 +517,14 @@ class InnertubeClient {
   ///
   /// The collection-level twin of [setLiked]: YouTube models saving a playlist
   /// as liking it, so it goes through the same endpoint with a playlist target.
+  /// An artist is the exception — a channel is not something one likes, it is
+  /// something one follows — so it is routed to [setArtistSubscribed] here,
+  /// where the difference is YouTube's, rather than in the store that only
+  /// knows it was asked to keep something.
   Future<void> setCollectionSaved(String playlistId, bool saved) async {
+    if (_isChannel(playlistId)) {
+      return setArtistSubscribed(playlistId, saved);
+    }
     _requireSession();
     await _post(
       _musicBase,
@@ -526,21 +536,44 @@ class InnertubeClient {
     );
   }
 
+  /// Follows or stops following an artist on the account.
+  ///
+  /// A channel, unlike a playlist, has an endpoint of its own, and it takes a
+  /// list: YouTube's own client unsubscribes from several at once from the
+  /// library page.
+  Future<void> setArtistSubscribed(String channelId, bool subscribed) async {
+    _requireSession();
+    await _post(
+      _musicBase,
+      subscribed ? 'subscription/subscribe' : 'subscription/unsubscribe',
+      _webRemix,
+      {
+        'channelIds': [channelId],
+      },
+    );
+  }
+
   /// A browse id without the `VL` a library shelf prefixes it with. Everything
   /// but `browse` wants the bare playlist id.
   static String _bareId(String playlistId) =>
       playlistId.startsWith('VL') ? playlistId.substring(2) : playlistId;
 
+  /// Channel ids are the one browse id that names a person rather than a list.
+  static bool _isChannel(String browseId) => browseId.startsWith('UC');
+
   /// An artist's page: their popular tracks, then their albums and singles.
   Future<MusicPage> artistPage(String browseId) async {
     final json = await browse(browseId);
     final header = parsePageHeader(json);
+    final details = parseArtistDetails(json);
     return MusicPage(
       title: header.title,
       subtitle: header.subtitle,
       thumbnailUrl: header.thumbnailUrl,
       songs: parseSongList(json),
       shelves: parseShelves(json),
+      radioPlaylistId: details.radioPlaylistId,
+      subscribed: details.subscribed,
     );
   }
 

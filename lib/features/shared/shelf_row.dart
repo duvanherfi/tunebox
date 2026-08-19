@@ -80,11 +80,15 @@ void openCollection(BuildContext context, Playlist collection) {
   final id = collection.browseId;
   final screen = switch (id) {
     _ when id.startsWith('MPRE') => AlbumScreen(browseId: id, title: collection.title),
-    _ when id.startsWith('UC') => ArtistScreen(browseId: id, name: collection.title),
+    _ when isArtistId(id) => ArtistScreen(browseId: id, name: collection.title),
     _ => PlaylistScreen(playlist: collection),
   };
   Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
 }
+
+/// Whether a browse id names a person rather than a list. The saved shelf holds
+/// both, and they belong on different pages and in different tabs.
+bool isArtistId(String browseId) => browseId.startsWith('UC');
 
 /// One cover with its title, whether it opens a collection or starts a track.
 class CoverCard extends StatelessWidget {

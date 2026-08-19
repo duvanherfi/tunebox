@@ -18,8 +18,9 @@ import 'collection_menu.dart';
 /// without breaking one of them onto two lines.
 ///
 /// [collection] is what the actions act on. Without it only the two ways in are
-/// offered: an artist's page uses this header too, and an artist is not a list
-/// one saves or shuffles into a radio.
+/// offered. An artist's page uses this header too, with [artist] set: the same
+/// three controls, except that keeping an artist is subscribing to them and
+/// their mix is an id of its own rather than one derived from the page's.
 class CollectionHeader extends StatelessWidget {
   const CollectionHeader({
     super.key,
@@ -29,6 +30,8 @@ class CollectionHeader extends StatelessWidget {
     required this.songs,
     this.collection,
     this.round = false,
+    this.artist = false,
+    this.radioPlaylistId,
   });
 
   final String title;
@@ -39,6 +42,12 @@ class CollectionHeader extends StatelessWidget {
 
   /// Artists are people, and a circle reads as one; a record is a square.
   final bool round;
+
+  /// Whether [collection] is an artist, which changes what keeping it means.
+  final bool artist;
+
+  /// The mix to start, when it is not the collection's own id.
+  final String? radioPlaylistId;
 
   @override
   Widget build(BuildContext context) {
@@ -148,15 +157,26 @@ class CollectionHeader extends StatelessWidget {
                           collection.browseId,
                         );
                         return IconButton(
-                          tooltip: saved
-                              ? l10n.collectionRemove
-                              : l10n.collectionSave,
-                          onPressed: () =>
-                              toggleCollectionSaved(context, collection),
+                          tooltip: artist
+                              ? (saved
+                                    ? l10n.artistUnsubscribe
+                                    : l10n.artistSubscribe)
+                              : (saved
+                                    ? l10n.collectionRemove
+                                    : l10n.collectionSave),
+                          onPressed: () => toggleCollectionSaved(
+                            context,
+                            collection,
+                            artist: artist,
+                          ),
                           icon: Icon(
-                            saved
-                                ? Icons.favorite_rounded
-                                : Icons.favorite_border_rounded,
+                            artist
+                                ? (saved
+                                      ? Icons.how_to_reg_rounded
+                                      : Icons.person_add_alt_1_rounded)
+                                : (saved
+                                      ? Icons.favorite_rounded
+                                      : Icons.favorite_border_rounded),
                             color: saved ? theme.colorScheme.primary : null,
                           ),
                         );
@@ -164,8 +184,11 @@ class CollectionHeader extends StatelessWidget {
                     ),
                     IconButton(
                       tooltip: l10n.menuRadio,
-                      onPressed: () =>
-                          startCollectionRadio(context, collection),
+                      onPressed: () => startCollectionRadio(
+                        context,
+                        collection,
+                        radioId: radioPlaylistId,
+                      ),
                       icon: const Icon(Icons.radio_rounded),
                     ),
                     IconButton(
@@ -174,6 +197,8 @@ class CollectionHeader extends StatelessWidget {
                         context,
                         collection: collection,
                         songs: songs,
+                        artist: artist,
+                        radioId: radioPlaylistId,
                       ),
                       icon: const Icon(Icons.more_vert_rounded),
                     ),

@@ -91,6 +91,28 @@ void main() {
     expect(store.all, isEmpty);
   });
 
+  test('adopts what the account already keeps, silently', () async {
+    var calls = 0;
+    final store = SavedCollections(
+      file: File('${directory.path}/saved_collections.json'),
+      innertube: InnertubeClient(
+        httpClient: MockClient((_) async {
+          calls++;
+          return http.Response('{}', 200);
+        }),
+      ),
+    );
+    await store.load();
+
+    await store.remember(_collection('UC1'));
+    // Twice, because an artist's page is read every time it is opened.
+    await store.remember(_collection('UC1'));
+
+    expect(store.isSaved('UC1'), isTrue);
+    expect(store.all.length, 1);
+    expect(calls, 0, reason: 'remembering is not a write');
+  });
+
   test('reads an absent file as nothing saved', () async {
     final store = saved();
     await store.load();

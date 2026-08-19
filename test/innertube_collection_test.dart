@@ -71,6 +71,23 @@ void main() {
       final body = jsonDecode(captured.body) as Map<String, dynamic>;
       expect(body['playlistId'], 'RDAMPLPL123');
     });
+
+    test('leaves an artist radio alone too', () async {
+      late http.Request captured;
+      final innertube = InnertubeClient(
+        httpClient: MockClient((request) async {
+          captured = request;
+          return http.Response('{}', 200);
+        }),
+      );
+
+      // An artist's mix is an `RDEM` id, and gluing `RDAMPL` in front of it
+      // asks for a playlist radio that does not exist.
+      await innertube.collectionRadio('RDEMabc');
+
+      final body = jsonDecode(captured.body) as Map<String, dynamic>;
+      expect(body['playlistId'], 'RDEMabc');
+    });
   });
 
   group('addAllToPlaylist', () {
@@ -174,6 +191,13 @@ void main() {
       expect(
         collectionLink('VLPL123'),
         'https://music.youtube.com/playlist?list=PL123',
+      );
+    });
+
+    test('points an artist at their channel', () {
+      expect(
+        collectionLink('UC123'),
+        'https://music.youtube.com/channel/UC123',
       );
     });
   });

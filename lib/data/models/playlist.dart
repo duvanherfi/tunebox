@@ -56,6 +56,8 @@ class MusicPage {
     this.thumbnailUrl,
     this.songs = const [],
     this.shelves = const [],
+    this.radioPlaylistId,
+    this.subscribed,
   });
 
   final String title;
@@ -63,6 +65,15 @@ class MusicPage {
   final String? thumbnailUrl;
   final List<Song> songs;
   final List<Shelf> shelves;
+
+  /// The mix YouTube builds around this page. An artist's is a different id
+  /// from the page's own, so it has to travel; an album's radio is derived from
+  /// its id and this stays null.
+  final String? radioPlaylistId;
+
+  /// Whether the account follows this artist, as the page reported it. Null
+  /// when nobody is signed in, or when the page is not an artist's.
+  final bool? subscribed;
 }
 
 /// Who is signed in.

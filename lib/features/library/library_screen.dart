@@ -114,15 +114,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   )
                 else
                   _SignedOut(onSignIn: _signIn),
-                if (session.isSignedIn)
-                  _Shelf<Playlist>(
-                    load: innertube.savedArtists,
-                    empty: l10n.libraryEmptyArtists,
-                    build: (artists) =>
-                        _CollectionList(collections: artists, round: true),
-                  )
-                else
-                  _SignedOut(onSignIn: _signIn),
+                _Artists(onSignIn: _signIn),
                 const _DeviceSongs(),
                 _Shelf<Song>(
                   load: _history,
@@ -215,12 +207,19 @@ class _Playlists extends StatelessWidget {
           ListenableBuilder(
             listenable: savedCollections,
             builder: (context, _) {
-              if (savedCollections.all.isEmpty) return const SizedBox.shrink();
+              // Artists are kept in the same shelf and shown in their own tab:
+              // a subscription is not a playlist, and reading it as one here
+              // would open a list that does not exist.
+              final saved = [
+                for (final collection in savedCollections.all)
+                  if (!isArtistId(collection.browseId)) collection,
+              ];
+              if (saved.isEmpty) return const SizedBox.shrink();
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _SectionLabel(l10n.librarySaved),
-                  for (final collection in savedCollections.all)
+                  for (final collection in saved)
                     ListTile(
                       leading: Artwork(
                         url: collection.thumbnailUrl,
@@ -251,6 +250,53 @@ class _Playlists extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+/// Artists: the ones followed from here first, then whoever the account
+/// follows.
+///
+/// Two sources in one tab for the same reason the playlists tab has two — a
+/// listener does not think of them as different shelves — and while signed out
+/// the local marks are the whole tab rather than an invitation to sign in.
+class _Artists extends StatelessWidget {
+  const _Artists({required this.onSignIn});
+
+  final VoidCallback onSignIn;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
+    return ListenableBuilder(
+      listenable: savedCollections,
+      builder: (context, _) {
+        final followed = [
+          for (final collection in savedCollections.all)
+            if (isArtistId(collection.browseId)) collection,
+        ];
+
+        if (!session.isSignedIn) {
+          if (followed.isEmpty) return _SignedOut(onSignIn: onSignIn);
+          return _CollectionList(collections: followed, round: true);
+        }
+
+        return _Shelf<Playlist>(
+          load: innertube.savedArtists,
+          empty: l10n.libraryEmptyArtists,
+          // The account's list already holds anything subscribed to from here
+          // once YouTube has caught up; until then the local mark is what the
+          // listener saw happen, so it leads.
+          build: (artists) => _CollectionList(
+            collections: [
+              ...followed,
+              ...artists.where((artist) => !followed.contains(artist)),
+            ],
+            round: true,
+          ),
+        );
+      },
     );
   }
 }

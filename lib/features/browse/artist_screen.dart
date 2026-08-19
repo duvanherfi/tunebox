@@ -25,7 +25,24 @@ class ArtistScreen extends StatefulWidget {
 }
 
 class _ArtistScreenState extends State<ArtistScreen> {
-  late final Future<MusicPage> _page = innertube.artistPage(widget.browseId);
+  late final Future<MusicPage> _page = _load();
+
+  /// The page, plus whatever it says about the account's relationship with this
+  /// artist. A subscription made on the web is older than this shelf, so it is
+  /// adopted rather than offered again.
+  Future<MusicPage> _load() async {
+    final page = await innertube.artistPage(widget.browseId);
+    if (page.subscribed == true) {
+      await savedCollections.remember(_asCollection(page));
+    }
+    return page;
+  }
+
+  Playlist _asCollection(MusicPage page) => Playlist(
+    browseId: widget.browseId,
+    title: page.title.isEmpty ? widget.name : page.title,
+    thumbnailUrl: page.thumbnailUrl,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -60,6 +77,9 @@ class _ArtistScreenState extends State<ArtistScreen> {
                   thumbnailUrl: page.thumbnailUrl,
                   songs: page.songs,
                   round: true,
+                  artist: true,
+                  collection: _asCollection(page),
+                  radioPlaylistId: page.radioPlaylistId,
                 ),
               ),
               if (page.songs.isNotEmpty) ...[
