@@ -389,4 +389,57 @@ void main() {
       }
     });
   });
+
+  group('parseSongIds', () {
+    test('names the same tracks parseSongList builds', () {
+      final json = _fixture('search_daft_punk.json');
+
+      expect(
+        parseSongIds(json),
+        parseSongList(json).map((song) => song.videoId).toList(),
+      );
+    });
+
+    test('is empty rather than throwing on a response with no rows', () {
+      expect(parseSongIds(const {'contents': {}}), isEmpty);
+    });
+  });
+
+  group('parseContinuationToken', () {
+    test('reads the command the current responses carry', () {
+      expect(
+        parseContinuationToken(const {
+          'contents': {
+            'continuationItemRenderer': {
+              'continuationEndpoint': {
+                'continuationCommand': {'token': 'next-page'},
+              },
+            },
+          },
+        }),
+        'next-page',
+      );
+    });
+
+    test('falls back to the older continuation data', () {
+      expect(
+        parseContinuationToken(const {
+          'contents': {
+            'musicShelfRenderer': {
+              'continuations': [
+                {
+                  'nextContinuationData': {'continuation': 'older-page'},
+                },
+              ],
+            },
+          },
+        }),
+        'older-page',
+      );
+    });
+
+    test('answers null at the end of the list', () {
+      expect(parseContinuationToken(_fixture('search_daft_punk.json')), isNull);
+    });
+  });
 }

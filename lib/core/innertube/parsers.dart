@@ -83,6 +83,38 @@ Duration? _parseDuration(String text) {
 /// Turns a search response into playable tracks.
 List<Song> parseSearchResults(Map<String, dynamic> json) => parseSongList(json);
 
+/// Lists the track ids of a response, without building the tracks.
+///
+/// The same rows [parseSongList] reads, reduced to what a membership test
+/// needs. Seeding the liked set walks pages of a thousand rows whose titles,
+/// artwork and durations nobody will ever read, and a set of strings is what
+/// the heart asks about.
+List<String> parseSongIds(Map<String, dynamic> json) {
+  final ids = <String>[];
+  final seen = <String>{};
+
+  for (final item in findAll(json, 'musicResponsiveListItemRenderer')) {
+    final videoId = findFirst(item, 'videoId');
+    if (videoId is String && seen.add(videoId)) ids.add(videoId);
+  }
+  return ids;
+}
+
+/// The token that asks for the next page, or null at the end of the list.
+///
+/// Both shapes are read because YouTube serves both: the newer responses wrap
+/// it in a `continuationCommand`, while some shelves still carry the older
+/// `nextContinuationData`. Which one arrives is not worth finding out at the
+/// call site.
+String? parseContinuationToken(Map<String, dynamic> json) {
+  final command = findFirst(json, 'continuationCommand');
+  final token = readPath(command, ['token']);
+  if (token is String && token.isNotEmpty) return token;
+
+  final legacy = readPath(findFirst(json, 'nextContinuationData'), ['continuation']);
+  return legacy is String && legacy.isNotEmpty ? legacy : null;
+}
+
 /// Turns any InnerTube response into playable tracks.
 ///
 /// Search, liked songs, history and playlist contents all render their rows

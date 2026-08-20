@@ -315,6 +315,14 @@ class InnertubeClient {
         'params': ?params,
       });
 
+  /// The next page of a browse response.
+  ///
+  /// A continuation carries no browse id: the token already names both the
+  /// shelf and the place in it. Every library surface here answers the first
+  /// hundred rows and hides the rest behind one of these.
+  Future<Map<String, dynamic>> browseContinuation(String token) =>
+      _post(_musicBase, 'browse', _webRemix, {'continuation': token});
+
   /// What the app shows on opening: whatever YouTube Music puts on its front
   /// page for this client.
   ///
@@ -434,6 +442,20 @@ class InnertubeClient {
   /// Songs the account has liked.
   Future<List<Song>> likedSongs() async =>
       parseSongList(await browse('FEmusic_liked_videos'));
+
+  /// One page of the ids the account has liked, and where to resume.
+  ///
+  /// Ids rather than [Song]s because the caller is filling a set to colour a
+  /// heart with, and a page holds a hundred rows. A null [continuation] starts
+  /// the list; a null `nextToken` in the answer means it ended.
+  Future<({List<String> ids, String? nextToken})> likedSongIds({
+    String? continuation,
+  }) async {
+    final json = continuation == null
+        ? await browse('FEmusic_liked_videos')
+        : await browseContinuation(continuation);
+    return (ids: parseSongIds(json), nextToken: parseContinuationToken(json));
+  }
 
   /// Recently played tracks.
   Future<List<Song>> history() async =>

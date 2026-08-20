@@ -5,19 +5,33 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
 
 ## Pendiente
 
-- **Notarizar es lo único que queda por decidir en macOS.** Todo lo demás está
-  hecho: la v0.1.6 publicó la primera imagen de disco, y el tap
-  `duvanherfi/homebrew-tunebox` la sirve y se mantiene solo. Lo que no se
-  resuelve sin pagar es que macOS pide autorización a mano en cada instalación
-  y en cada actualización. Son 99 USD/año, y a cambio desaparece el paso, el
-  `.dmg` deja de necesitar explicación en las notas y brew deja de re-marcar
-  cada versión. Mientras tanto está documentado en los dos sitios donde alguien
-  se lo va a encontrar.
+- **La paginación nueva sólo la usa el "me gusta".** `browseContinuation` y
+  `parseContinuationToken` entraron con la sincronización de los me gusta, pero
+  las playlists, los álbumes y el historial siguen leyendo la primera página y
+  nada más: una lista de 500 pistas se abre con 100. Ninguna pantalla lo dice,
+  así que parece que la lista es corta. Falta decidir dónde se pagina al abrir y
+  dónde al llegar al final del scroll.
 
 ## Suelto, sin diagnosticar
 
 Cosas que funcionan a medias y conviene mirar antes de dar por cerrada una
 versión.
+
+- **En macOS, al iniciar sesión no cargó la foto de la cuenta** (20 de agosto
+  de 2026). El avatar de la esquina se quedó en el icono de respaldo. El dato
+  que falta y que parte el problema en dos es si el nombre y el correo sí
+  aparecieron —en el tooltip del avatar o al abrir el panel—: si aparecieron,
+  `accountInfo()` contestó y lo que falla es cargar la imagen; si no, falló la
+  llamada entera y nadie lo reintenta.
+  Descartado el sandbox: `com.apple.security.network.client` está en los dos
+  `.entitlements`, y la propia sesión ya usa la red para iniciarla.
+  Por dónde mirar: `AccountStore.refresh` cuelga del listener de la sesión,
+  `accountInfo()` se traga cualquier fallo devolviendo null y no hay reintento,
+  así que una llamada que salga antes de que las cookies sirvan deja el icono
+  puesto hasta reiniciar; además `if (_loading) return;` descarta un segundo
+  aviso mientras el primero está en vuelo. La comprobación barata es abrir la
+  app otra vez con la sesión ya hecha: si entonces sale la foto, fue la carrera
+  y no la imagen.
 
 - **En Android Auto se quedó mudo con el contador corriendo** (20 de agosto de
   2026). Al desconectar el cable USB del carro la misma canción volvió a sonar
