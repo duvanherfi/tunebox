@@ -445,6 +445,13 @@ class InnertubeClient {
 
   /// One page of the ids the account has liked, and where to resume.
   ///
+  /// The `LM` auto-playlist rather than [likedSongs]'s browse id, because those
+  /// are two different lists and only this one is the likes. Measured against a
+  /// real account on 20 August 2026: `FEmusic_liked_videos` answered with 598
+  /// tracks and `LM` with 183, sharing only 150 — the first is what the library
+  /// holds, which a saved album fills without anyone liking anything. Seeding a
+  /// heart from it fills in hundreds that were never liked.
+  ///
   /// Ids rather than [Song]s because the caller is filling a set to colour a
   /// heart with, and a page holds a hundred rows. A null [continuation] starts
   /// the list; a null `nextToken` in the answer means it ended.
@@ -452,7 +459,7 @@ class InnertubeClient {
     String? continuation,
   }) async {
     final json = continuation == null
-        ? await browse('FEmusic_liked_videos')
+        ? await browse('VLLM')
         : await browseContinuation(continuation);
     return (ids: parseSongIds(json), nextToken: parseContinuationToken(json));
   }

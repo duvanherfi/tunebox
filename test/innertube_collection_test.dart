@@ -244,4 +244,43 @@ void main() {
       expect(streams.first.userAgent, isNotEmpty);
     });
   });
+
+  group('likedSongIds', () {
+    test('reads the Liked Music playlist, not the library\'s songs', () async {
+      late http.Request captured;
+      final innertube = InnertubeClient(
+        httpClient: MockClient((request) async {
+          captured = request;
+          return http.Response('{}', 200);
+        }),
+      );
+
+      await innertube.likedSongIds();
+
+      expect(captured.url.path, endsWith('/browse'));
+      final body = jsonDecode(captured.body) as Map<String, dynamic>;
+      // Measured against a real account: this browse id answers with the songs
+      // in the library — 598 of them, most from saved albums — while the likes
+      // are the 183 of the LM auto-playlist. Reading the wrong one fills in
+      // hearts for tracks nobody liked.
+      expect(body['browseId'], 'VLLM');
+      expect(body['browseId'], isNot('FEmusic_liked_videos'));
+    });
+
+    test('a continuation names the place, not the list', () async {
+      late http.Request captured;
+      final innertube = InnertubeClient(
+        httpClient: MockClient((request) async {
+          captured = request;
+          return http.Response('{}', 200);
+        }),
+      );
+
+      await innertube.likedSongIds(continuation: 'token-1');
+
+      final body = jsonDecode(captured.body) as Map<String, dynamic>;
+      expect(body['continuation'], 'token-1');
+      expect(body.containsKey('browseId'), isFalse);
+    });
+  });
 }

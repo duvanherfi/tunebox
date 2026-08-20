@@ -5,15 +5,36 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
 
 ## Pendiente
 
-- **Las listas siguen mostrando sólo la primera página.** Medido el 20 de
-  agosto de 2026 contra la cuenta real: los me gusta son **598** repartidos en
-  **14 páginas de 25 a 44 pistas**, y la pestaña *Liked* enseña 25 y dice "25
-  tracks" como si fuera el total. Lo mismo les pasa a playlists, álbumes e
-  historial. `browseContinuation` y `parseContinuationToken` ya existen —los
-  usa la sincronización de los me gusta—, así que lo que falta es decidir dónde
-  se pagina: todo al abrir, que en una lista larga son catorce peticiones antes
-  de ver nada, o al llegar al final del scroll, que es más trabajo de interfaz
-  pero es lo que hace YouTube.
+- **"Me gusta" y "biblioteca" son dos listas distintas, y la app las mezcla.**
+  Medido el 20 de agosto de 2026 contra la cuenta real: `FEmusic_liked_videos`
+  contesta **598** pistas en 16 páginas y la playlist `LM` —*Liked Music*—
+  **183** en dos; sólo **150** están en las dos. La primera es lo que hay en la
+  biblioteca, que un álbum guardado llena sin que nadie dé like; la segunda son
+  los me gusta. Los corazones ya leen `LM`. Lo que falta es la interfaz: la
+  pestaña que la biblioteca llama **"Liked"** lee `FEmusic_liked_videos`, o sea
+  las canciones de la biblioteca, y el estante del carro etiquetado igual
+  también. Hay que decidir si se renombran a "Canciones" o si pasan a mostrar
+  los me gusta de verdad — y entonces la biblioteca se queda sin su propia
+  pestaña.
+
+- **Quitar una canción de la biblioteca sin quitarle el like.** Pedido el 20 de
+  agosto de 2026, para que funcione como YouTube Music. Ahora que las dos
+  listas están separadas la acción tiene sentido, pero falta sondear con qué
+  endpoint se hace: lo más probable es un `feedbackToken` que viene en el menú
+  de la propia fila, no `edit_playlist`, que es lo que la app usa para añadir.
+
+- **La cuenta dice 216 me gusta y `LM` contesta 183.** La página dos llega sin
+  token, así que no es que el recorrido se corte: son 33 que la API no lista.
+  Sin diagnosticar; la sospecha es que son pistas ya no disponibles o de otro
+  tipo. Mientras tanto esos 33 salen con el corazón vacío.
+
+- **Las listas largas siguen mostrando sólo la primera página.** Playlists,
+  álbumes, historial y la pestaña de la biblioteca leen una página y la
+  presentan como la lista entera —la de la biblioteca dice "25 tracks" de 598—.
+  `browseContinuation` y `parseContinuationToken` ya existen, así que lo que
+  falta es decidir dónde se pagina: todo al abrir, que en una lista larga son
+  dieciséis peticiones antes de ver nada, o al llegar al final del scroll, que
+  es más trabajo de interfaz pero es lo que hace YouTube.
 
 ## Suelto, sin diagnosticar
 
