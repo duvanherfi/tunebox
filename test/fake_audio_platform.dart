@@ -67,6 +67,10 @@ class FakeAudioPlayer extends AudioPlayerPlatform {
   bool playing = false;
   ProcessingStateMessage state = ProcessingStateMessage.idle;
 
+  /// The volume the player was last set to. A fade is only visible from here:
+  /// nothing is decoded, so what a fade did is what it asked for.
+  double volume = 1;
+
   @override
   Stream<PlaybackEventMessage> get playbackEventMessageStream => _events.stream;
 
@@ -82,6 +86,14 @@ class FakeAudioPlayer extends AudioPlayerPlatform {
       currentIndex: 0,
       androidAudioSessionId: null,
     ));
+  }
+
+  /// Puts the playhead somewhere in the middle of the track, as playing on or
+  /// seeking would. The position stream is what drives the fades, so a test
+  /// that wants to reach one has to move the playhead first.
+  void moveTo(Duration where) {
+    position = where;
+    _emit();
   }
 
   /// Pretends the loaded track ran all the way to its end, which is the moment
@@ -144,8 +156,10 @@ class FakeAudioPlayer extends AudioPlayerPlatform {
   }
 
   @override
-  Future<SetVolumeResponse> setVolume(SetVolumeRequest request) async =>
-      SetVolumeResponse();
+  Future<SetVolumeResponse> setVolume(SetVolumeRequest request) async {
+    volume = request.volume;
+    return SetVolumeResponse();
+  }
 
   @override
   Future<SetSpeedResponse> setSpeed(SetSpeedRequest request) async =>

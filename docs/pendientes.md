@@ -16,6 +16,17 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
   Sin diagnosticar; la sospecha es que son pistas ya no disponibles o de otro
   tipo. Mientras tanto esos 33 salen con el corazón vacío.
 
+- **La letra se queda pegada a la canción con la que se abrió.** Visto el 20 de
+  agosto de 2026: se abre la letra en una canción y, al pasar a las siguientes,
+  sigue mostrando la letra de la primera. `LyricsView` sí se entera de un
+  cambio de pista —`didUpdateWidget` compara `videoId` y vuelve a pedirla
+  (`lib/features/player/lyrics_view.dart:32`)—, así que lo que hay que mirar es
+  quién le pasa la canción: `full_player.dart:126` lee
+  `playerService.currentSong` en el build, y ese widget solo se reconstruye
+  cuando lo hace el reproductor completo. Si el `AnimatedSwitcher` conserva el
+  hijo sin reconstruirlo, o si el build llega antes de que `currentSong` cambie,
+  la vista nunca ve la pista nueva. Sin diagnosticar.
+
 - **Las playlists, los álbumes y el historial siguen en una sola página.** Las
   dos pestañas de canciones ya crecen con `songPages` —"Canciones" llega a 598
   y "Me gusta" a 183—, pero abrir una playlist larga sigue mostrando cien
@@ -52,6 +63,18 @@ versión.
   alguien toque *Start head unit server* en el teléfono en cada intento.
   Ojo: esto es de la sesión de medios y del enrutado, no del `StreamProxy` —
   ese quedó descartado con medición al diagnosticar lo de la duración.
+  Dos datos nuevos del 20 de agosto que estrechan el sitio donde mirar. El
+  aparato era el Samsung por USB, o sea que el caso del carro y el del teléfono
+  son el mismo y no dos: siempre proyectando. Y **pasar a la siguiente canción
+  no devolvió el sonido; solo desconectar el cable**. Eso descarta el volumen:
+  un volumen mal dejado lo repone `_fadeIn` en la pista siguiente, y además el
+  fundido estaba en cero. Queda el destino.
+  Descartado también el propio reproductor, con medida: mientras la sesión
+  publica PLAYING, el mezclador escribe señal de verdad. Se ve en
+  `adb shell dumpsys media.audio_flinger`, en el *Signal power history* del hilo
+  de salida — números como −7 dB son música saliendo; −60 o vacío es silencio.
+  Es la forma barata de separar "la app no suena" de "el audio no llega al
+  altavoz", y sirve igual para el emulador que para el teléfono.
 
 - **El aleatorio arranca siempre con la canción que ya suena.** Pedido el 20 de
   agosto de 2026. Hoy es deliberado: `_shuffleAround` deja la pista actual de
@@ -93,6 +116,36 @@ versión.
   Ahora que hay CI esto sale en rojo de tanto en tanto sin significar nada;
   el arreglo es el `tearDown`, no un reintento, que escondería los fallos
   de verdad.
+- **El emulador se queda sin sonido y no es la app** (20 de agosto de 2026).
+  Comprobado midiendo: con el emulador mudo, `dumpsys media.audio_flinger` daba
+  −7 dB de señal continua al altavoz, `Master mute: off` y el volumen de música
+  en 15/15. El audio sale de Android entero; lo que se rompe es la entrega al
+  Mac, y pasa cuando macOS cambia de salida —auriculares, Bluetooth— con el
+  emulador ya abierto. Se arregla reiniciando el emulador, no tocando código.
+
+- **La app se congela y la mata el sistema (ANR + crash nativo).** Reproducido
+  el 20 de agosto dos veces seguidas en un emulador recién arrancado, una de
+  ellas recién abierta la app y sentada en el reproductor restaurado, sin tocar
+  nada. Firma idéntica en los tres registros que hay (18 de agosto, 20 a las
+  14:00 y 20 a las 18:22): el hilo principal queda **Runnable** —no bloqueado
+  por un candado— quemando CPU dentro de
+  `DartMessenger.handleMessageFromDart` → `PlatformTaskQueue.dispatch` →
+  `Handler.post`, con 14 s, 24 s y 25 s de tiempo de usuario acumulado, y el
+  proceso en **950 MB – 1 GB de RSS**. Es una inundación de mensajes de Dart
+  hacia la plataforma, no un bloqueo. Termina en `APP CRASH(NATIVE)` unos
+  segundos después.
+  Se leen con `adb shell dumpsys dropbox --print data_app_anr` y
+  `adb shell dumpsys activity exit-info com.tunebox.tunebox`.
+  Dos salvedades antes de sacar conclusiones: todo esto es sobre un **build de
+  depuración**, que va mucho más lento que uno de lanzamiento, y en un emulador
+  que cayó a **render por software** por falta de memoria en el Mac
+  (`Software GL rendering will be used due to system memory pressure` en el log
+  del emulador). Las dos cosas inflan un ANR. Aun así, un gigabyte de RSS y
+  veinticinco segundos de hilo principal en el mensajero no se explican por
+  ahí. Por dónde empezar: quién manda tantos mensajes de plataforma — la
+  cadena `positionStream` → `setVolume`/`playbackState` es la sospechosa
+  inmediata, porque tira hasta sesenta tics por segundo.
+
 - **El aviso de Play Protect no sale en el emulador**, que no lleva Google Play
   Services. Al instalar un APK de fuera, un teléfono con Play muestra un aviso
   propio antes del instalador; dónde aparece y qué dice es cosa suya, no
@@ -101,7 +154,15 @@ versión.
   se hace y no falla, pero un `screencap` no captura la retroiluminación, así
   que el 20 % está probado como código y no como luz. Falta mirarlo en un
   teléfono.
-- En el reproductor completo, con la cola terminada, la etiqueta izquierda marcó
-  **1:48** y la derecha **0:00** con el cursor al principio. No se tocó esa
-  pantalla; puede ser transitorio al expandir o un fallo previo de cómo se
-  pintan posición y restante al acabar.
+- **Las etiquetas del reproductor: la izquierda con la posición vieja y la
+  derecha en 0:00.** Visto primero con la cola terminada (1:48 y 0:00) y
+  reproducido el 20 de agosto al abrir la app: sale **al restaurar**, con el
+  cursor al principio y la izquierda marcando el segundo en que se dejó (1:13).
+  Ya no es un misterio de dónde sale: `shownPosition` devuelve a propósito la
+  posición recordada mientras no hay stream abierto
+  (`player_service.dart:253`), pero `shownDuration` es
+  `_player.duration ?? currentSong?.duration`, y si la canción guardada no
+  trajo duración eso es null y se pinta 0:00. Las dos etiquetas no hablan de lo
+  mismo hasta que alguien le da al play. Falta decidir el arreglo: guardar la
+  duración en el punto de reanudación, o no pintar la posición mientras no haya
+  una duración con la que casarla.

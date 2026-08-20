@@ -208,19 +208,36 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   }
 
   void _fadeOutNearTheEnd(Duration position) {
+    if (!_player.playing) return;
+
     final seconds = _settings.fadeSeconds;
     final total = _player.duration;
-    if (seconds <= 0 || total == null || !_player.playing) return;
+    final left = total == null ? null : total - position;
 
-    final left = total - position;
-    if (left > Duration(seconds: seconds)) {
-      // Comfortably inside the track: nothing to do, and the volume belongs to
-      // whatever the fade-in left it at.
+    if (seconds <= 0 || left == null || left > Duration(seconds: seconds)) {
+      // Not in the fade-out: either there is no fade at all, or the playhead is
+      // comfortably inside the track. A fade-out that had already started has
+      // to be undone right here — seeking back from the last seconds of a track
+      // is the ordinary way to arrive — because the only thing that ever raises
+      // the volume again is [_fadeIn], and that runs when the *next* track
+      // starts. Without this the rest of the track plays under a volume meant
+      // for its final second: the bar moves, the counter runs, nothing is
+      // heard.
+      _undoFadeOut();
       return;
     }
+
     final ratio = (left.inMilliseconds / (seconds * 1000)).clamp(0.0, 1.0);
     _fadeTarget = ratio;
     _player.setVolume(ratio);
+  }
+
+  /// Returns the volume a fade-out took away. A no-op when no fade-out is in
+  /// force, so it never fights the fade-in on its way up.
+  void _undoFadeOut() {
+    if (_fadeTarget == 1) return;
+    _fadeTarget = 1;
+    _player.setVolume(1);
   }
 
   /// Where a restored track should start, until the first play consumes it.
