@@ -96,6 +96,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get libraryEmptyLikes => 'You haven\'t liked any songs yet';
 
   @override
+  String get librarySongs => 'Songs';
+
+  @override
+  String get libraryEmptySongs => 'Nothing saved to your library yet';
+
+  @override
   String get libraryEmptyPlaylists => 'You have no saved playlists';
 
   @override

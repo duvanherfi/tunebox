@@ -266,6 +266,18 @@ abstract class AppLocalizations {
   /// **'You haven\'t liked any songs yet'**
   String get libraryEmptyLikes;
 
+  /// No description provided for @librarySongs.
+  ///
+  /// In en, this message translates to:
+  /// **'Songs'**
+  String get librarySongs;
+
+  /// No description provided for @libraryEmptySongs.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing saved to your library yet'**
+  String get libraryEmptySongs;
+
   /// No description provided for @libraryEmptyPlaylists.
   ///
   /// In en, this message translates to:

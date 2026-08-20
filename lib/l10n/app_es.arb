@@ -35,6 +35,8 @@
   "libraryPlaylists": "Playlists",
   "libraryHistory": "Historial",
   "libraryEmptyLikes": "No has marcado ninguna canción",
+  "librarySongs": "Canciones",
+  "libraryEmptySongs": "Aún no has guardado nada en tu biblioteca",
   "libraryEmptyPlaylists": "No tienes playlists guardadas",
   "libraryEmptyHistory": "Todavía no has escuchado nada",
   "libraryPlaylistEmpty": "Esta playlist está vacía",

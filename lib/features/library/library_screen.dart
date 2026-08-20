@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_theme.dart';
@@ -86,6 +88,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             tabs: [
               Tab(text: l10n.libraryDownloads),
               Tab(text: l10n.libraryLikes),
+              Tab(text: l10n.librarySongs),
               Tab(text: l10n.libraryPlaylists),
               Tab(text: l10n.libraryAlbums),
               Tab(text: l10n.libraryArtists),
@@ -98,10 +101,16 @@ class _LibraryScreenState extends State<LibraryScreen> {
               children: [
                 const _Downloads(),
                 if (session.isSignedIn)
-                  _Shelf<Song>(
-                    load: innertube.likedSongs,
+                  _GrowingShelf(
+                    pages: innertube.likedSongPages,
                     empty: l10n.libraryEmptyLikes,
-                    build: (songs) => SortedSongs(songs: songs),
+                  )
+                else
+                  _SignedOut(onSignIn: _signIn),
+                if (session.isSignedIn)
+                  _GrowingShelf(
+                    pages: innertube.librarySongPages,
+                    empty: l10n.libraryEmptySongs,
                   )
                 else
                   _SignedOut(onSignIn: _signIn),
@@ -617,6 +626,79 @@ class _SignedOut extends StatelessWidget {
 }
 
 /// Loads one browse shelf and renders it, with retry on failure.
+/// A song list that paints its first page and keeps growing behind it.
+///
+/// The account's own lists run to hundreds of tracks and arrive a hundred at a
+/// time, so waiting for the last page would leave the tab blank for a dozen
+/// requests. What arrives is shown, and the rest lands underneath it — which
+/// also keeps the sorting honest, since [SortedSongs] reorders whatever it is
+/// given and half a list sorted reads as a whole one.
+class _GrowingShelf extends StatefulWidget {
+  const _GrowingShelf({required this.pages, required this.empty});
+
+  final Stream<List<Song>> Function() pages;
+  final String empty;
+
+  @override
+  State<_GrowingShelf> createState() => _GrowingShelfState();
+}
+
+class _GrowingShelfState extends State<_GrowingShelf>
+    with AutomaticKeepAliveClientMixin {
+  final _songs = <Song>[];
+  StreamSubscription<List<Song>>? _reading;
+  Object? _error;
+  var _done = false;
+
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    _read();
+  }
+
+  void _read() {
+    _reading?.cancel();
+    setState(() {
+      _songs.clear();
+      _error = null;
+      _done = false;
+    });
+    _reading = widget.pages().listen(
+      (page) => setState(() => _songs.addAll(page)),
+      // A page that never came is not a reason to empty the screen: what did
+      // arrive is still the account's, and the retry is the same pull down.
+      onError: (Object error) => setState(() {
+        _error = error;
+        _done = true;
+      }),
+      onDone: () => setState(() => _done = true),
+    );
+  }
+
+  @override
+  void dispose() {
+    _reading?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    if (_songs.isEmpty) {
+      if (_error != null) return _Retry(message: '$_error', onRetry: _read);
+      if (!_done) return const SongListSkeleton();
+      return Center(child: Text(widget.empty));
+    }
+    return RefreshIndicator(
+      onRefresh: () async => _read(),
+      child: SortedSongs(songs: _songs),
+    );
+  }
+}
+
 class _Shelf<T> extends StatefulWidget {
   const _Shelf({
     super.key,

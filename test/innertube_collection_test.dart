@@ -283,4 +283,51 @@ void main() {
       expect(body.containsKey('browseId'), isFalse);
     });
   });
+
+  group('songPages', () {
+    test('asks for the next page until the answer carries no token', () async {
+      final asked = <Map<String, dynamic>>[];
+      final pages = [
+        '{"contents":{"continuationItemRenderer":{"continuationEndpoint":'
+            '{"continuationCommand":{"token":"page-2"}}}}}',
+        '{"contents":{}}',
+      ];
+      final innertube = InnertubeClient(
+        httpClient: MockClient((request) async {
+          asked.add(jsonDecode(request.body) as Map<String, dynamic>);
+          return http.Response(pages[asked.length - 1], 200);
+        }),
+      );
+
+      await innertube.songPages('FEmusic_liked_videos').toList();
+
+      expect(asked.length, 2);
+      expect(asked.first['browseId'], 'FEmusic_liked_videos');
+      expect(asked.last['continuation'], 'page-2');
+      expect(asked.last.containsKey('browseId'), isFalse);
+    });
+
+    test('gives up the first page before the last one is asked for', () async {
+      var served = 0;
+      final innertube = InnertubeClient(
+        httpClient: MockClient((request) async {
+          served++;
+          return http.Response(
+            served == 1
+                ? '{"contents":{"continuationItemRenderer":{"continuationEndpoint"'
+                    ':{"continuationCommand":{"token":"page-2"}}}}}'
+                : '{"contents":{}}',
+            200,
+          );
+        }),
+      );
+
+      // A tab paints what it has while the rest is still coming, so the first
+      // page must arrive as its own event rather than at the end.
+      final first = await innertube.songPages('VLLM').first;
+
+      expect(first, isEmpty, reason: 'no rows in this fixture, but it arrived');
+      expect(served, 1);
+    });
+  });
 }

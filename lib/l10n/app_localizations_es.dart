@@ -97,6 +97,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get libraryEmptyLikes => 'No has marcado ninguna canción';
 
   @override
+  String get librarySongs => 'Canciones';
+
+  @override
+  String get libraryEmptySongs => 'Aún no has guardado nada en tu biblioteca';
+
+  @override
   String get libraryEmptyPlaylists => 'No tienes playlists guardadas';
 
   @override

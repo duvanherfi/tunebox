@@ -439,9 +439,36 @@ class InnertubeClient {
         .join();
   }
 
+  /// Every page of a browse id that answers with tracks, as it arrives.
+  ///
+  /// A library surface answers a hundred rows and hides the rest behind a
+  /// continuation, so a list shown from one page is a list that lies about its
+  /// own length. Handed over page by page rather than as one list at the end:
+  /// the first hundred are what a screen paints while the rest is still coming,
+  /// and against a real account the rest is fifteen more requests.
+  Stream<List<Song>> songPages(String browseId) async* {
+    var json = await browse(browseId);
+    while (true) {
+      yield parseSongList(json);
+      final token = parseContinuationToken(json);
+      if (token == null) return;
+      json = await browseContinuation(token);
+    }
+  }
+
+  /// The songs in the account's library.
+  ///
+  /// Not the likes: this is what YouTube Music shows under Library › Songs,
+  /// which a saved album fills without anyone liking anything. The likes are
+  /// [likedSongs].
+  Stream<List<Song>> librarySongPages() => songPages('FEmusic_liked_videos');
+
+  /// Songs the account has liked, page by page.
+  Stream<List<Song>> likedSongPages() => songPages('VLLM');
+
   /// Songs the account has liked.
   Future<List<Song>> likedSongs() async =>
-      parseSongList(await browse('FEmusic_liked_videos'));
+      [for (final page in await likedSongPages().toList()) ...page];
 
   /// One page of the ids the account has liked, and where to resume.
   ///
