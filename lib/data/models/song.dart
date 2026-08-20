@@ -83,6 +83,7 @@ class AudioStream {
     required this.url,
     required this.bitrate,
     required this.mimeType,
+    this.duration,
     this.userAgent = '',
     this.trackingUrl,
     this.watchtimeUrl,
@@ -92,6 +93,20 @@ class AudioStream {
   final String url;
   final int bitrate;
   final String mimeType;
+
+  /// How long this format really is, as the server states it.
+  ///
+  /// Not decoration: the platform player is not a reliable authority on it.
+  /// AVFoundation reads YouTube's fragmented mp4 audio — `stts` and `stsz`
+  /// empty, the samples in `moof` boxes — as exactly twice its length, so a
+  /// four-minute song is drawn on a nine-minute bar and the music stops halfway
+  /// along it. Measured three ways: through the app, through a bare
+  /// `AVURLAsset` over the file on disk, and against `ffprobe` and macOS's own
+  /// `afinfo`, which both read the same files correctly. Every header inside
+  /// the file agrees with them, so the file is not the broken part.
+  ///
+  /// Null when the server states neither of the two places it usually does.
+  final Duration? duration;
 
   /// Where to report that this track started, and where to report how much of
   /// it was heard.

@@ -799,6 +799,7 @@ class InnertubeClient {
               url: '${stream.url}&cpn=$cpn',
               bitrate: stream.bitrate,
               mimeType: stream.mimeType,
+              duration: stream.duration,
               userAgent: client.userAgent,
               cpn: cpn,
               trackingUrl: trackingUrl,

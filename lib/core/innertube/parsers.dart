@@ -562,7 +562,12 @@ List<AudioStream> parseAudioStreams(
     final bitrate = (readPath(format, ['bitrate']) as num?)?.toInt() ?? 0;
     // A format that claims no bitrate has never turned out to be a real one.
     if (bitrate <= 0) continue;
-    streams.add(AudioStream(url: url, bitrate: bitrate, mimeType: mimeType));
+    streams.add(AudioStream(
+      url: url,
+      bitrate: bitrate,
+      mimeType: mimeType,
+      duration: _declaredDuration(format, url),
+    ));
   }
 
   streams.sort((a, b) {
@@ -575,6 +580,24 @@ List<AudioStream> parseAudioStreams(
     return _codecRank(b.mimeType).compareTo(_codecRank(a.mimeType));
   });
   return streams;
+}
+
+/// How long a format really runs, as the server states it.
+///
+/// Read from the response rather than from the player because the player is
+/// wrong about it — see [AudioStream.duration]. Two sources, because the
+/// server gives two: `approxDurationMs` is the better one, being a field and
+/// per format, but a rename would take it away silently and put the doubled
+/// length back, and the media URL carries the same value in seconds.
+Duration? _declaredDuration(Object? format, String url) {
+  final ms = readPath(format, ['approxDurationMs']);
+  final parsed = ms is num ? ms.toInt() : int.tryParse(ms is String ? ms : '');
+  if (parsed != null && parsed > 0) return Duration(milliseconds: parsed);
+
+  final seconds =
+      double.tryParse(Uri.tryParse(url)?.queryParameters['dur'] ?? '');
+  if (seconds == null || seconds <= 0) return null;
+  return Duration(milliseconds: (seconds * 1000).round());
 }
 
 int _mp4First(AudioStream stream) => stream.mimeType.startsWith('audio/mp4') ? 1 : 0;

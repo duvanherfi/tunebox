@@ -54,6 +54,42 @@ class _TwoFormatInnertube extends InnertubeClient {
   Future<List<Song>> radio(String videoId) async => const [];
 }
 
+/// Answers with one format, stating its length — or leaving it out.
+class _DeclaredDurationInnertube extends InnertubeClient {
+  _DeclaredDurationInnertube(this._duration);
+
+  final Duration? _duration;
+
+  @override
+  Future<List<AudioStream>> resolveStreams(
+    String videoId, {
+    int passes = 2,
+  }) async =>
+      [
+        AudioStream(
+          url: 'https://example.invalid/$videoId.m4a',
+          bitrate: 128000,
+          mimeType: 'audio/mp4; codecs="mp4a.40.2"',
+          duration: _duration,
+          userAgent: 'test',
+          cpn: 'cpn',
+        ),
+      ];
+
+  @override
+  Future<AudioStream> resolveStream(String videoId, {int passes = 2}) async =>
+      (await resolveStreams(videoId)).first;
+
+  @override
+  Future<void> reportPlayback(AudioStream stream) async {}
+
+  @override
+  Future<void> reportWatchtime(AudioStream stream, Duration position) async {}
+
+  @override
+  Future<List<Song>> radio(String videoId) async => const [];
+}
+
 /// The equalizer and the loudness enhancer are Android's own, and just_audio
 /// activates every effect in the pipeline whatever the platform — so carrying
 /// them elsewhere makes each track throw MissingPluginException on load and the
@@ -151,5 +187,39 @@ void main() {
       'abc',
       reason: 'and the track is the one that was asked for, not a skip',
     );
+  });
+
+  // AVFoundation reads YouTube's fragmented mp4 audio as exactly twice its
+  // length: `g06C6_UZ-vY` runs 4:53 and arrives as 9:46, `RtWEqRH0dBE` runs
+  // 3:55 and arrives as 7:50. The music therefore stops halfway along the bar
+  // and the counter goes on through silence for as long again before the queue
+  // moves. Clipping to the length the server declared fixes both at once: the
+  // platform reports the clip as the duration, and it ends the item there, so
+  // no separate watchdog has to notice.
+  test('stops a track where the server says it ends', () async {
+    build(_DeclaredDurationInnertube(const Duration(minutes: 3, seconds: 55)));
+
+    await player.setQueue(const [
+      Song(videoId: 'abc', title: 'ABC', subtitle: 'test'),
+    ]);
+
+    expect(
+      platform.player.clippedTo,
+      [const Duration(minutes: 3, seconds: 55)],
+      reason: 'the player is told to stop at the real end, not at its own',
+    );
+  });
+
+  // Nothing to clip to is not a reason to refuse a track: a stream whose length
+  // the server left out plays whole, the way it did before any of this.
+  test('plays a stream of unstated length whole', () async {
+    build(_DeclaredDurationInnertube(null));
+
+    await player.setQueue(const [
+      Song(videoId: 'abc', title: 'ABC', subtitle: 'test'),
+    ]);
+
+    expect(platform.player.clippedTo, [null]);
+    expect(platform.player.loaded, hasLength(1));
   });
 }

@@ -53,6 +53,12 @@ class FakeAudioPlayer extends AudioPlayerPlatform {
   /// which track the queue actually reached for.
   final loaded = <String>[];
 
+  /// Where each load was told to stop, in order — null when it was handed the
+  /// whole stream. The player is not to be trusted about how long a track is,
+  /// so the app clips it to the length the server declared, and this is how a
+  /// test sees that it did.
+  final clippedTo = <Duration?>[];
+
   /// Loads still to be refused before one is accepted.
   int rejectLoads = 0;
 
@@ -88,9 +94,24 @@ class FakeAudioPlayer extends AudioPlayerPlatform {
 
   @override
   Future<LoadResponse> load(LoadRequest request) async {
-    final source = request.audioSourceMessage;
+    var source = request.audioSourceMessage;
+    // just_audio wraps what it is given before it reaches the platform, so the
+    // stream is found by unwrapping rather than by matching one shape.
+    Duration? clip;
+    while (true) {
+      if (source is ConcatenatingAudioSourceMessage &&
+          source.children.length == 1) {
+        source = source.children.single;
+      } else if (source is ClippingAudioSourceMessage) {
+        clip = source.end;
+        source = source.child;
+      } else {
+        break;
+      }
+    }
     final uri = source is UriAudioSourceMessage ? source.uri : source.id;
     loaded.add(uri);
+    clippedTo.add(clip);
     if (rejectLoads > 0) {
       rejectLoads--;
       throw PlatformException(code: 'abort', message: 'Cannot Open');

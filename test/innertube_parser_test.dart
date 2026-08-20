@@ -327,4 +327,66 @@ void main() {
       expect(streams.map((s) => s.url), ['https://example.invalid/good']);
     });
   });
+
+  // AVFoundation reads YouTube's fragmented mp4 audio as exactly twice its
+  // length, so the platform player cannot be the authority on how long a track
+  // is. The server states it twice — as a field and on the media URL — and
+  // both were measured against the real audio.
+  group('parseAudioStreams duration', () {
+    Map<String, dynamic> withFormats(List<Map<String, Object?>> formats) => {
+          'streamingData': {'adaptiveFormats': formats},
+        };
+
+    test('reads how long the track really is', () {
+      final streams = parseAudioStreams(withFormats([
+        {
+          'mimeType': 'audio/mp4; codecs="mp4a.40.2"',
+          'url': 'https://example.invalid/m4a?dur=293.082',
+          'bitrate': 128000,
+          'approxDurationMs': '293082',
+        },
+      ]));
+
+      expect(streams.single.duration, const Duration(milliseconds: 293082));
+    });
+
+    // The field is the better source — it is per format and needs no parsing —
+    // but it is one rename away from vanishing, and losing it silently would
+    // put the doubled length back. The URL carries the same seconds.
+    test('falls back to the seconds on the media URL', () {
+      final streams = parseAudioStreams(withFormats([
+        {
+          'mimeType': 'audio/mp4; codecs="mp4a.40.2"',
+          'url': 'https://example.invalid/m4a?itag=140&dur=293.082&x=1',
+          'bitrate': 128000,
+        },
+      ]));
+
+      expect(streams.single.duration, const Duration(milliseconds: 293082));
+    });
+
+    test('says nothing when the server states neither', () {
+      final streams = parseAudioStreams(withFormats([
+        {
+          'mimeType': 'audio/mp4; codecs="mp4a.40.2"',
+          'url': 'https://example.invalid/m4a',
+          'bitrate': 128000,
+        },
+      ]));
+
+      expect(streams.single.duration, isNull);
+    });
+
+    test('reads it from a recorded response', () {
+      final streams = parseAudioStreams(_fixture('player_ios.json'));
+
+      expect(streams, isNotEmpty);
+      for (final stream in streams) {
+        expect(stream.duration, isNotNull);
+        // The recorded track is 249 seconds; the formats differ by a frame or
+        // two, which is why each carries its own.
+        expect(stream.duration!.inSeconds, closeTo(249, 1));
+      }
+    });
+  });
 }

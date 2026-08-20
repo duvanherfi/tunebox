@@ -659,6 +659,31 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
               cacheFile: _cache.fileFor(song.videoId),
             ));
             unawaited(_cache.prune(_settings.cacheLimitMb * 1024 * 1024));
+          } else if (candidate.duration case final length?) {
+            // Clipped to the length the server declared, because the platform
+            // player is not a reliable authority on it: AVFoundation reads
+            // YouTube's fragmented mp4 audio as exactly twice its length — see
+            // [AudioStream.duration]. Left alone, the music stops halfway along
+            // the bar and the counter runs on through silence for as long again
+            // before the queue moves.
+            //
+            // One clip settles both halves of that, which is why it is done
+            // here rather than by correcting the number downstream: the
+            // platform reports the clip as the duration, so every surface —
+            // the player, the notification, the car — reads it without knowing
+            // any of this; and it ends the item at that point, so the queue
+            // advances on the player's own completion instead of on a watchdog
+            // racing it.
+            //
+            // Not available on the cached path above: clipping takes a
+            // `UriAudioSource` and `LockCachingAudioSource` is a
+            // `StreamAudioSource`. That costs nothing today — caching only runs
+            // where the player reads these files correctly — but the two cannot
+            // both be had for one track.
+            await _player.setAudioSource(ClippingAudioSource(
+              child: AudioSource.uri(source),
+              end: length,
+            ));
           } else {
             await _player.setUrl(source.toString());
           }
