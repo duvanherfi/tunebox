@@ -5,12 +5,15 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
 
 ## Pendiente
 
-- **La paginación nueva sólo la usa el "me gusta".** `browseContinuation` y
-  `parseContinuationToken` entraron con la sincronización de los me gusta, pero
-  las playlists, los álbumes y el historial siguen leyendo la primera página y
-  nada más: una lista de 500 pistas se abre con 100. Ninguna pantalla lo dice,
-  así que parece que la lista es corta. Falta decidir dónde se pagina al abrir y
-  dónde al llegar al final del scroll.
+- **Las listas siguen mostrando sólo la primera página.** Medido el 20 de
+  agosto de 2026 contra la cuenta real: los me gusta son **598** repartidos en
+  **14 páginas de 25 a 44 pistas**, y la pestaña *Liked* enseña 25 y dice "25
+  tracks" como si fuera el total. Lo mismo les pasa a playlists, álbumes e
+  historial. `browseContinuation` y `parseContinuationToken` ya existen —los
+  usa la sincronización de los me gusta—, así que lo que falta es decidir dónde
+  se pagina: todo al abrir, que en una lista larga son catorce peticiones antes
+  de ver nada, o al llegar al final del scroll, que es más trabajo de interfaz
+  pero es lo que hace YouTube.
 
 ## Suelto, sin diagnosticar
 

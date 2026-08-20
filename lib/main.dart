@@ -115,6 +115,10 @@ Future<void> main() async {
   );
 
   likes = Likes(innertube);
+  await likes.load();
+  // Not awaited: the saved list is what the hearts read while the account's own
+  // is on its way, and that read is a dozen requests.
+  unawaited(likes.refresh());
 
   localPlaylists = LocalPlaylists();
   await localPlaylists.load();

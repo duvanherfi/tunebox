@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tunebox/core/auth/session.dart';
 import 'package:tunebox/core/innertube/innertube_client.dart';
@@ -19,27 +22,25 @@ class _FakeSession extends Session {
 
 /// The account's liked songs, served one page at a time.
 class _PagedInnertube extends InnertubeClient {
-  _PagedInnertube({required this.pages, super.session, this.failFirst = false});
+  _PagedInnertube({required this.pages, super.session, this.failAfter});
 
   final List<({List<String> ids, String? nextToken})> pages;
 
-  /// Whether the first read fails, as it does in a tunnel.
-  final bool failFirst;
+  /// How many pages answer before the network refuses, as it does in a tunnel.
+  final int? failAfter;
 
   /// The continuation each call asked for; null is the first page.
   final requested = <String?>[];
 
   final written = <String, bool>{};
   var _index = 0;
-  var _failed = false;
 
   @override
   Future<({List<String> ids, String? nextToken})> likedSongIds({
     String? continuation,
   }) async {
     requested.add(continuation);
-    if (failFirst && !_failed) {
-      _failed = true;
+    if (failAfter != null && requested.length > failAfter!) {
       throw InnertubeException('offline');
     }
     return pages[_index++];
@@ -51,43 +52,61 @@ class _PagedInnertube extends InnertubeClient {
   }
 }
 
+/// The account refusing every write.
+class _FailingWrites extends _PagedInnertube {
+  _FailingWrites({required super.pages, super.session});
+
+  @override
+  Future<void> setLiked(String videoId, bool liked) async =>
+      throw InnertubeException('refused');
+}
+
 const _song = Song(videoId: 'song1', title: 'Title', subtitle: 'Artist');
 
 void main() {
-  group('seeding from the account', () {
-    test('reads the first page when a heart asks about an unknown track',
+  late Directory dir;
+  late File file;
+
+  setUp(() {
+    dir = Directory.systemTemp.createTempSync('likes_test');
+    file = File('${dir.path}/likes.json');
+  });
+
+  tearDown(() => dir.deleteSync(recursive: true));
+
+  group('what was read last time', () {
+    test('colours the hearts before anything is asked of the network',
         () async {
+      file.writeAsStringSync(jsonEncode({'ids': ['a', 'b']}));
       final client = _PagedInnertube(
         session: _FakeSession(),
-        pages: [(ids: ['a', 'b'], nextToken: null)],
+        pages: [(ids: ['a'], nextToken: null)],
       );
-      final likes = Likes(client, pageGap: Duration.zero);
 
-      expect(likes.isLiked('a'), isFalse, reason: 'nothing read yet');
-      await pumpEventQueue();
+      final likes = Likes(client, file: file, pageGap: Duration.zero);
+      await likes.load();
 
-      expect(client.requested, [null]);
       expect(likes.isLiked('a'), isTrue);
       expect(likes.isLiked('b'), isTrue);
+      expect(client.requested, isEmpty, reason: 'reading asks nothing');
     });
 
-    test('stops after one page when nothing else is asking', () async {
-      final client = _PagedInnertube(
-        session: _FakeSession(),
-        pages: [
-          (ids: ['a'], nextToken: 'token-1'),
-          (ids: ['b'], nextToken: null),
-        ],
+    test('an unreadable file is the same as knowing nothing', () async {
+      file.writeAsStringSync('not json');
+      final likes = Likes(
+        _PagedInnertube(session: _FakeSession(), pages: const []),
+        file: file,
+        pageGap: Duration.zero,
       );
-      final likes = Likes(client, pageGap: Duration.zero);
 
-      likes.isLiked('a');
-      await pumpEventQueue();
+      await likes.load();
 
-      expect(client.requested, [null], reason: 'demand ended with the answer');
+      expect(likes.isLiked('a'), isFalse);
     });
+  });
 
-    test('keeps pulling while something on screen is still unknown', () async {
+  group('refreshing against the account', () {
+    test('reads every page and keeps what it found', () async {
       final client = _PagedInnertube(
         session: _FakeSession(),
         pages: [
@@ -96,73 +115,108 @@ void main() {
           (ids: ['c'], nextToken: null),
         ],
       );
-      final likes = Likes(client, pageGap: Duration.zero);
+      final likes = Likes(client, file: file, pageGap: Duration.zero);
 
-      // A row that stays on screen asks again on every rebuild, which is the
-      // demand signal the crawl advances on.
-      likes.addListener(() => likes.isLiked('never-liked'));
-      likes.isLiked('never-liked');
-      await pumpEventQueue();
+      await likes.refresh();
 
       expect(client.requested, [null, 'token-1', 'token-2']);
       expect(likes.isLiked('c'), isTrue);
+      expect(jsonDecode(file.readAsStringSync())['ids'], ['a', 'b', 'c']);
+    });
+
+    test('drops what the account no longer lists', () async {
+      file.writeAsStringSync(jsonEncode({'ids': ['gone', 'kept']}));
+      final client = _PagedInnertube(
+        session: _FakeSession(),
+        pages: [(ids: ['kept'], nextToken: null)],
+      );
+      final likes = Likes(client, file: file, pageGap: Duration.zero);
+      await likes.load();
+
+      await likes.refresh();
+
+      expect(likes.isLiked('kept'), isTrue);
+      expect(likes.isLiked('gone'), isFalse, reason: 'unliked elsewhere');
+    });
+
+    test('a read that breaks off adds what arrived and removes nothing',
+        () async {
+      file.writeAsStringSync(jsonEncode({'ids': ['old']}));
+      final client = _PagedInnertube(
+        session: _FakeSession(),
+        failAfter: 1,
+        pages: [(ids: ['new'], nextToken: 'token-1')],
+      );
+      final likes = Likes(client, file: file, pageGap: Duration.zero);
+      await likes.load();
+
+      await likes.refresh();
+
+      expect(likes.isLiked('new'), isTrue);
+      expect(likes.isLiked('old'), isTrue,
+          reason: 'half a list is no reason to empty a heart');
     });
 
     test('asks nothing while signed out', () async {
-      final client = _PagedInnertube(
-        pages: [(ids: ['a'], nextToken: null)],
-      );
-      final likes = Likes(client, pageGap: Duration.zero);
+      final client = _PagedInnertube(pages: [(ids: ['a'], nextToken: null)]);
+      final likes = Likes(client, file: file, pageGap: Duration.zero);
 
-      likes.isLiked('a');
-      await pumpEventQueue();
+      await likes.refresh();
 
       expect(client.requested, isEmpty);
       expect(likes.canLike, isFalse);
     });
 
-    test('a refused read is retried the next time a heart asks', () async {
+    test('one read at a time', () async {
       final client = _PagedInnertube(
         session: _FakeSession(),
-        failFirst: true,
-        pages: [(ids: ['a'], nextToken: null)],
+        pages: [
+          (ids: ['a'], nextToken: 'token-1'),
+          (ids: ['b'], nextToken: null),
+        ],
       );
-      final likes = Likes(client, pageGap: Duration.zero);
+      final likes = Likes(client, file: file, pageGap: Duration.zero);
 
-      likes.isLiked('a');
-      await pumpEventQueue();
-      expect(likes.isLiked('a'), isFalse, reason: 'the page never arrived');
+      await Future.wait([likes.refresh(), likes.refresh()]);
 
-      await pumpEventQueue();
-      expect(client.requested.length, 2);
-      expect(likes.isLiked('a'), isTrue);
+      expect(client.requested, [null, 'token-1']);
     });
   });
 
   group('what was toggled here', () {
-    test('wins over a later page that still lists an unliked track', () async {
+    test('is saved at once, so a restart still knows it', () async {
+      final client = _PagedInnertube(
+        session: _FakeSession(),
+        pages: const [],
+      );
+      final likes = Likes(client, file: file, pageGap: Duration.zero);
+      await likes.load();
+
+      await likes.toggle(_song);
+
+      expect(client.written['song1'], isTrue);
+      final next = Likes(client, file: file, pageGap: Duration.zero);
+      await next.load();
+      expect(next.isLiked('song1'), isTrue);
+    });
+
+    test('wins over a page read while the write was in flight', () async {
       final client = _PagedInnertube(
         session: _FakeSession(),
         pages: [
           (ids: ['song1'], nextToken: 'token-1'),
-          (ids: ['song1', 'x'], nextToken: null),
+          (ids: ['song1'], nextToken: null),
         ],
       );
-      final likes = Likes(client, pageGap: Duration.zero);
+      final likes = Likes(client, file: file, pageGap: Duration.zero);
+      final refreshing = likes.refresh();
 
-      likes.isLiked('song1');
-      await pumpEventQueue();
-      expect(likes.isLiked('song1'), isTrue, reason: 'the account has it');
-
-      await likes.toggle(_song); // taken back here
-      expect(client.written['song1'], isFalse);
-
-      // The rest of the list is read afterwards and still names the track,
-      // because YouTube's own list lags a write by a moment.
-      likes.isLiked('never-liked');
-      await pumpEventQueue();
+      await likes.toggle(_song); // liked, then taken back below
+      await likes.toggle(_song);
+      await refreshing;
 
       expect(likes.isLiked('song1'), isFalse, reason: 'a page resurrected it');
+      expect(client.written['song1'], isFalse);
     });
 
     test('a failed write leaves the heart as the account has it', () async {
@@ -170,11 +224,8 @@ void main() {
         session: _FakeSession(),
         pages: [(ids: ['song1'], nextToken: null)],
       );
-      final likes = Likes(client, pageGap: Duration.zero);
-
-      likes.isLiked('song1');
-      await pumpEventQueue();
-      expect(likes.isLiked('song1'), isTrue);
+      final likes = Likes(client, file: file, pageGap: Duration.zero);
+      await likes.refresh();
 
       await expectLater(likes.toggle(_song), throwsA(isA<Exception>()));
       expect(likes.isLiked('song1'), isTrue, reason: 'rolled back to the list');
@@ -182,38 +233,35 @@ void main() {
   });
 
   group('changing account', () {
-    test('forgets everything and reads again', () async {
+    test('signing out forgets the list and what was saved of it', () async {
       final session = _FakeSession();
       final client = _PagedInnertube(
         session: session,
-        pages: [
-          (ids: ['a'], nextToken: null),
-          (ids: ['z'], nextToken: null),
-        ],
+        pages: [(ids: ['a'], nextToken: null)],
       );
-      final likes = Likes(client, pageGap: Duration.zero);
-
-      likes.isLiked('a');
-      await pumpEventQueue();
+      final likes = Likes(client, file: file, pageGap: Duration.zero);
+      await likes.refresh();
       expect(likes.isLiked('a'), isTrue);
 
       session.set(false);
+      await pumpEventQueue();
+
       expect(likes.isLiked('a'), isFalse);
+      expect(file.existsSync(), isFalse);
+    });
+
+    test('signing in reads the new account', () async {
+      final session = _FakeSession().. set(false);
+      final client = _PagedInnertube(
+        session: session,
+        pages: [(ids: ['z'], nextToken: null)],
+      );
+      final likes = Likes(client, file: file, pageGap: Duration.zero);
 
       session.set(true);
-      likes.isLiked('z');
       await pumpEventQueue();
+
       expect(likes.isLiked('z'), isTrue);
-      expect(client.requested, [null, null]);
     });
   });
-}
-
-/// The account refusing every write.
-class _FailingWrites extends _PagedInnertube {
-  _FailingWrites({required super.pages, super.session});
-
-  @override
-  Future<void> setLiked(String videoId, bool liked) async =>
-      throw InnertubeException('refused');
 }

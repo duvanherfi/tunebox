@@ -1,70 +1,118 @@
-import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../core/innertube/innertube_client.dart';
 import 'models/song.dart';
 
-/// Which tracks the account has liked, read as the screen asks about them.
+/// Which tracks the account has liked.
 ///
 /// YouTube does not say whether a track is liked in any response this app
 /// reads — that state arrives only inside the watch page's menus, so colouring
 /// a list would mean a page per row. What is cheap is the liked list itself,
 /// and the answer to "is this liked" is whether the id is in it.
 ///
-/// It is read lazily and in order, because the two questions cost differently:
-/// knowing a track *is* liked can stop at the page that names it, while knowing
-/// it is *not* means having read the list to the end. So nothing is fetched
-/// until a heart asks about a track that is not in the set yet, and the crawl
-/// advances only while something on screen keeps asking. A listener who opens
-/// the app and plays what was already playing costs no requests at all.
+/// The list is read whole, in the background, and kept on disk. Measured
+/// against a real account it comes back in pages of 25 to 44, so a few hundred
+/// likes are a dozen requests and some seconds — too slow to answer a heart
+/// that is on screen now, which is why the saved copy is what the interface
+/// reads while the new one is on its way. Reading is not lazy either: nothing
+/// in a list displays like state, so there is no moment of demand to hang the
+/// next page on.
 ///
-/// Deliberately not persisted. A saved copy would age badly against likes made
-/// on other devices, and it is no longer needed: the list is read again on
-/// every launch that looks at one.
+/// The saved copy ages against likes made on other devices, and the refresh is
+/// what settles that: it runs on every launch and on every sign-in, and only a
+/// read that reached the end of the list is allowed to take a heart away. A
+/// read that broke off halfway adds what it saw and removes nothing, because
+/// half a list is not evidence that anything was unliked.
 class Likes extends ChangeNotifier {
-  Likes(this._innertube, {Duration pageGap = const Duration(milliseconds: 400)})
-      : _pageGap = pageGap {
+  Likes(
+    this._innertube, {
+    File? file,
+    Duration pageGap = const Duration(milliseconds: 400),
+  })  : _file = file,
+        _pageGap = pageGap {
     _innertube.session?.addListener(_onSessionChanged);
   }
 
+  static const _fileName = 'likes.json';
+
   final InnertubeClient _innertube;
+  File? _file;
 
   /// How long to wait between pages.
   ///
   /// Each page is a large response decoded on this isolate — the same cost as
   /// opening any list in the app. Spacing them apart leaves frames in between
-  /// for the list to keep scrolling, and gives the rows that are on screen a
-  /// chance to ask again, which is what tells the crawl to carry on.
+  /// for whatever the listener is actually doing.
   final Duration _pageGap;
 
-  /// Ids the account's list has named so far.
-  final _fromAccount = <String>{};
+  /// What the account's list said, as last read.
+  var _liked = <String>{};
 
   /// What was toggled here, which outranks the list: the write already went
   /// through, so a page read afterwards can still be describing the account
   /// from a moment ago.
   final _toggledHere = <String, bool>{};
 
-  String? _nextToken;
-  var _readEverything = false;
-  var _reading = false;
-  var _asked = false;
+  var _refreshing = false;
 
-  bool isLiked(String videoId) {
-    final toggled = _toggledHere[videoId];
-    if (toggled != null) return toggled;
-    if (_fromAccount.contains(videoId)) return true;
-
-    // Not knowing looks the same as not liked, and asking is what makes the
-    // answer arrive: the heart fills in when the page that names it lands.
-    _readMore();
-    return false;
-  }
+  bool isLiked(String videoId) =>
+      _toggledHere[videoId] ?? _liked.contains(videoId);
 
   /// Whether liking is possible at all — it writes to an account, and without
   /// one the control should not be offered anywhere, notification included.
   bool get canLike => _innertube.session?.isSignedIn ?? false;
+
+  /// Reads back the list saved by the last run.
+  Future<void> load() async {
+    final file = await _resolve();
+    if (!file.existsSync()) return;
+
+    try {
+      final json = jsonDecode(file.readAsStringSync());
+      final ids = json is Map<String, dynamic> ? json['ids'] : null;
+      if (ids is! List) return;
+      _liked = ids.whereType<String>().toSet();
+      notifyListeners();
+    } catch (_) {
+      // A list that cannot be read is the same as not having one: the hearts
+      // stay empty until the refresh answers.
+    }
+  }
+
+  /// Reads the account's list again, from the first page to the last.
+  Future<void> refresh() async {
+    if (!canLike || _refreshing) return;
+    _refreshing = true;
+
+    final fresh = <String>{};
+    var complete = false;
+    try {
+      String? token;
+      while (true) {
+        final page = await _innertube.likedSongIds(continuation: token);
+        fresh.addAll(page.ids);
+        token = page.nextToken;
+        if (token == null) {
+          complete = true;
+          break;
+        }
+        await Future<void>.delayed(_pageGap);
+      }
+    } catch (_) {
+      // Whatever arrived is still true; what did not arrive is not evidence.
+    } finally {
+      _refreshing = false;
+    }
+
+    if (!complete && fresh.isEmpty) return;
+    _liked = complete ? fresh : (_liked..addAll(fresh));
+    notifyListeners();
+    await _save();
+  }
 
   /// Flips the heart at once, then tells YouTube. On failure it flips back —
   /// an icon that lies about what the account holds is worse than a stutter.
@@ -78,6 +126,14 @@ class Likes extends ChangeNotifier {
       _apply(song.videoId, previous);
       rethrow;
     }
+    // Saved rather than left to the next refresh, so a restart in between does
+    // not undo what the listener just did.
+    if (liked) {
+      _liked.add(song.videoId);
+    } else {
+      _liked.remove(song.videoId);
+    }
+    await _save();
   }
 
   void _apply(String videoId, bool? liked) {
@@ -89,45 +145,28 @@ class Likes extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Records that something wants an answer, and starts reading if nothing is.
-  void _readMore() {
-    if (_readEverything || !canLike) return;
-    _asked = true;
-    if (!_reading) unawaited(_crawl());
-  }
-
-  Future<void> _crawl() async {
-    _reading = true;
-    try {
-      while (_asked && !_readEverything) {
-        _asked = false;
-        final page = await _innertube.likedSongIds(continuation: _nextToken);
-        _nextToken = page.nextToken;
-        _readEverything = page.nextToken == null;
-
-        if (page.ids.isNotEmpty) {
-          _fromAccount.addAll(page.ids);
-          notifyListeners();
-        }
-        if (!_readEverything) await Future<void>.delayed(_pageGap);
-      }
-    } catch (_) {
-      // A list the network refuses is not an error to show anyone: the hearts
-      // stay as they are, and the next one to ask starts the read again.
-    } finally {
-      _reading = false;
-    }
-  }
-
   /// Another account means another list, and nothing read so far applies.
-  void _onSessionChanged() {
-    _fromAccount.clear();
+  Future<void> _onSessionChanged() async {
+    _liked = {};
     _toggledHere.clear();
-    _nextToken = null;
-    _readEverything = false;
-    _asked = false;
     notifyListeners();
+
+    if (!canLike) {
+      final file = await _resolve();
+      if (file.existsSync()) await file.delete();
+      return;
+    }
+    await refresh();
   }
+
+  Future<void> _save() async {
+    final file = await _resolve();
+    await file.writeAsString(jsonEncode({'ids': _liked.toList()}));
+  }
+
+  Future<File> _resolve() async => _file ??= File(
+        '${(await getApplicationSupportDirectory()).path}/$_fileName',
+      );
 
   @override
   void dispose() {
