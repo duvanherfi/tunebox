@@ -58,6 +58,7 @@ class MusicPage {
     this.shelves = const [],
     this.radioPlaylistId,
     this.subscribed,
+    this.continuation,
   });
 
   final String title;
@@ -65,6 +66,10 @@ class MusicPage {
   final String? thumbnailUrl;
   final List<Song> songs;
   final List<Shelf> shelves;
+
+  /// Where the tracks carry on, when there are more than the first page holds.
+  /// Null once the page has handed over everything it has.
+  final String? continuation;
 
   /// The mix YouTube builds around this page. An artist's is a different id
   /// from the page's own, so it has to travel; an album's radio is derived from

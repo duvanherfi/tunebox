@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_theme.dart';
@@ -10,6 +8,7 @@ import '../../main.dart';
 import '../auth/login_screen.dart';
 import '../shared/skeleton.dart';
 import '../shared/shelf_row.dart';
+import '../shared/song_pages.dart';
 import '../shared/sorted_songs.dart';
 import 'auto_playlists.dart';
 import 'local_playlist_screen.dart';
@@ -50,15 +49,21 @@ class _LibraryScreenState extends State<LibraryScreen> {
   /// heard anywhere else, but writes on its own schedule. Showing the local
   /// plays first means a track appears in History the moment it starts, and the
   /// rest of a listening life is still there underneath.
-  Future<List<Song>> _history() async {
+  Stream<List<Song>> _history() async* {
     final local = playHistory.songs;
+    yield local;
+    if (!session.isSignedIn) return;
+
     final seen = local.map((song) => song.videoId).toSet();
-    if (!session.isSignedIn) return local;
     try {
-      final remote = await innertube.history();
-      return [...local, ...remote.where((song) => !seen.contains(song.videoId))];
+      // Page by page like the other account lists: a listening life is longer
+      // than a hundred tracks, and the first hundred are worth painting while
+      // the rest is still coming.
+      await for (final page in innertube.historyPages()) {
+        yield [for (final song in page) if (seen.add(song.videoId)) song];
+      }
     } catch (_) {
-      return local; // A history that only reaches back to this device still is one.
+      // A history that only reaches back to this device still is one.
     }
   }
 
@@ -125,10 +130,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   _SignedOut(onSignIn: _signIn),
                 _Artists(onSignIn: _signIn),
                 const _DeviceSongs(),
-                _Shelf<Song>(
-                  load: _history,
+                _GrowingShelf(
+                  pages: _history,
                   empty: l10n.libraryEmptyHistory,
-                  build: (songs) => SortedSongs(songs: songs),
                 ),
               ],
             ),
@@ -633,68 +637,31 @@ class _SignedOut extends StatelessWidget {
 /// requests. What arrives is shown, and the rest lands underneath it — which
 /// also keeps the sorting honest, since [SortedSongs] reorders whatever it is
 /// given and half a list sorted reads as a whole one.
-class _GrowingShelf extends StatefulWidget {
+class _GrowingShelf extends StatelessWidget {
   const _GrowingShelf({required this.pages, required this.empty});
 
   final Stream<List<Song>> Function() pages;
   final String empty;
 
   @override
-  State<_GrowingShelf> createState() => _GrowingShelfState();
-}
-
-class _GrowingShelfState extends State<_GrowingShelf>
-    with AutomaticKeepAliveClientMixin {
-  final _songs = <Song>[];
-  StreamSubscription<List<Song>>? _reading;
-  Object? _error;
-  var _done = false;
-
-  @override
-  bool get wantKeepAlive => true;
-
-  @override
-  void initState() {
-    super.initState();
-    _read();
-  }
-
-  void _read() {
-    _reading?.cancel();
-    setState(() {
-      _songs.clear();
-      _error = null;
-      _done = false;
-    });
-    _reading = widget.pages().listen(
-      (page) => setState(() => _songs.addAll(page)),
-      // A page that never came is not a reason to empty the screen: what did
-      // arrive is still the account's, and the retry is the same pull down.
-      onError: (Object error) => setState(() {
-        _error = error;
-        _done = true;
-      }),
-      onDone: () => setState(() => _done = true),
-    );
-  }
-
-  @override
-  void dispose() {
-    _reading?.cancel();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    super.build(context);
-    if (_songs.isEmpty) {
-      if (_error != null) return _Retry(message: '$_error', onRetry: _read);
-      if (!_done) return const SongListSkeleton();
-      return Center(child: Text(widget.empty));
-    }
-    return RefreshIndicator(
-      onRefresh: () async => _read(),
-      child: SortedSongs(songs: _songs),
+    return SongPages(
+      pages: pages,
+      build: (view) {
+        if (view.songs.isEmpty) {
+          if (view.error != null) {
+            return _Retry(message: '${view.error}', onRetry: view.reload);
+          }
+          if (!view.done) return const SongListSkeleton();
+          return Center(child: Text(empty));
+        }
+        return RefreshIndicator(
+          onRefresh: () async => view.reload(),
+          // Sorted rather than shown in arrival order: [SortedSongs] reorders
+          // whatever it is given, and half a list sorted reads as a whole one.
+          child: SortedSongs(songs: view.songs),
+        );
+      },
     );
   }
 }

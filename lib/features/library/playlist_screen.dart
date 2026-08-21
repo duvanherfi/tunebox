@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 
-import '../../data/models/song.dart';
 import '../../data/models/playlist.dart';
+import '../../data/models/song.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../shared/collection_header.dart';
 import '../shared/skeleton.dart';
 import '../shared/song_list_view.dart';
+import '../shared/song_pages.dart';
 import '../shared/suggestions.dart';
 
 /// The tracks inside a saved playlist or album.
@@ -20,13 +21,10 @@ class PlaylistScreen extends StatefulWidget {
 }
 
 class _PlaylistScreenState extends State<PlaylistScreen> {
-  late Future<List<Song>> _future;
-
-  @override
-  void initState() {
-    super.initState();
-    _future = innertube.playlistSongs(widget.playlist.browseId);
-  }
+  /// A method rather than a closure built in `build`, so a rebuild does not
+  /// read as a different list and start the whole playlist over.
+  Stream<List<Song>> _pages() =>
+      innertube.playlistSongPages(widget.playlist.browseId);
 
   @override
   Widget build(BuildContext context) {
@@ -34,22 +32,24 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
 
     return Scaffold(
       appBar: AppBar(title: Text(widget.playlist.title)),
-      body: FutureBuilder<List<Song>>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const SongListSkeleton();
-          }
-          if (snapshot.hasError) {
+      body: SongPages(
+        pages: _pages,
+        build: (view) {
+          final songs = view.songs;
+
+          // Nothing yet and nothing to say about it: the first page is still on
+          // its way, and a playlist opens onto its shape rather than a spinner.
+          if (songs.isEmpty && !view.done) return const SongListSkeleton();
+
+          if (songs.isEmpty && view.error != null) {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
-                child: Text('${snapshot.error}', textAlign: TextAlign.center),
+                child: Text('${view.error}', textAlign: TextAlign.center),
               ),
             );
           }
 
-          final songs = snapshot.data ?? const <Song>[];
           return CustomScrollView(
             slivers: [
               // The card that opened this already knew the name and the cover,
@@ -77,10 +77,13 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                   itemBuilder: (context, index) =>
                       SongRow(songs: songs, index: index),
                 ),
-                // What else goes with this, once the list itself has been
-                // read: a playlist that ends in a wall is a dead end.
-                SliverToBoxAdapter(child: Suggestions(seed: songs.first)),
+                // Only once the list really is the whole list. Suggestions
+                // under a hundred rows of a list that is still growing would
+                // read as its end, and it is not.
+                if (view.done)
+                  SliverToBoxAdapter(child: Suggestions(seed: songs.first)),
               ],
+              if (!view.done) const SliverToBoxAdapter(child: MoreComing()),
               SliverToBoxAdapter(
                 child: SizedBox(
                   height: 24 + MediaQuery.paddingOf(context).bottom,

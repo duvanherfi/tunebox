@@ -466,6 +466,27 @@ class InnertubeClient {
   /// Songs the account has liked, page by page.
   Stream<List<Song>> likedSongPages() => songPages('VLLM');
 
+  /// The pages that follow one already read.
+  ///
+  /// For a surface whose first page came with something else — an album hands
+  /// over its cover and its name alongside its first hundred tracks — so that
+  /// growing the list does not mean asking for that page a second time.
+  Stream<List<Song>> songPagesAfter(String? continuation) async* {
+    var token = continuation;
+    while (token != null) {
+      final json = await browseContinuation(token);
+      yield parseSongList(json);
+      token = parseContinuationToken(json);
+    }
+  }
+
+  /// Recently played tracks, page by page.
+  Stream<List<Song>> historyPages() => songPages('FEmusic_history');
+
+  /// Tracks inside a playlist, page by page.
+  Stream<List<Song>> playlistSongPages(String playlistId) =>
+      songPages(_asBrowseId(playlistId));
+
   /// Songs the account has liked.
   Future<List<Song>> likedSongs() async =>
       [for (final page in await likedSongPages().toList()) ...page];
@@ -490,10 +511,6 @@ class InnertubeClient {
         : await browseContinuation(continuation);
     return (ids: parseSongIds(json), nextToken: parseContinuationToken(json));
   }
-
-  /// Recently played tracks.
-  Future<List<Song>> history() async =>
-      parseSongList(await browse('FEmusic_history'));
 
   /// What YouTube would finish a half-typed query with.
   ///
@@ -643,6 +660,10 @@ class InnertubeClient {
       subtitle: header.subtitle,
       thumbnailUrl: header.thumbnailUrl,
       songs: parseSongList(json),
+      // Where the rest of a long record carries on from. Null for almost every
+      // album, which fits in one page, and the reason a box set does not stop
+      // at a hundred.
+      continuation: parseContinuationToken(json),
     );
   }
 

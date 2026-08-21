@@ -307,6 +307,78 @@ void main() {
       expect(asked.last.containsKey('browseId'), isFalse);
     });
 
+    test('a playlist asks with the VL prefix, an album without it', () async {
+      final asked = <Map<String, dynamic>>[];
+      final innertube = InnertubeClient(
+        httpClient: MockClient((request) async {
+          asked.add(jsonDecode(request.body) as Map<String, dynamic>);
+          return http.Response('{"contents":{}}', 200);
+        }),
+      );
+
+      await innertube.playlistSongPages('PL123').toList();
+      await innertube.playlistSongPages('MPREb_abc').toList();
+
+      expect(asked.first['browseId'], 'VLPL123');
+      expect(asked.last['browseId'], 'MPREb_abc');
+    });
+
+    test('carries on from a token without asking for the page it came with',
+        () async {
+      final asked = <Map<String, dynamic>>[];
+      final pages = [
+        '{"contents":{"continuationItemRenderer":{"continuationEndpoint":'
+            '{"continuationCommand":{"token":"page-3"}}}}}',
+        '{"contents":{}}',
+      ];
+      final innertube = InnertubeClient(
+        httpClient: MockClient((request) async {
+          asked.add(jsonDecode(request.body) as Map<String, dynamic>);
+          return http.Response(pages[asked.length - 1], 200);
+        }),
+      );
+
+      // An album's first page arrives with its cover and its name, so growing
+      // the list must start at the second one.
+      await innertube.songPagesAfter('page-2').toList();
+
+      expect(asked.length, 2);
+      expect(asked.first['continuation'], 'page-2');
+      expect(asked.last['continuation'], 'page-3');
+    });
+
+    test('a token that is already null is a list that ends there', () async {
+      var served = 0;
+      final innertube = InnertubeClient(
+        httpClient: MockClient((request) async {
+          served++;
+          return http.Response('{"contents":{}}', 200);
+        }),
+      );
+
+      expect(await innertube.songPagesAfter(null).toList(), isEmpty);
+      expect(served, 0, reason: 'nothing to ask for');
+    });
+
+    test('an album hands over where its tracks carry on', () async {
+      final innertube = InnertubeClient(
+        httpClient: MockClient((request) async {
+          return http.Response(
+            '{"contents":{"continuationItemRenderer":{"continuationEndpoint":'
+            '{"continuationCommand":{"token":"page-2"}}}}}',
+            200,
+          );
+        }),
+      );
+
+      final page = await innertube.albumPage('MPREb_abc');
+
+      // Without this the screen would have to ask for the first page again to
+      // find out there was a second, and that is the slowest request of the
+      // lot.
+      expect(page.continuation, 'page-2');
+    });
+
     test('gives up the first page before the last one is asked for', () async {
       var served = 0;
       final innertube = InnertubeClient(

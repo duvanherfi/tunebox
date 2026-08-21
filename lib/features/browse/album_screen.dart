@@ -6,6 +6,7 @@ import '../../main.dart';
 import '../shared/collection_header.dart';
 import '../shared/skeleton.dart';
 import '../shared/song_list_view.dart';
+import '../shared/song_pages.dart';
 
 /// One record, in its running order.
 class AlbumScreen extends StatefulWidget {
@@ -46,41 +47,52 @@ class _AlbumScreenState extends State<AlbumScreen> {
           }
 
           final page = snapshot.data!;
-          return CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(
-                child: CollectionHeader(
-                  title: page.title.isEmpty ? widget.title : page.title,
-                  subtitle: page.subtitle,
-                  thumbnailUrl: page.thumbnailUrl,
-                  songs: page.songs,
-                  collection: Playlist(
-                    browseId: widget.browseId,
-                    title: page.title.isEmpty ? widget.title : page.title,
-                    subtitle: page.subtitle,
-                    thumbnailUrl: page.thumbnailUrl,
+          // The first page came with the cover and the name; a record long
+          // enough to be cut in two carries on from the token beside them,
+          // rather than by asking for that page again.
+          return SongPages(
+            first: page.songs,
+            pages: () => innertube.songPagesAfter(page.continuation),
+            build: (view) {
+              final songs = view.songs;
+              return CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: CollectionHeader(
+                      title: page.title.isEmpty ? widget.title : page.title,
+                      subtitle: page.subtitle,
+                      thumbnailUrl: page.thumbnailUrl,
+                      songs: songs,
+                      collection: Playlist(
+                        browseId: widget.browseId,
+                        title: page.title.isEmpty ? widget.title : page.title,
+                        subtitle: page.subtitle,
+                        thumbnailUrl: page.thumbnailUrl,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              if (page.songs.isEmpty)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Center(child: Text(l10n.libraryPlaylistEmpty)),
+                  if (songs.isEmpty)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Center(child: Text(l10n.libraryPlaylistEmpty)),
+                      ),
+                    )
+                  else
+                    SliverList.builder(
+                      itemCount: songs.length,
+                      itemBuilder: (context, index) =>
+                          SongRow(songs: songs, index: index, numbered: true),
+                    ),
+                  if (!view.done) const SliverToBoxAdapter(child: MoreComing()),
+                  SliverToBoxAdapter(
+                    child: SizedBox(
+                      height: 24 + MediaQuery.paddingOf(context).bottom,
+                    ),
                   ),
-                )
-              else
-                SliverList.builder(
-                  itemCount: page.songs.length,
-                  itemBuilder: (context, index) =>
-                      SongRow(songs: page.songs, index: index, numbered: true),
-                ),
-              SliverToBoxAdapter(
-                child: SizedBox(
-                  height: 24 + MediaQuery.paddingOf(context).bottom,
-                ),
-              ),
-            ],
+                ],
+              );
+            },
           );
         },
       ),
