@@ -16,43 +16,30 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
   Sin diagnosticar; la sospecha es que son pistas ya no disponibles o de otro
   tipo. Mientras tanto esos 33 salen con el corazón vacío.
 
-- **La letra se queda pegada a la canción con la que se abrió.** Visto el 20 de
-  agosto de 2026: se abre la letra en una canción y, al pasar a las siguientes,
-  sigue mostrando la letra de la primera. `LyricsView` sí se entera de un
-  cambio de pista —`didUpdateWidget` compara `videoId` y vuelve a pedirla
-  (`lib/features/player/lyrics_view.dart:32`)—, así que lo que hay que mirar es
-  quién le pasa la canción: `full_player.dart:126` lee
-  `playerService.currentSong` en el build, y ese widget solo se reconstruye
-  cuando lo hace el reproductor completo. Si el `AnimatedSwitcher` conserva el
-  hijo sin reconstruirlo, o si el build llega antes de que `currentSong` cambie,
-  la vista nunca ve la pista nueva. Sin diagnosticar.
-
-- **Las playlists, los álbumes y el historial siguen en una sola página.** Las
-  dos pestañas de canciones ya crecen con `songPages` —"Canciones" llega a 598
-  y "Me gusta" a 183—, pero abrir una playlist larga sigue mostrando cien
-  pistas como si fueran todas. Es el mismo `songPages` y el mismo
-  `_GrowingShelf`; falta llevarlos a `playlist_screen` y a las otras dos.
-
 ## Suelto, sin diagnosticar
 
 Cosas que funcionan a medias y conviene mirar antes de dar por cerrada una
 versión.
 
 - **En macOS, al iniciar sesión no cargó la foto de la cuenta** (20 de agosto
-  de 2026). El avatar de la esquina se quedó en el icono de respaldo. El dato
-  que falta y que parte el problema en dos es si el nombre y el correo sí
-  aparecieron —en el tooltip del avatar o al abrir el panel—: si aparecieron,
-  `accountInfo()` contestó y lo que falla es cargar la imagen; si no, falló la
-  llamada entera y nadie lo reintenta.
-  Descartado el sandbox: `com.apple.security.network.client` está en los dos
-  `.entitlements`, y la propia sesión ya usa la red para iniciarla.
-  Por dónde mirar: `AccountStore.refresh` cuelga del listener de la sesión,
-  `accountInfo()` se traga cualquier fallo devolviendo null y no hay reintento,
-  así que una llamada que salga antes de que las cookies sirvan deja el icono
-  puesto hasta reiniciar; además `if (_loading) return;` descarta un segundo
-  aviso mientras el primero está en vuelo. La comprobación barata es abrir la
-  app otra vez con la sesión ya hecha: si entonces sale la foto, fue la carrera
-  y no la imagen.
+  de 2026). **Medio cerrado**: el agujero que convertía un fallo pasajero en
+  permanente ya está tapado; falta un inicio de sesión para saber si era ese.
+  Lo que sí quedó comprobado leyendo el flujo, no suponiendo: en el inicio de
+  sesión hay **una sola** notificación —`login_screen` se guarda con `_captured`
+  de llamar a `signIn` dos veces—, así que la sospecha de dos avisos pisándose
+  no se sostiene. Lo que sí pasa es que `accountInfo()` se traga cualquier fallo
+  y contesta null, y `AccountStore` guardaba ese null como si fuera la
+  respuesta: una sola petición mal parada dejaba el icono de respaldo **hasta
+  reiniciar**, que es exactamente el síntoma.
+  Ahora la tienda: no descarta un aviso que llega con otro en vuelo (lo
+  encola), no borra una cuenta ya sabida por un null, y vuelve a preguntar a
+  los 2, 6 y 20 segundos. Cinco pruebas en `test/account_store_test.dart`, de
+  las que cuatro fallan contra la versión anterior.
+  Lo que falta y no se puede hacer sin ti: **no hay sesión guardada en este
+  Mac** —la app arrancó con `signedIn=false`—, así que no se pudo reproducir.
+  Cuando vuelvas a iniciar sesión ahí, el dato que parte el problema en dos
+  sigue siendo si el nombre y el correo aparecen: si aparecen y la foto no, el
+  fallo es cargar la imagen y esto no lo arregla.
 
 - **En Android Auto se quedó mudo con el contador corriendo** (20 de agosto de
   2026). Al desconectar el cable USB del carro la misma canción volvió a sonar
@@ -75,12 +62,6 @@ versión.
   de salida — números como −7 dB son música saliendo; −60 o vacío es silencio.
   Es la forma barata de separar "la app no suena" de "el audio no llega al
   altavoz", y sirve igual para el emulador que para el teléfono.
-
-- **El aleatorio arranca siempre con la canción que ya suena.** Pedido el 20 de
-  agosto de 2026. Hoy es deliberado: `_shuffleAround` deja la pista actual de
-  primera para no cortar la música al barajar. Falta decidir si cambia solo
-  cuando se baraja sin nada sonando, o siempre — y si es siempre, qué pasa con
-  la canción que se está oyendo en ese momento.
 
 - **El paso de Gatekeeper, comprobado: hay que autorizarla a mano.** Los dos
   caminos probados en macOS 26.6 el 19 de agosto de 2026. Sin cuarentena
@@ -109,13 +90,6 @@ versión.
   implementados y no se han ejecutado nunca contra una cuenta real, para no
   ensuciar la biblioteca de nadie. De suscribirse, en el emulador salieron bien
   la marca local, la radio del artista y compartir; la escritura, no.
-- **`player_queue_test.dart` falla de vez en cuando** al borrar su directorio
-  temporal: `FileSystemException: Deletion failed … Directory not empty`. Salió
-  una vez en una tanda y no volvió en siete pasadas seguidas, ni antes ni
-  después de tocar nada. Es una carrera del `tearDown`, no del reproductor.
-  Ahora que hay CI esto sale en rojo de tanto en tanto sin significar nada;
-  el arreglo es el `tearDown`, no un reintento, que escondería los fallos
-  de verdad.
 - **El emulador se queda sin sonido y no es la app** (20 de agosto de 2026).
   Comprobado midiendo: con el emulador mudo, `dumpsys media.audio_flinger` daba
   −7 dB de señal continua al altavoz, `Master mute: off` y el volumen de música
@@ -166,3 +140,77 @@ versión.
   mismo hasta que alguien le da al play. Falta decidir el arreglo: guardar la
   duración en el punto de reanudación, o no pintar la posición mientras no haya
   una duración con la que casarla.
+
+## Hecho
+
+- **La letra ya no se queda pegada a la canción con la que se abrió** (20 de
+  agosto de 2026). No era que no se recargara: sí lo hacía. Cada cambio de
+  pista dejaba **otra `LyricsView` viva encima**, sin `deactivate` ni
+  `dispose`, cada una siguiendo la posición por su cuenta; la vieja quedaba
+  debajo de la nueva y se leía como una letra pegada. Medido en el emulador
+  con contador de instancias: llegaban a tres seguidas sin soltar ninguna.
+  La causa está en cómo `AnimatedSwitcher` distingue a sus hijos: sólo por la
+  clave —su `defaultTransitionBuilder` fabrica la clave de la transición a
+  partir de la del hijo— y `_stage` le daba `const ValueKey('lyrics')`, que no
+  cambia nunca. Ahora la letra se clava por canción, igual que ya hacía la
+  portada, y el registro muestra el `dispose` de la anterior en cada salto.
+  Sin test: ni con la clave constante ni reusando `GlobalKey`s se reproduce en
+  `flutter test`, hace falta el temporizado real. Queda comprobado en el
+  aparato, antes y después.
+
+- **El `tearDown` que borraba el temporal ya no compite con el reproductor**
+  (20 de agosto de 2026). El `FileSystemException: Deletion failed … Directory
+  not empty` era una carrera: el reproductor escribe el registro de escuchas y
+  el punto de reanudación sin que nadie sostenga sus futuros, así que `stop()`
+  no significa "ya terminó de escribir", y `pumpEventQueue()` es una apuesta
+  sobre cuánto tarda eso. Al mirarlo resultó que el mismo `tearDown` estaba
+  copiado en **cinco** pruebas, y dos de ellas —`player_effects_test` y
+  `player_fade_test`— ya se tragaban el fallo en un `try`, dejando basura en el
+  temporal en silencio. Ahora las cinco llaman a `removeWhenSettled`
+  (`test/temp_directory.dart`), que espera la condición —que el directorio
+  salga— en vez de una duración, y sigue lanzando si de verdad no sale.
+  Seis tandas seguidas en verde; el fallo era raro, así que esto es el
+  mecanismo atendido, no una prueba de que no vuelva.
+
+- **Las playlists, los álbumes y el historial ya crecen página a página**
+  (20 de agosto de 2026). Lo que se repetía en cinco sitios —acumular páginas,
+  el esqueleto mientras llega la primera, el reintento— vive ahora en
+  `SongPages` (`lib/features/shared/song_pages.dart`), y `_GrowingShelf` de la
+  biblioteca es un usuario más de él. La playlist usa `playlistSongPages`, el
+  historial `historyPages` (y de paso deduplica entre páginas, no solo contra
+  lo local), y el álbum se apoya en `MusicPage.continuation`: su primera página
+  llega con la portada y el nombre, así que crecer no significa volver a
+  pedirla — que es la petición más lenta de todas. Debajo de una lista que
+  todavía crece hay un `MoreComing`, y las sugerencias del pie solo salen
+  cuando ya está entera, porque bajo cien filas de una lista incompleta se leen
+  como su final.
+  Comprobado en el emulador con números, no de vista: la playlist "Cool"
+  imprimió `songs=0` → `songs=100` → `songs=124 done=true`; antes se quedaba en
+  cien. El historial pasó de una página a **375 pistas**.
+
+- **La pestaña "Historial" no se podía abrir** (20 de agosto de 2026).
+  Encontrado de paso al ir a paginarla: `DefaultTabController(length: 7)` con
+  ocho pestañas. Al añadir la de "Me gusta" nadie subió el número, así que el
+  controlador no llegaba al octavo índice: tocar "Historial" no hacía nada y no
+  se pintaba ni el indicador. No lanza excepción, que es por lo que llevaba
+  días ahí sin que nada se quejara.
+
+- **El aleatorio ya no arranca siempre con la misma canción** (20 de agosto de
+  2026). Eran dos caminos distintos con la misma raíz: `_shuffleAround` subía
+  al frente la pista de la que se barajaba.
+  Al mirarlo salió que el botón **Barajar de una playlist** empezaba
+  **siempre por la pista uno**: `setQueue` recibía `startIndex: 0` por defecto
+  y no había forma de distinguir "toqué esta fila" de "dame la lista entera".
+  Ahora `startIndex` es `int?`: una fila tocada sigue mandando —tocar significa
+  "esta", se baraje o no—, y sin fila la decide el azar. Ningún llamador tuvo
+  que cambiar: los toques de fila ya pasaban índice y los botones de reproducir
+  no.
+  Y el **interruptor sobre la cola que suena** baraja sin interrumpir, pero la
+  pista que suena ya no queda clavada arriba: toma el sitio que le dé el azar.
+  Lo que caiga por encima es la parte del barajado por la que este paso ya no
+  vuelve — está a un toque en la cola, y con repetición se llega a ella.
+  Seis pruebas nuevas en `player_queue_test.dart`, de las que dos fallan contra
+  la versión anterior. En el emulador: tres veces "Barajar" en una playlist de
+  124 con otra cosa sonando dieron tres arranques distintos y ninguno la pista
+  uno; y apagar y encender el aleatorio dejó "Faded" sonando sin corte
+  (0:46 → 0:53) con la cola empezando por otra.
