@@ -430,13 +430,31 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     );
   }
 
-  /// Replaces the queue and starts playing at [startIndex].
-  Future<void> setQueue(List<Song> songs, {int startIndex = 0}) async {
+  /// Replaces the queue and starts playing.
+  ///
+  /// [startIndex] is the track the listener pointed at, when they pointed at
+  /// one: a row tapped in a list means "play this one", shuffled or not. Null
+  /// means they did not point at anything — the shuffle button on a playlist
+  /// hands over the list and no opinion about where in it to begin — and
+  /// shuffled, that difference is the whole point: with an opinion the queue
+  /// opens where it was asked to, without one the shuffle decides. Pinning
+  /// track one either way is how shuffling a playlist kept starting on the same
+  /// song.
+  Future<void> setQueue(List<Song> songs, {int? startIndex}) async {
     _songs = List.of(songs);
     _unshuffled = List.of(songs);
-    if (_shuffled) _shuffleAround(startIndex);
+
+    var start = startIndex ?? 0;
+    if (_shuffled && _songs.isNotEmpty) {
+      final asked = startIndex != null && start >= 0 && start < _songs.length
+          ? _songs[start]
+          : null;
+      _songs = List.of(_songs)..shuffle();
+      start = asked == null ? 0 : _songs.indexOf(asked);
+    }
+
     _publishQueue();
-    if (!await _playIndex(_shuffled ? 0 : startIndex)) await _advance();
+    if (!await _playIndex(start)) await _advance();
   }
 
   /// Puts a track right after the one playing, for "play next".
@@ -526,15 +544,19 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     playbackState.add(playbackState.value.copyWith(shuffleMode: shuffleMode));
   }
 
-  /// Shuffles the queue while leaving the track at [around] playing, first in
-  /// the new order: stopping the music to shuffle it would be absurd.
+  /// Shuffles the queue without stopping the music.
+  ///
+  /// The track at [around] carries on playing and takes whatever place the
+  /// shuffle gives it. Lifted to the front — which is what this used to do —
+  /// every shuffle opened with the song that was already on, the one order
+  /// nobody asked for, and the queue showed it at the top as though it had just
+  /// been picked out. What lands above it is the part of the shuffle this pass
+  /// has already gone by: a tap away in the queue, and repeat comes round to it.
   void _shuffleAround(int around) {
     if (_songs.isEmpty) return;
     final current = _songs[around.clamp(0, _songs.length - 1)];
-    final rest = List.of(_songs)..remove(current);
-    rest.shuffle();
-    _songs = [current, ...rest];
-    _index = 0;
+    _songs = List.of(_songs)..shuffle();
+    _index = _songs.indexOf(current);
   }
 
   /// Republishes the state from the player as it is right now.
