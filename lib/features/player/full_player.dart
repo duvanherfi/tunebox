@@ -123,7 +123,17 @@ class _FullPlayerState extends State<FullPlayer> {
       duration: const Duration(milliseconds: 300),
       child: _showLyrics
           ? LyricsView(
-              key: const ValueKey('lyrics'),
+              // Keyed by the song, the way the cover below is, and not by
+              // "the words" in the abstract. A switcher tells its children
+              // apart by their key alone — its default transition builds its
+              // own key out of the child's — and with a key that never
+              // changed, a track change replaced the entry without ever
+              // taking the old one down: no deactivate, no dispose, one more
+              // live copy of the words on the stage per song, each still
+              // following playback. On screen that read as the words being
+              // stuck on the song the panel was opened with; they were only
+              // underneath. Measured on a device, before and after.
+              key: ValueKey('lyrics/${playerService.currentSong?.videoId}'),
               song: playerService.currentSong,
             )
           : LayoutBuilder(
