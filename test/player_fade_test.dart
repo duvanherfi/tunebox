@@ -15,6 +15,7 @@ import 'package:tunebox/data/models/song.dart';
 import 'package:tunebox/data/settings.dart';
 
 import 'fake_audio_platform.dart';
+import 'temp_directory.dart';
 
 /// Answers with one playable format and nothing else, so a test can get to the
 /// fades without the queue reaching for the network.
@@ -106,12 +107,9 @@ void main() {
 
   tearDown(() async {
     await player.stop();
-    await pumpEventQueue();
-    try {
-      await temp.delete(recursive: true);
-    } on FileSystemException {
-      // Left for the operating system to reap.
-    }
+    // The writes the player started on its way out still have to land before
+    // the directory under them disappears.
+    await removeWhenSettled(temp);
   });
 
   test('raises the volume to full over the fade-in', () async {

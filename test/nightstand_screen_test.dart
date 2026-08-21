@@ -20,6 +20,7 @@ import 'package:tunebox/l10n/app_localizations.dart';
 import 'package:tunebox/main.dart' as app;
 
 import 'fake_audio_platform.dart';
+import 'temp_directory.dart';
 
 /// Four switches decide what this screen draws, so what is worth testing is
 /// that each one really removes its own thing and leaves the others alone.
@@ -94,8 +95,9 @@ void main() {
 
   tearDownAll(() async {
     await app.playerService.stop();
-    await pumpEventQueue();
-    await temp.delete(recursive: true);
+    // The writes the player started on its way out still have to land before
+    // the directory under them disappears.
+    await removeWhenSettled(temp);
   });
 
   Future<void> open(WidgetTester tester) async {

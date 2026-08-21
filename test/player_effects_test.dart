@@ -15,6 +15,7 @@ import 'package:tunebox/data/models/song.dart';
 import 'package:tunebox/data/settings.dart';
 
 import 'fake_audio_platform.dart';
+import 'temp_directory.dart';
 
 /// Answers with two formats for every track, as a real response does.
 class _TwoFormatInnertube extends InnertubeClient {
@@ -138,15 +139,9 @@ void main() {
 
   tearDown(() async {
     await player.stop();
-    // Writes the player started on its way out still have to land before the
-    // directory under them disappears, and a stray one must not fail the run:
-    // nothing asserted here depends on the directory surviving.
-    await pumpEventQueue();
-    try {
-      await temp.delete(recursive: true);
-    } on FileSystemException {
-      // Left for the operating system to reap.
-    }
+    // The writes the player started on its way out still have to land before
+    // the directory under them disappears.
+    await removeWhenSettled(temp);
   });
 
   test('carries no Android audio effects off Android', () {

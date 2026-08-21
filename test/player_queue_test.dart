@@ -16,6 +16,7 @@ import 'package:tunebox/data/resume_point.dart';
 import 'package:tunebox/data/settings.dart';
 
 import 'fake_audio_platform.dart';
+import 'temp_directory.dart';
 
 /// An [InnertubeClient] that resolves whatever it is told to and refuses the
 /// rest, which is what a real liked-songs playlist looks like: most tracks
@@ -112,10 +113,9 @@ void main() {
 
   tearDown(() async {
     await player.stop();
-    // Writes the player started on its way out still have to land before the
-    // directory under them disappears.
-    await pumpEventQueue();
-    await temp.delete(recursive: true);
+    // The writes the player started on its way out still have to land before
+    // the directory under them disappears.
+    await removeWhenSettled(temp);
   });
 
   test('plays the queue in order when every track resolves', () async {
@@ -185,6 +185,97 @@ void main() {
     await pumpEventQueue();
 
     expect(player.currentSong?.videoId, 'a');
+  });
+
+  group('shuffle', () {
+    // Twenty is enough that a track staying at the front twenty times running
+    // is a rule rather than luck: one in twenty to the twentieth.
+    List<Song> twenty() => [
+      for (var i = 0; i < 20; i++) _song('s$i'),
+    ];
+
+    test('does not lift the playing track to the front', () async {
+      await build();
+      await player.setQueue(twenty());
+      expect(player.currentSong?.videoId, 's0');
+
+      var everOffTheFront = false;
+      for (var attempt = 0; attempt < 20 && !everOffTheFront; attempt++) {
+        await player.setShuffleMode(AudioServiceShuffleMode.all);
+
+        // The music does not stop to be shuffled: whatever was on is still on.
+        expect(player.currentSong?.videoId, 's0');
+        expect(player.songs, hasLength(20));
+
+        if (player.currentIndex != 0) everOffTheFront = true;
+      }
+
+      expect(
+        everOffTheFront,
+        isTrue,
+        reason: 'shuffling kept opening on the track already playing',
+      );
+    });
+
+    test('a collection shuffled does not always open on track one', () async {
+      final opened = <String?>{};
+      for (var attempt = 0; attempt < 20; attempt++) {
+        await build();
+        await player.setShuffleMode(AudioServiceShuffleMode.all);
+        // No track asked for: this is the shuffle button on a playlist, which
+        // hands over the list and no opinion about where to begin.
+        await player.setQueue(twenty());
+        opened.add(player.currentSong?.videoId);
+      }
+
+      expect(opened, hasLength(greaterThan(1)));
+    });
+
+    test('shuffling a playlist while something else plays still opens at '
+        'random', () async {
+      final opened = <String?>{};
+      for (var attempt = 0; attempt < 20; attempt++) {
+        await build();
+        // Something else is on, from somewhere else. Pressing shuffle on a
+        // playlist means that playlist, from wherever the shuffle decides —
+        // what was playing was another list, not this one's first track.
+        await player.setQueue([_song('elsewhere')]);
+        expect(player.currentSong?.videoId, 'elsewhere');
+
+        await player.setShuffleMode(AudioServiceShuffleMode.all);
+        await player.setQueue(twenty());
+        opened.add(player.currentSong?.videoId);
+      }
+
+      expect(opened, isNot(contains('elsewhere')));
+      expect(opened, hasLength(greaterThan(1)));
+    });
+
+    test('a track tapped while shuffled is the one that plays', () async {
+      await build();
+      await player.setShuffleMode(AudioServiceShuffleMode.all);
+      await player.setQueue(twenty(), startIndex: 7);
+
+      // Tapping a row means "play this one", shuffled or not. What changes is
+      // the order of everything else.
+      expect(player.currentSong?.videoId, 's7');
+      expect(player.songs[player.currentIndex].videoId, 's7');
+    });
+
+    test('turning it off restores the order with the track still current',
+        () async {
+      await build();
+      await player.setQueue(twenty());
+      await player.setShuffleMode(AudioServiceShuffleMode.all);
+      final playing = player.currentSong?.videoId;
+
+      await player.setShuffleMode(AudioServiceShuffleMode.none);
+
+      expect(player.songs.map((song) => song.videoId).toList(), [
+        for (var i = 0; i < 20; i++) 's$i',
+      ]);
+      expect(player.currentSong?.videoId, playing);
+    });
   });
 
   test('repeat one plays the same track again', () async {

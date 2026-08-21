@@ -17,6 +17,7 @@ import 'package:tunebox/data/resume_point.dart';
 import 'package:tunebox/data/settings.dart';
 
 import 'fake_audio_platform.dart';
+import 'temp_directory.dart';
 
 /// The account a car is browsing, with the network either answering or not.
 class _LibraryInnertube extends InnertubeClient {
@@ -120,8 +121,9 @@ void main() {
 
   tearDown(() async {
     await player.stop();
-    await pumpEventQueue();
-    await temp.delete(recursive: true);
+    // The writes the player started on its way out still have to land before
+    // the directory under them disappears.
+    await removeWhenSettled(temp);
   });
 
   test('a signed-in car is offered the whole library', () async {
