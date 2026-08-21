@@ -76,7 +76,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
     // are this device's, and hiding them behind a sign-in wall would be a lie
     // about where they come from.
     return DefaultTabController(
-      length: 7,
+      length: 8,
       child: Column(
         children: [
           // Above the tabs, because these are not one of them: they cut across
