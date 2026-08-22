@@ -5,12 +5,19 @@
 [![Licencia](https://img.shields.io/github/license/duvanherfi/tunebox)](LICENSE)
 
 Reproductor de música en Flutter que lee el catálogo de YouTube Music a través
-de InnerTube, la API interna que usa la propia web de YouTube.
+de InnerTube, la API interna que usa la propia web de YouTube. Corre en Android
+y en macOS, y se usa a diario.
 
 **No usa microG ni Google Play Services.** microG existe para que las apps
 parcheadas (ReVanced, Vanced) puedan iniciar sesión pese a no estar firmadas por
 Google; esa capa emulada es justamente la que cuesta rendimiento. Aquí se habla
 directo con la API por HTTP y el audio va a ExoPlayer nativo, sin WebView.
+
+El historial **no** se escribe en la cuenta de YouTube: los pings se envían tal
+y como los manda la web, YouTube responde 204 y no aparece nada en
+`FEmusic_history`. Por eso el historial, las estadísticas y el scrobbling se
+llevan en el dispositivo. Lo medido está en
+[`docs/streaming-findings.md`](docs/streaming-findings.md).
 
 ## Cómo se ve
 
@@ -33,36 +40,6 @@ Las capturas de Android salen con la interfaz en inglés y las del Mac en
 español: es el mismo build, leyendo el idioma del aparato. La foto de la cuenta
 está difuminada a propósito.
 
-## Estado
-
-Usable a diario, en Android y macOS. El número de la versión publicada está en
-la insignia de arriba, que lo lee de las releases — así no hay que acordarse de
-actualizarlo aquí.
-
-| Alcance | Estado |
-|---|---|
-| Buscar, reproducir, cola, segundo plano con notificación | Hecho |
-| Login con cuenta, biblioteca, likes, playlists, historial, feed de inicio | Hecho |
-| Escritura en la cuenta: like, crear playlist, añadir canciones, seguir artistas | Hecho |
-| Acciones de colección: guardar, radio, descargar entera, compartir | Hecho |
-| Radio y autoplay, letras sincronizadas, ecualizador, temporizador | Hecho |
-| Descargas, caché y reproducción sin conexión | Hecho |
-| Android Auto, widget de pantalla de inicio, retomar donde se quedó | Hecho |
-| Scrobbling a Last.fm y ListenBrainz, estadísticas, copia de seguridad | Hecho |
-| Música del propio teléfono, playlists locales, tema y degradados a medida | Hecho |
-| Modo mesita de noche | Hecho |
-| Actualizaciones desde la propia app | Hecho |
-
-El historial **no** se escribe en la cuenta de YouTube: los pings se envían tal
-y como los manda la web, YouTube responde 204 y no aparece nada en
-`FEmusic_history`. Por eso el historial, las estadísticas y el scrobbling se
-llevan en el dispositivo. Lo medido está en
-[`docs/streaming-findings.md`](docs/streaming-findings.md).
-
-Windows y Linux no están: `audio_service` y `just_audio` solo declaran android,
-ios, macos y web, y el reproductor **es** un `BaseAudioHandler`, así que esas
-plataformas compilarían y morirían al arrancar el servicio.
-
 ## Instalar
 
 El APK de cada versión está en las
@@ -75,6 +52,10 @@ una versión nueva, la ofrece y la instala. Comprueba que el APK descargado est�
 firmado con la misma clave que la copia instalada antes de entregárselo al
 instalador del sistema; uno que no lo esté se descarta. Se apaga en
 Ajustes › System.
+
+Windows y Linux no están: `audio_service` y `just_audio` solo declaran android,
+ios, macos y web, y el reproductor **es** un `BaseAudioHandler`, así que esas
+plataformas compilarían y morirían al arrancar el servicio.
 
 ## Compilar
 
