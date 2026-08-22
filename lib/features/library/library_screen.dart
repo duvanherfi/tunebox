@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/playlist.dart';
 import '../../data/models/song.dart';
+import '../../data/retired_ids.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../auth/login_screen.dart';
@@ -50,12 +51,17 @@ class _LibraryScreenState extends State<LibraryScreen> {
   /// heard anywhere else, but writes on its own schedule. Showing the local
   /// plays first means a track appears in History the moment it starts, and the
   /// rest of a listening life is still there underneath.
+  ///
+  /// A track both sources know is handed over twice on purpose, and the shelf
+  /// merges the two: the local telling is read back from the play log and has
+  /// no menu at all, so keeping it would leave the tracks played here as the
+  /// only ones that can never be taken out of the history. The account's row
+  /// replaces it where it already stands.
   Stream<List<Song>> _history() async* {
-    final local = playHistory.songs;
-    yield local;
+    yield playHistory.songs;
     if (!session.isSignedIn) return;
 
-    final seen = local.map((song) => song.videoId).toSet();
+    final seen = <String>{};
     try {
       // Page by page like the other account lists: a listening life is longer
       // than a hundred tracks, and the first hundred are worth painting while
@@ -110,6 +116,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   _GrowingShelf(
                     pages: innertube.likedSongPages,
                     empty: l10n.libraryEmptyLikes,
+                    list: RetiredIds.likes,
                   )
                 else
                   _SignedOut(onSignIn: _signIn),
@@ -117,6 +124,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   _GrowingShelf(
                     pages: innertube.librarySongPages,
                     empty: l10n.libraryEmptySongs,
+                    list: RetiredIds.library,
                   )
                 else
                   _SignedOut(onSignIn: _signIn),
@@ -134,6 +142,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 _GrowingShelf(
                   pages: _history,
                   empty: l10n.libraryEmptyHistory,
+                  list: RetiredIds.history,
+                  mergeById: true,
                 ),
               ],
             ),
@@ -336,9 +346,14 @@ class _AccountPlaylistsState extends State<_AccountPlaylists> {
           );
         }
         final playlists = snapshot.data ?? const <Playlist>[];
-        return Column(
+        // Read once and kept, so a list deleted from its own screen would go on
+        // being offered here until the tab is built again.
+        return ListenableBuilder(
+          listenable: retiredIds,
+          builder: (context, _) => Column(
           children: [
             for (final playlist in playlists)
+              if (!retiredIds.isRetired(RetiredIds.playlists, playlist.browseId))
               ListTile(
                 leading: Artwork(
                   url: playlist.thumbnailUrl,
@@ -364,6 +379,7 @@ class _AccountPlaylistsState extends State<_AccountPlaylists> {
                 ),
               ),
           ],
+          ),
         );
       },
     );
@@ -652,15 +668,30 @@ class _SignedOut extends StatelessWidget {
 /// also keeps the sorting honest, since [SortedSongs] reorders whatever it is
 /// given and half a list sorted reads as a whole one.
 class _GrowingShelf extends StatelessWidget {
-  const _GrowingShelf({required this.pages, required this.empty});
+  const _GrowingShelf({
+    required this.pages,
+    required this.empty,
+    this.list,
+    this.mergeById = false,
+  });
 
   final Stream<List<Song>> Function() pages;
   final String empty;
+
+  /// Which list this is, so a track taken off it here leaves the screen at
+  /// once rather than at the next read.
+  final String? list;
+
+  /// Whether the same track arriving twice is one row or two. See
+  /// [SongPages.mergeById]; only the history is fed from two sources.
+  final bool mergeById;
 
   @override
   Widget build(BuildContext context) {
     return SongPages(
       pages: pages,
+      list: list,
+      mergeById: mergeById,
       build: (view) {
         if (view.songs.isEmpty) {
           if (view.error != null) {

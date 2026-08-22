@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../data/models/song.dart';
+import '../../data/retired_ids.dart';
+import '../../main.dart';
 
 /// What has arrived so far of a list that comes a page at a time.
 typedef SongPagesView = ({
@@ -38,6 +40,8 @@ class SongPages extends StatefulWidget {
     required this.pages,
     required this.build,
     this.first = const [],
+    this.list,
+    this.mergeById = false,
   });
 
   /// Called to start the reading, and again on every reload.
@@ -47,6 +51,24 @@ class SongPages extends StatefulWidget {
   /// first page arrives with its cover and its name, and asking for it a second
   /// time would be the slowest request of the lot, repeated.
   final List<Song> first;
+
+  /// Which list this is, for the tracks the listener took off it — one of the
+  /// names on [RetiredIds].
+  ///
+  /// Null on the surfaces that offer no way to remove anything, an album or a
+  /// search result, which must not inherit another surface's withdrawals.
+  final String? list;
+
+  /// Whether a track arriving again replaces the one already listed.
+  ///
+  /// Off by default, because a playlist can hold the same track twice and each
+  /// of those rows is its own row. On where the list is fed from two sources
+  /// that describe the same listening: the history is told first by the device,
+  /// instantly and with no menu — a track read back from the play log is a name
+  /// and a cover — and then by the account, which answers with the row YouTube
+  /// attached its actions to. The later telling wins, in the place the first one
+  /// already had, so the order stays the order it was heard in.
+  final bool mergeById;
 
   final Widget Function(SongPagesView view) build;
 
@@ -89,7 +111,7 @@ class _SongPagesState extends State<SongPages>
       _done = false;
     });
     _reading = widget.pages().listen(
-      (page) => setState(() => _songs.addAll(page)),
+      (page) => setState(() => _add(page)),
       // A page that never came is not a reason to empty the screen: what did
       // arrive is still the account's, and the retry is the same pull down.
       onError: (Object error) => setState(() {
@@ -98,6 +120,21 @@ class _SongPagesState extends State<SongPages>
       }),
       onDone: () => setState(() => _done = true),
     );
+  }
+
+  void _add(List<Song> page) {
+    if (!widget.mergeById) {
+      _songs.addAll(page);
+      return;
+    }
+    for (final song in page) {
+      final at = _songs.indexWhere((listed) => listed.videoId == song.videoId);
+      if (at == -1) {
+        _songs.add(song);
+      } else {
+        _songs[at] = song;
+      }
+    }
   }
 
   @override
@@ -109,13 +146,27 @@ class _SongPagesState extends State<SongPages>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    return widget.build((
-      songs: List.unmodifiable(_songs),
-      done: _done,
-      error: _error,
-      reload: _read,
-    ));
+    final list = widget.list;
+    if (list == null) return _view(_songs);
+
+    // Rebuilt from the notifier rather than filtered once on arrival: the row
+    // is removed while this list is already on screen, and the page it came in
+    // is not going to be read again.
+    return ListenableBuilder(
+      listenable: retiredIds,
+      builder: (context, _) => _view([
+        for (final song in _songs)
+          if (!retiredIds.isRetired(list, song.videoId)) song,
+      ]),
+    );
   }
+
+  Widget _view(List<Song> songs) => widget.build((
+        songs: List.unmodifiable(songs),
+        done: _done,
+        error: _error,
+        reload: _read,
+      ));
 }
 
 /// The foot of a list that has not finished arriving.

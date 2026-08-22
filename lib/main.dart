@@ -28,6 +28,7 @@ import 'data/saved_collections.dart';
 import 'data/local_playlists.dart';
 import 'data/play_history.dart';
 import 'data/recent_searches.dart';
+import 'data/retired_ids.dart';
 import 'data/resume_point.dart';
 import 'data/settings.dart';
 import 'data/updates.dart';
@@ -57,6 +58,10 @@ late final SavedCollections savedCollections;
 late final MusicFolders musicFolders;
 late final DeviceSongs deviceSongs;
 late final RecentSearches recentSearches;
+
+/// What was taken off a list here, so the list on screen stops showing it.
+/// Nothing to load: it only ever holds this session's own withdrawals.
+final RetiredIds retiredIds = RetiredIds();
 late final ResumePoint resumePoint;
 late final Updates updates;
 
