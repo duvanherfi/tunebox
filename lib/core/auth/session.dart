@@ -4,6 +4,8 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import 'secure_storage.dart';
+
 /// Holds the signed-in YouTube session and derives the headers InnerTube
 /// expects from it.
 ///
@@ -13,7 +15,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// Cookies live in secure storage and never leave the device.
 class Session extends ChangeNotifier {
   Session({FlutterSecureStorage? storage})
-      : _storage = storage ?? const FlutterSecureStorage();
+      : _storage = storage ?? secureStorage;
 
   static const _cookieKey = 'youtube_cookies';
   static const origin = 'https://music.youtube.com';

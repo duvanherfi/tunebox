@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
+import '../auth/secure_storage.dart';
 import '../../data/models/song.dart';
 
 /// Reports listens to the services that keep a listening history properly.
@@ -19,7 +20,7 @@ import '../../data/models/song.dart';
 class Scrobbler extends ChangeNotifier {
   Scrobbler({http.Client? httpClient, FlutterSecureStorage? storage})
       : _http = httpClient ?? http.Client(),
-        _storage = storage ?? const FlutterSecureStorage();
+        _storage = storage ?? secureStorage;
 
   static const _listenBrainzKey = 'listenbrainz_token';
   static const _lastFmKeyKey = 'lastfm_api_key';
