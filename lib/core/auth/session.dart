@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'secure_storage.dart';
@@ -32,8 +33,22 @@ class Session extends ChangeNotifier {
   String? get cookieHeader => _cookieHeader;
   bool get isSignedIn => _cookieHeader != null && sapisidOf(_cookieHeader!) != null;
 
+  /// Reads the stored session, and treats a keychain that refuses as one that
+  /// has nothing to say.
+  ///
+  /// macOS asks for the keychain password whenever the signature of the binary
+  /// changes, which an ad-hoc build does on every compile, and Deny arrives
+  /// here as a `PlatformException`. Thrown out of `main` it never reaches
+  /// `runApp`: the window stays black for good, and denying a dialog is not a
+  /// decision to lose the app. Refused is not the same as absent — nothing is
+  /// deleted, so authorising it on a later launch gives the session back
+  /// exactly as it was.
   Future<void> load() async {
-    _cookieHeader = await _storage.read(key: _cookieKey);
+    try {
+      _cookieHeader = await _storage.read(key: _cookieKey);
+    } on PlatformException {
+      _cookieHeader = null;
+    }
     notifyListeners();
   }
 

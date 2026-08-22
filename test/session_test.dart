@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tunebox/core/auth/session.dart';
@@ -11,6 +12,10 @@ class _MemoryStorage extends FlutterSecureStorage {
   /// Holds [delete] open, the way a keychain that is thinking does.
   Completer<void>? stall;
 
+  /// Refuses every read, the way macOS does when the password dialog is
+  /// answered with Deny.
+  bool refuses = false;
+
   @override
   Future<String?> read({
     required String key,
@@ -20,7 +25,16 @@ class _MemoryStorage extends FlutterSecureStorage {
     WebOptions? webOptions,
     AppleOptions? mOptions,
     WindowsOptions? wOptions,
-  }) async => values[key];
+  }) async {
+    if (refuses) {
+      throw PlatformException(
+        code: 'Unexpected security result code',
+        message: 'User canceled the operation.',
+        details: -128,
+      );
+    }
+    return values[key];
+  }
 
   @override
   Future<void> write({
@@ -55,6 +69,32 @@ class _MemoryStorage extends FlutterSecureStorage {
 /// failure mode: a malformed credential just comes back as an empty library,
 /// indistinguishable from having liked nothing. These pin the format.
 void main() {
+  group('a keychain that refuses to be read', () {
+    test('opens signed out rather than not opening at all', () async {
+      final storage = _MemoryStorage()..values['youtube_cookies'] = 'SAPISID=x';
+      final session = Session(storage: storage);
+      storage.refuses = true;
+
+      await session.load();
+
+      expect(session.isSignedIn, isFalse);
+    });
+
+    test('leaves the stored session where it is', () async {
+      // macOS asks again on the next launch, and answering it then has to give
+      // the session back. Forgetting it here would make Deny a sign-out.
+      final storage = _MemoryStorage()..values['youtube_cookies'] = 'SAPISID=x';
+      final session = Session(storage: storage);
+      storage.refuses = true;
+      await session.load();
+
+      storage.refuses = false;
+      await session.load();
+
+      expect(session.cookieHeader, 'SAPISID=x');
+    });
+  });
+
   group('sapisidOf', () {
     test('reads SAPISID from a cookie string', () {
       expect(

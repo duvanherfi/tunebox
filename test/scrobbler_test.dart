@@ -1,5 +1,6 @@
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -13,6 +14,16 @@ void main() {
   setUp(() {
     TestWidgetsFlutterBinding.ensureInitialized();
     FlutterSecureStorage.setMockInitialValues({});
+  });
+
+  test('opens with no scrobbling rather than not opening at all', () async {
+    // Same keychain refusal that used to take the whole launch down: this runs
+    // before runApp too, and four reads is four chances to throw.
+    final scrobbler = Scrobbler(storage: _RefusingStorage());
+
+    await scrobbler.load();
+
+    expect(scrobbler.listenBrainzConnected, isFalse);
   });
 
   const song = Song(
@@ -86,4 +97,25 @@ void main() {
     expect(params['format'], 'json');
     expect(scrobbler.lastFmConnected, isTrue);
   });
+}
+
+
+/// A keychain answering the way macOS does when its password dialog is denied.
+class _RefusingStorage extends FlutterSecureStorage {
+  @override
+  Future<String?> read({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
+    throw PlatformException(
+      code: 'Unexpected security result code',
+      message: 'User canceled the operation.',
+      details: -128,
+    );
+  }
 }

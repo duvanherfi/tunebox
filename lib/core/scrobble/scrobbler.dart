@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
@@ -45,11 +46,24 @@ class Scrobbler extends ChangeNotifier {
   bool get lastFmConnected => _lastFmSession != null;
   bool get lastFmConfigured => _lastFmApiKey != null && _lastFmSecret != null;
 
+  /// Reads the stored credentials, and treats a keychain that refuses as one
+  /// with nothing in it.
+  ///
+  /// This runs before `runApp` as well, so an exception here is the same black
+  /// window as one out of the session — see `Session.load`. Nothing is
+  /// deleted: the tokens come back on a launch where the keychain is allowed.
   Future<void> load() async {
-    _listenBrainzToken = await _storage.read(key: _listenBrainzKey);
-    _lastFmApiKey = await _storage.read(key: _lastFmKeyKey);
-    _lastFmSecret = await _storage.read(key: _lastFmSecretKey);
-    _lastFmSession = await _storage.read(key: _lastFmSessionKey);
+    try {
+      _listenBrainzToken = await _storage.read(key: _listenBrainzKey);
+      _lastFmApiKey = await _storage.read(key: _lastFmKeyKey);
+      _lastFmSecret = await _storage.read(key: _lastFmSecretKey);
+      _lastFmSession = await _storage.read(key: _lastFmSessionKey);
+    } on PlatformException {
+      _listenBrainzToken = null;
+      _lastFmApiKey = null;
+      _lastFmSecret = null;
+      _lastFmSession = null;
+    }
     notifyListeners();
   }
 
