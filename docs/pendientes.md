@@ -5,8 +5,8 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
 
 ## Pendiente
 
-Orden acordado el 21 de agosto de 2026, un hilo por punto. Hecho el primero,
-quedan: **el ANR del mensajero de Dart** → **el selector de carpetas del
+Orden acordado el 21 de agosto de 2026, un hilo por punto. Hechos el primero y
+el ANR del mensajero de Dart, queda: **el selector de carpetas del
 escritorio**.
 
 - **Llegar a Documentos, Escritorio o un disco externo en macOS.** Lo que
@@ -145,29 +145,6 @@ versión.
   Mac, y pasa cuando macOS cambia de salida —auriculares, Bluetooth— con el
   emulador ya abierto. Se arregla reiniciando el emulador, no tocando código.
 
-- **La app se congela y la mata el sistema (ANR + crash nativo).** Reproducido
-  el 20 de agosto dos veces seguidas en un emulador recién arrancado, una de
-  ellas recién abierta la app y sentada en el reproductor restaurado, sin tocar
-  nada. Firma idéntica en los tres registros que hay (18 de agosto, 20 a las
-  14:00 y 20 a las 18:22): el hilo principal queda **Runnable** —no bloqueado
-  por un candado— quemando CPU dentro de
-  `DartMessenger.handleMessageFromDart` → `PlatformTaskQueue.dispatch` →
-  `Handler.post`, con 14 s, 24 s y 25 s de tiempo de usuario acumulado, y el
-  proceso en **950 MB – 1 GB de RSS**. Es una inundación de mensajes de Dart
-  hacia la plataforma, no un bloqueo. Termina en `APP CRASH(NATIVE)` unos
-  segundos después.
-  Se leen con `adb shell dumpsys dropbox --print data_app_anr` y
-  `adb shell dumpsys activity exit-info com.tunebox.tunebox`.
-  Dos salvedades antes de sacar conclusiones: todo esto es sobre un **build de
-  depuración**, que va mucho más lento que uno de lanzamiento, y en un emulador
-  que cayó a **render por software** por falta de memoria en el Mac
-  (`Software GL rendering will be used due to system memory pressure` en el log
-  del emulador). Las dos cosas inflan un ANR. Aun así, un gigabyte de RSS y
-  veinticinco segundos de hilo principal en el mensajero no se explican por
-  ahí. Por dónde empezar: quién manda tantos mensajes de plataforma — la
-  cadena `positionStream` → `setVolume`/`playbackState` es la sospechosa
-  inmediata, porque tira hasta sesenta tics por segundo.
-
 - **En macOS, un permiso denegado se ve igual que "no hay música".** De hacer
   la pestaña del dispositivo (21 de agosto de 2026). Al mirar `~/Music` y
   `~/Downloads` macOS pregunta una vez por carpeta, en el momento de leerla. Si
@@ -215,6 +192,63 @@ versión.
   repintado, ya contesta null. Si vuelve a salir, ahí es donde hay que mirar.
 
 ## Hecho
+
+- **El ANR del mensajero de Dart era el puente del widget** (22 de agosto de
+  2026). La sospecha apuntada aquí —la cadena `positionStream` →
+  `setVolume`/`playbackState`, hasta sesenta tics por segundo— era **falsa**, y
+  conviene dejarlo escrito: `positionStream` no cruza a la plataforma, la
+  posición se calcula en Dart, y en tres minutos de reproducción `setVolume`
+  salió **dos** veces. El fundido tampoco: sólo escribe volumen dentro de la
+  ventana del fundido, y ahí la cadencia es la del `positionStream`, 200 ms.
+  Lo que inunda es `HomeWidgetBridge`. Publicaba en el lanzador **por cada**
+  evento de `mediaItem` y de `playbackState`, sin comparar si algo había
+  cambiado y sin esperar a que la publicación anterior terminara. Cada
+  publicación son **cinco viajes a la plataforma** (cuatro `saveWidgetData` y un
+  `updateWidget`) y el `updateWidget` acaba en una emisión
+  `APPWIDGET_UPDATE` que vuelve a entrar **por el hilo principal de la propia
+  app**. Los eventos del reproductor no llegan repartidos sino a ráfagas —un
+  cambio de pista, una tanda de saltos, un arrastre por la barra, el
+  `_advance` saltándose pistas que YouTube niega—, así que llegan cientos de
+  golpe y el despachador de entrada de Android se cansa a los 5 s.
+  Medido, no supuesto. La traza lo dice dos veces: el hilo principal está en
+  `DartMessenger.handleMessageFromDart` → `PlatformTaskQueue.dispatch` →
+  `Handler.post` —es decir, *poniendo* estos mensajes—, y el `Debug Store` del
+  informe es una tira de recepciones seguidas de
+  `act=android.appwidget.action.APPWIDGET_UPDATE;cmp=…/.TuneboxWidget` en
+  `tname=main`. En los siete ANR registrados aparece 51 veces.
+  Con el instrumento de Flutter para esto —`debugProfilePlatformChannels`, que
+  imprime cada segundo qué canal manda cuántos bytes— y **25 toques de
+  "siguiente"** en el emulador, antes y después del arreglo:
+
+  | | antes | después |
+  |---|---|---|
+  | `saveWidgetData` | 1498 | 76 |
+  | `updateWidget` (emisiones al hilo principal) | 336 | 19 |
+  | segundos con tráfico | 73 | 14 |
+  | RSS | 503 → 671 MB | 495 → 518 MB |
+  | montón de Dart | 176 → 318 MB | 177 → 183 MB |
+
+  El puente era el **95 %** de todo el tráfico Dart → plataforma. Y la memoria
+  venía con él: reproducir tres minutos seguidos no movía el RSS, pero la
+  tormenta de saltos lo subía 170 MB y no los devolvía; con el arreglo se queda
+  plano. Lo de "un gigabyte no se explica por el render por software" era
+  cierto — esta vez el emulador iba con Impeller sobre GL y aun así llegó a
+  **1.09 GB** y se mató dos veces seguidas.
+  El arreglo es uno solo, con la forma que ya usa `Downloads._drain`: un tipo
+  `_Wanted` con las cuatro cosas que el widget dibuja (título, artista,
+  carátula y si suena), se descarta lo que no cambie nada, y se publica de una
+  en una — mientras hay una en vuelo las demás se funden en **una sola**
+  pendiente, lo que además acota la cadencia sin necesidad de temporizador.
+  De paso arregla un defecto vecino que la misma causa producía: al solaparse,
+  las publicaciones se pisaban las cuatro claves y **el último título no
+  llegaba nunca**. La prueba lo enseña —contra la versión anterior devuelve
+  `null`— y en el aparato el almacén del widget y la sesión de medios ahora
+  dicen lo mismo ("El aviador / Saurom / playing=true").
+  Y no hace falta tener el widget puesto: en el emulador no hay ninguno
+  colocado, la emisión se manda igual y la inundación ocurre igual.
+  Cuatro pruebas en `test/home_widget_bridge_test.dart`, tres en rojo contra la
+  versión anterior, que interceptan el canal `home_widget` y cuentan los viajes
+  de verdad: 40 estados iguales daban 40 publicaciones y 42 solapadas a la vez.
 
 - **Quitar una canción de la biblioteca ya no le quita el like** (21 de agosto
   de 2026). Pedido el 20 de agosto; lo que faltaba era saber por dónde se pide,
