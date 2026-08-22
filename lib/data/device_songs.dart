@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import 'models/song.dart';
+import 'music_folders.dart';
 
 /// Music already on the device.
 ///
@@ -14,7 +15,7 @@ import 'models/song.dart';
 /// folder is the artist, which is exactly what a well-kept music folder encodes
 /// anyway.
 class DeviceSongs extends ChangeNotifier {
-  DeviceSongs({List<Directory>? roots, Set<String>? extensions})
+  DeviceSongs({List<Directory>? roots, Set<String>? extensions, this.folders})
       : _roots = roots,
         _extensions = extensions ?? extensionsFor(Platform.operatingSystem);
 
@@ -38,6 +39,18 @@ class DeviceSongs extends ChangeNotifier {
             '.m4b',
           },
         'macos' => const {..._common, '.aiff', '.aif', '.m4b'},
+        // No audio plugin reaches these two yet. The one that will is
+        // just_audio_media_kit, which is libmpv and opens whatever ExoPlayer
+        // does; naming that set now is what lets the tab work the day it lands.
+        'windows' || 'linux' => const {
+            ..._common,
+            '.ogg',
+            '.oga',
+            '.opus',
+            '.webm',
+            '.mka',
+            '.m4b',
+          },
         _ => const {},
       };
 
@@ -48,14 +61,28 @@ class DeviceSongs extends ChangeNotifier {
   /// and only Music and Downloads have an entitlement — inside the container
   /// macOS links them under `HOME` once that entitlement is granted, so the
   /// container's own home is the right place to look and no bookmark is needed.
+  ///
+  /// Windows and Linux have no sandbox parcelling out the disk, so these are a
+  /// starting point rather than a boundary: anything else is one pick away. On
+  /// Linux the folder may well be named in the language of the desktop, which
+  /// XDG records in `~/.config/user-dirs.dirs` and this does not read — keeping
+  /// this a pure function of its environment is worth more than guessing, and
+  /// the picker covers what the guess would miss.
   static List<String> rootsFor(String platform,
       {Map<String, String>? environment}) {
+    final env = environment ?? Platform.environment;
+
     switch (platform) {
       case 'android':
         return const ['/storage/emulated/0'];
-      case 'macos':
-        final base = (environment ?? Platform.environment)['HOME'];
+      case 'macos' || 'linux':
+        final base = env['HOME'];
         return base == null ? const [] : ['$base/Music', '$base/Downloads'];
+      case 'windows':
+        final base = env['USERPROFILE'];
+        return base == null
+            ? const []
+            : ['$base\\Music', '$base\\Downloads'];
       default:
         return const [];
     }
@@ -67,6 +94,9 @@ class DeviceSongs extends ChangeNotifier {
 
   /// The mark that tells the player this track is a path rather than a video.
   static const prefix = 'local:';
+
+  /// The folders someone added by hand, walked on top of the platform's own.
+  final MusicFolders? folders;
 
   final List<Directory>? _roots;
   final Set<String> _extensions;
@@ -88,8 +118,11 @@ class DeviceSongs extends ChangeNotifier {
     notifyListeners();
     try {
       final found = <Song>[];
-      final roots = _roots ??
-          rootsFor(Platform.operatingSystem).map(Directory.new).toList();
+      final roots = [
+        ..._roots ??
+            rootsFor(Platform.operatingSystem).map(Directory.new).toList(),
+        ...?folders?.paths.map(Directory.new),
+      ];
       for (final directory in roots) {
         await _walk(directory, found, atRoot: true);
       }
@@ -150,18 +183,21 @@ class DeviceSongs extends ChangeNotifier {
     );
   }
 
+  /// Whether reading the device's music is a question put to the person.
+  ///
+  /// Only on Android. macOS answered it when the app was signed, by whether the
+  /// entitlement is there and, for anything else, by whether a folder was
+  /// picked; Windows and Linux never ask. Saying no for them would report a
+  /// refusal nobody made — and permission_handler ships no desktop
+  /// implementation anyway, so asking threw `MissingPluginException` out of the
+  /// library tab rather than answering.
+  static bool asksAtRuntime(String platform) => platform == 'android';
+
   /// Android 13 split storage permissions by media type; older versions have
   /// only the blanket one. Asking for both and accepting either keeps this
   /// working in both worlds.
-  ///
-  /// macOS has nothing to ask at runtime: its answer was decided when the app
-  /// was signed, by whether the entitlement is there. Everywhere else there are
-  /// no roots to walk, so there is nothing to ask for either — and
-  /// permission_handler ships no desktop implementation, so asking threw
-  /// `MissingPluginException` out of the library tab rather than answering no.
   Future<bool> _permitted() async {
-    if (Platform.isMacOS) return true;
-    if (!Platform.isAndroid) return false;
+    if (!asksAtRuntime(Platform.operatingSystem)) return true;
     if (await Permission.audio.request().isGranted) return true;
     return Permission.storage.request().isGranted;
   }

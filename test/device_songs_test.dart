@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tunebox/data/device_songs.dart';
+import 'package:tunebox/data/music_folders.dart';
 
 /// What a device holds is the same question on every platform and a different
 /// answer on each: Android hands over its whole shared storage behind one
@@ -28,8 +29,17 @@ void main() {
       expect(macos, isNot(contains('.webm')));
     });
 
+    test('offers the other desktops what libmpv opens', () {
+      // Windows and Linux have no audio plugin yet; the one they will get is
+      // libmpv, which reads everything ExoPlayer does.
+      for (final platform in ['windows', 'linux']) {
+        expect(DeviceSongs.extensionsFor(platform),
+            containsAll({'.mp3', '.flac', '.opus', '.webm'}));
+      }
+    });
+
     test('offers a platform with no player of ours nothing', () {
-      expect(DeviceSongs.extensionsFor('windows'), isEmpty);
+      expect(DeviceSongs.extensionsFor('fuchsia'), isEmpty);
     });
   });
 
@@ -49,6 +59,36 @@ void main() {
 
     test('walks nothing where the home is unknown', () {
       expect(DeviceSongs.rootsFor('macos', environment: const {}), isEmpty);
+    });
+
+    test('walks the usual two on Windows, off its own home variable', () {
+      expect(
+        DeviceSongs.rootsFor('windows',
+            environment: {'USERPROFILE': r'C:\Users\dee'}),
+        [r'C:\Users\dee\Music', r'C:\Users\dee\Downloads'],
+      );
+    });
+
+    test('walks the usual two on Linux', () {
+      // A desktop that speaks Spanish may well call it ~/Musica, which XDG
+      // records and this does not read. The picker is what covers that.
+      expect(
+        DeviceSongs.rootsFor('linux', environment: {'HOME': '/home/dee'}),
+        ['/home/dee/Music', '/home/dee/Downloads'],
+      );
+    });
+  });
+
+  group('permission', () {
+    test('is asked for only where a platform asks at runtime', () {
+      expect(DeviceSongs.asksAtRuntime('android'), isTrue);
+
+      // macOS decided it when the app was signed; Windows and Linux never ask
+      // at all. Answering "denied" there would leave the tab reporting a
+      // refusal nobody made.
+      for (final platform in ['macos', 'windows', 'linux']) {
+        expect(DeviceSongs.asksAtRuntime(platform), isFalse);
+      }
     });
   });
 
@@ -103,6 +143,47 @@ void main() {
       addTearDown(() => Process.runSync('chmod', ['755', closed.path]));
 
       expect(await titles(scanner()), ['Kept']);
+    });
+
+    test('reaches a folder that was added by hand', () async {
+      touch('Music/Kept.mp3');
+      final chosen = Directory('${root.path}/../tunebox_chosen')
+        ..createSync(recursive: true);
+      addTearDown(() => chosen.deleteSync(recursive: true));
+      File('${chosen.path}/Picked.mp3').writeAsStringSync('');
+
+      final folders = MusicFolders(
+        file: File('${root.path}/folders.json'),
+        bookmarks: const FolderBookmarks.none(),
+      );
+      await folders.load();
+      await folders.add(chosen.path);
+
+      final device = DeviceSongs(
+        roots: [root],
+        extensions: DeviceSongs.extensionsFor('android'),
+        folders: folders,
+      );
+
+      expect(await titles(device), ['Kept', 'Picked']);
+    });
+
+    test('leaves out an added folder that is not reachable', () async {
+      touch('Music/Kept.mp3');
+      final folders = MusicFolders(
+        file: File('${root.path}/folders.json'),
+        bookmarks: const FolderBookmarks.none(),
+      );
+      await folders.load();
+      await folders.add('${root.path}/../tunebox_unplugged');
+
+      final device = DeviceSongs(
+        roots: [root],
+        extensions: DeviceSongs.extensionsFor('android'),
+        folders: folders,
+      );
+
+      expect(await titles(device), ['Kept']);
     });
 
     test('skips files no player here can open', () async {

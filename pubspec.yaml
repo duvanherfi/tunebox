@@ -61,6 +61,10 @@ dependencies:
   # The installed build number, which is what Android compares when it
   # decides whether an APK may be installed over another.
   package_info_plus:
+  # The folder picker. Desktop only: it is how someone reaches music that
+  # lives outside the folders a platform hands over by default, and on a
+  # sandboxed Mac it is the only way to reach one at all.
+  file_selector:
 
 dev_dependencies:
   flutter_test:

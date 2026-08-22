@@ -6,6 +6,7 @@ import '../../data/models/song.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../auth/login_screen.dart';
+import '../settings/music_folders_screen.dart';
 import '../shared/skeleton.dart';
 import '../shared/shelf_row.dart';
 import '../shared/song_pages.dart';
@@ -574,6 +575,19 @@ class _DeviceSongs extends StatelessWidget {
                     },
                     child: Text(l10n.libraryDeviceScan),
                   ),
+                  // An empty tab on a desktop usually means the music is
+                  // somewhere the platform does not hand over by itself, and
+                  // looking again will keep finding nothing until someone says
+                  // where it is.
+                  if (MusicFoldersScreen.isSupported)
+                    TextButton(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const MusicFoldersScreen(),
+                        ),
+                      ),
+                      child: Text(l10n.libraryDeviceFolders),
+                    ),
                 ],
               ),
             ),

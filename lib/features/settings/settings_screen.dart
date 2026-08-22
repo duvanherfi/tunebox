@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import 'appearance_screen.dart';
 import 'backup_settings_screen.dart';
+import 'music_folders_screen.dart';
 import 'nightstand_settings_screen.dart';
 import 'playback_settings_screen.dart';
 import 'storage_settings_screen.dart';
@@ -63,6 +64,16 @@ class SettingsScreen extends StatelessWidget {
             body: l10n.settingsNightstandBody,
             onTap: () => open(const NightstandSettingsScreen()),
           ),
+          // Android grants its whole shared storage at once, so there is no
+          // folder left to pick and this row would open on a list that can
+          // never have anything in it.
+          if (MusicFoldersScreen.isSupported)
+            _Entry(
+              icon: Icons.folder_open_outlined,
+              title: l10n.settingsMusicFolders,
+              body: l10n.settingsMusicFoldersBody,
+              onTap: () => open(const MusicFoldersScreen()),
+            ),
           // The widget is the only thing behind this door, and it is Android's
           // alone; elsewhere the row would open on nothing.
           if (Platform.isAndroid)

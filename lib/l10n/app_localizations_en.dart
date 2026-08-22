@@ -831,6 +831,32 @@ class AppLocalizationsEn extends AppLocalizations {
       'Without access to your audio there is nothing to look through.';
 
   @override
+  String get libraryDeviceFolders => 'Choose folders…';
+
+  @override
+  String get settingsMusicFolders => 'Music folders';
+
+  @override
+  String get settingsMusicFoldersBody =>
+      'Where to look for music besides the usual folders.';
+
+  @override
+  String get musicFoldersBody =>
+      'Music and Downloads are read already. Anything else — Documents, the desktop, an external disk — is picked here once and remembered.';
+
+  @override
+  String get musicFoldersAdd => 'Add folder…';
+
+  @override
+  String get musicFoldersEmpty => 'No folders added yet.';
+
+  @override
+  String get musicFoldersRemove => 'Remove';
+
+  @override
+  String get musicFoldersUnavailable => 'Not reachable right now';
+
+  @override
   String get settingsWidget => 'Add the home screen widget';
 
   @override

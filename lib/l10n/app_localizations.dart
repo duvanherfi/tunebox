@@ -1616,6 +1616,54 @@ abstract class AppLocalizations {
   /// **'Without access to your audio there is nothing to look through.'**
   String get libraryDeviceDenied;
 
+  /// No description provided for @libraryDeviceFolders.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose folders…'**
+  String get libraryDeviceFolders;
+
+  /// No description provided for @settingsMusicFolders.
+  ///
+  /// In en, this message translates to:
+  /// **'Music folders'**
+  String get settingsMusicFolders;
+
+  /// No description provided for @settingsMusicFoldersBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Where to look for music besides the usual folders.'**
+  String get settingsMusicFoldersBody;
+
+  /// No description provided for @musicFoldersBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Music and Downloads are read already. Anything else — Documents, the desktop, an external disk — is picked here once and remembered.'**
+  String get musicFoldersBody;
+
+  /// No description provided for @musicFoldersAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add folder…'**
+  String get musicFoldersAdd;
+
+  /// No description provided for @musicFoldersEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No folders added yet.'**
+  String get musicFoldersEmpty;
+
+  /// No description provided for @musicFoldersRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get musicFoldersRemove;
+
+  /// No description provided for @musicFoldersUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Not reachable right now'**
+  String get musicFoldersUnavailable;
+
   /// No description provided for @settingsWidget.
   ///
   /// In en, this message translates to:

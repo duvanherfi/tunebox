@@ -836,6 +836,32 @@ class AppLocalizationsEs extends AppLocalizations {
       'Sin acceso a tu audio no hay nada que revisar.';
 
   @override
+  String get libraryDeviceFolders => 'Elegir carpetas…';
+
+  @override
+  String get settingsMusicFolders => 'Carpetas de música';
+
+  @override
+  String get settingsMusicFoldersBody =>
+      'Dónde buscar música además de las carpetas de siempre.';
+
+  @override
+  String get musicFoldersBody =>
+      'Música y Descargas ya se leen. Cualquier otra — Documentos, el escritorio, un disco externo — se elige aquí una vez y se recuerda.';
+
+  @override
+  String get musicFoldersAdd => 'Añadir carpeta…';
+
+  @override
+  String get musicFoldersEmpty => 'Todavía no hay carpetas añadidas.';
+
+  @override
+  String get musicFoldersRemove => 'Quitar';
+
+  @override
+  String get musicFoldersUnavailable => 'Ahora mismo no se puede llegar';
+
+  @override
   String get settingsWidget => 'Añadir el widget a la pantalla de inicio';
 
   @override

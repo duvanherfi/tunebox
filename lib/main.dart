@@ -23,6 +23,7 @@ import 'data/device_songs.dart';
 import 'data/downloads.dart';
 import 'data/home_widget_bridge.dart';
 import 'data/likes.dart';
+import 'data/music_folders.dart';
 import 'data/saved_collections.dart';
 import 'data/local_playlists.dart';
 import 'data/play_history.dart';
@@ -53,7 +54,8 @@ late final Likes likes;
 late final AccountStore accountStore;
 late final LocalPlaylists localPlaylists;
 late final SavedCollections savedCollections;
-final DeviceSongs deviceSongs = DeviceSongs();
+late final MusicFolders musicFolders;
+late final DeviceSongs deviceSongs;
 late final RecentSearches recentSearches;
 late final ResumePoint resumePoint;
 late final Updates updates;
@@ -134,6 +136,12 @@ Future<void> main() async {
 
   recentSearches = RecentSearches();
   await recentSearches.load();
+
+  // Loaded before the tab that reads it, because loading is what reopens the
+  // bookmarked folders: on macOS the paths are not reachable until it has run.
+  musicFolders = MusicFolders();
+  await musicFolders.load();
+  deviceSongs = DeviceSongs(folders: musicFolders);
 
   // Read before the handler exists, so the first frame can already show what
   // was playing when the app was last closed.
