@@ -5,6 +5,15 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
 
 ## Pendiente
 
+- **Llegar a Documentos, Escritorio o un disco externo en macOS.** Lo que
+  quedó fuera al hacer que la pestaña leyera del dispositivo (21 de agosto de
+  2026). El sandbox reparte el disco por carpeta y solo hay entitlement para
+  dos: `assets.music.read-only` y `files.downloads.read-only`. Para el resto no
+  existe ninguno — hace falta el selector de carpetas y guardar un
+  *security-scoped bookmark* para que el permiso sobreviva al reinicio, que pide
+  además `files.bookmarks.app-scope` y un paquete nuevo: no hay selector de
+  archivos en `pubspec.yaml`. Es un feature aparte, no un ajuste de este.
+
 - **Quitar una canción de la biblioteca sin quitarle el like.** Pedido el 20 de
   agosto de 2026, para que funcione como YouTube Music. Ahora que las dos
   listas están separadas la acción tiene sentido, pero falta sondear con qué
@@ -21,25 +30,16 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
 Cosas que funcionan a medias y conviene mirar antes de dar por cerrada una
 versión.
 
-- **En macOS, al iniciar sesión no cargó la foto de la cuenta** (20 de agosto
-  de 2026). **Medio cerrado**: el agujero que convertía un fallo pasajero en
-  permanente ya está tapado; falta un inicio de sesión para saber si era ese.
-  Lo que sí quedó comprobado leyendo el flujo, no suponiendo: en el inicio de
-  sesión hay **una sola** notificación —`login_screen` se guarda con `_captured`
-  de llamar a `signIn` dos veces—, así que la sospecha de dos avisos pisándose
-  no se sostiene. Lo que sí pasa es que `accountInfo()` se traga cualquier fallo
-  y contesta null, y `AccountStore` guardaba ese null como si fuera la
-  respuesta: una sola petición mal parada dejaba el icono de respaldo **hasta
-  reiniciar**, que es exactamente el síntoma.
-  Ahora la tienda: no descarta un aviso que llega con otro en vuelo (lo
-  encola), no borra una cuenta ya sabida por un null, y vuelve a preguntar a
-  los 2, 6 y 20 segundos. Cinco pruebas en `test/account_store_test.dart`, de
-  las que cuatro fallan contra la versión anterior.
-  Lo que falta y no se puede hacer sin ti: **no hay sesión guardada en este
-  Mac** —la app arrancó con `signedIn=false`—, así que no se pudo reproducir.
-  Cuando vuelvas a iniciar sesión ahí, el dato que parte el problema en dos
-  sigue siendo si el nombre y el correo aparecen: si aparecen y la foto no, el
-  fallo es cargar la imagen y esto no lo arregla.
+- **El llavero de macOS y la firma ad-hoc, al actualizar: sí pregunta.**
+  Medido el 21 de agosto de 2026, que era lo que faltaba. Al abrir un build
+  nuevo sobre el llavero que dejó el anterior, macOS pide autorizar el acceso a
+  `flutter_secure_storage_service` con la contraseña del llavero. Era lo
+  esperado: la identidad de una firma ad-hoc es el `cdhash`, que cambia en cada
+  compilación, lo mismo que ya obliga a repetir el permiso de Gatekeeper.
+  Autorizarlo devuelve la sesión entera sin volver a iniciarla. Lo que sigue sin
+  comprobarse es si "Permitir siempre" evita la pregunta en la compilación
+  *siguiente*; por lo que se sabe de la identidad, no debería. Una firma
+  Developer ID lo arreglaría, igual que arreglaría lo de Gatekeeper.
 
 - **En Android Auto se quedó mudo con el contador corriendo** (20 de agosto de
   2026). Al desconectar el cable USB del carro la misma canción volvió a sonar
@@ -120,6 +120,36 @@ versión.
   cadena `positionStream` → `setVolume`/`playbackState` es la sospechosa
   inmediata, porque tira hasta sesenta tics por segundo.
 
+- **En macOS, un permiso denegado se ve igual que "no hay música".** De hacer
+  la pestaña del dispositivo (21 de agosto de 2026). Al mirar `~/Music` y
+  `~/Downloads` macOS pregunta una vez por carpeta, en el momento de leerla. Si
+  la respuesta es *No permitir*, la lectura lanza `FileSystemException`, el
+  recorrido se la traga —que es lo que hace falta para que una carpeta prohibida
+  no se lleve por delante el resto— y la pestaña sale vacía con su mensaje de
+  siempre. Nadie le dice a quien negó el permiso que fue eso. Android sí lo
+  distingue, porque ahí el permiso se pide antes y de una vez.
+
+- **El `Info.plist` de macOS no explica para qué pide las carpetas.** Sin
+  `NSAppleMusicUsageDescription` ni `NSDownloadsFolderUsageDescription`, macOS
+  pone su texto genérico —que al menos llega traducido—. Poner uno propio pide
+  además un `InfoPlist.strings` por idioma, o el aviso saldría en inglés a todo
+  el mundo.
+
+- **Recorrer el almacenamiento entero no se ha medido en un teléfono lleno.**
+  En el emulador, con cinco archivos, es instantáneo. Un teléfono real tiene
+  decenas de miles de archivos bajo `/storage/emulated/0`, y el recorrido es
+  carpeta a carpeta y en el isolate principal. Si tarda, la pestaña se queda en
+  su esqueleto sin decir cuánto falta.
+
+- **Una prueba falló una vez de nueve y no se supo cuál** (21 de agosto de
+  2026). Una pasada dio `+218 -1` y las ocho siguientes, seguidas, dieron las
+  219 en verde. El resumen no nombra la que falla, así que quedó sin
+  identificar; por dónde cayó, la sospecha son las de `player_fade_test`, que
+  van contra tiempos. No es de lo que se tocó ese día —el cambio fue
+  `DeviceSongs`, los ARB y los entitlements— y conviene volver a mirarlo con
+  `--reporter expanded` a la próxima que aparezca, que es lo que sí imprime el
+  nombre.
+
 - **El aviso de Play Protect no sale en el emulador**, que no lleva Google Play
   Services. Al instalar un APK de fuera, un teléfono con Play muestra un aviso
   propio antes del instalador; dónde aparece y qué dice es cosa suya, no
@@ -142,6 +172,95 @@ versión.
   una duración con la que casarla.
 
 ## Hecho
+
+- **La pestaña ya lee del dispositivo, en el Mac también, y con los formatos
+  que cada reproductor abre** (21 de agosto de 2026). Tres cosas que parecían
+  independientes y compartían una sola causa: `DeviceSongs` estaba escrito para
+  Android y para nadie más.
+  El nombre era lo de menos: `libraryDevice` y `libraryDeviceEmpty` en los dos
+  ARB, "Del dispositivo" / "On this device".
+  **En macOS no estaba roto, es que nunca se escribió.** Las raíces eran cuatro
+  rutas `/storage/emulated/0/…` que en un Mac no existen, y el permiso iba por
+  `permission_handler`, que no tiene implementación de escritorio. Ahora
+  `rootsFor` decide por plataforma. En el Mac son `$HOME/Music` y
+  `$HOME/Downloads`, y el truco está en que dentro del sandbox `HOME` **ya es el
+  contenedor**, donde macOS deja un enlace a la carpeta real en cuanto el
+  entitlement está concedido: no hace falta resolver el home de verdad ni
+  guardar bookmarks. Los entitlements son `assets.music.read-only` y
+  `files.downloads.read-only`, y **la firma ad-hoc los acepta** — comprobado con
+  `codesign -d --entitlements`, al contrario que `keychain-access-groups`. En
+  macOS no hay nada que preguntar en tiempo de ejecución: lo pregunta el sistema,
+  una vez por carpeta, cuando se va a leer.
+  **En Android se pasó de cuatro carpetas a todas.** Una sola raíz,
+  `/storage/emulated/0`, y debajo todo menos lo que empieza por `.` y menos
+  `Android/`, que es dato privado de otras apps. Eso obligó a dejar de usar
+  `list(recursive: true)`: es un único stream, así que la primera carpeta que se
+  niegue a ser leída —`Android/data` en cualquier teléfono moderno— lo termina y
+  se lleva consigo todo lo que quedara por visitar. Ahora se recorre nivel a
+  nivel y una negativa cuesta esa carpeta y nada más.
+  **Los formatos son dos listas, no una.** ExoPlayer abre Ogg, Opus, WebM y
+  Matroska y no tiene extractor de AIFF; AVFoundation es al revés. Una lista
+  única dejaría filas que parecen música y contestan silencio.
+  Once pruebas en `test/device_songs_test.dart`, todas en rojo antes; la del
+  permiso denegado se comprobó además quitándole el `try` al recorrido, para que
+  no pasara por casualidad. Y en los dos aparatos, con números: en el Mac, dos
+  archivos en `~/Music` salieron y el `.aiff` sonó, mientras la carpeta oculta
+  de al lado no apareció; en el emulador, cinco archivos colocados a propósito
+  dieron **3** —un `.mp3` en `Music`, un `.mka` en `Podcasts` y un `.opus` en
+  `MiCarpeta/Subcarpeta`, dos carpetas que la versión anterior no miraba— y se
+  quedaron fuera el de la carpeta oculta y un `.aiff`, que en Android no se
+  lista. Los dos contenedores nuevos se reprodujeron.
+
+- **Cerrar sesión ya cierra sesión de verdad** (21 de agosto de 2026). El
+  botón borraba la copia de la app y dejaba intacta la del navegador: el
+  webview del login guarda su propio almacén —`WKWebsiteDataStore` en macOS,
+  `CookieManager` en Android—, que es del sistema y sobrevive a la app, y nada
+  en el repo lo tocaba nunca; `CookieManager` aparecía una sola vez, para leer.
+  Google seguía con la sesión abierta ahí, así que el siguiente inicio
+  atravesaba la página de login sin detenerse: la misma cuenta, sin selector y
+  sin contraseña. Visto desde fuera, un cierre de sesión que no hizo nada — que
+  es justo lo que estorba a quien cierra sesión para entrar con otra cuenta.
+  Ahora `Session.signOut` vacía los dos. La limpieza vive en
+  `features/auth/browser_session.dart` y se inyecta desde `main.dart`, para que
+  `core/auth` no dependa del webview; va en `Session` y no en el botón porque
+  hay un tercer camino que cierra sesión solo — el 401 de
+  `innertube_client.dart:260`.
+  De paso, un defecto vecino: `signOut` avisaba **después** de esperar al
+  almacén, así que la cuenta seguía en pantalla durante el viaje al llavero, y
+  si el almacén fallaba —como fallaba esta misma mañana— para siempre. Ahora
+  avisa primero. Dos pruebas en `test/session_test.dart`; la del orden falla
+  contra la versión anterior.
+
+- **El inicio de sesión en macOS ya se guarda, y con él vuelve la foto**
+  (21 de agosto de 2026). No era la foto ni `AccountStore`: era que **el login
+  entero fallaba**. Se vio a la primera al reproducirlo con el registro delante:
+  `PlatformException(-34018, A required entitlement isn't present)` desde
+  `FlutterSecureStorage.write` ← `Session.signIn` ← `LoginScreen._tryCapture`.
+  De ahí salían los dos síntomas a la vez: `signIn` guarda la cookie en memoria
+  y lanza **antes** de `notifyListeners`, así que nadie se enteraba de la sesión
+  —el avatar se quedaba en su icono de respaldo aunque la biblioteca ya
+  funcionara— y nada llegaba al llavero, así que al siguiente arranque
+  `signedIn=false`. Eso explica la nota vieja de que "no hay sesión guardada en
+  este Mac": no es que no se hubiera iniciado, es que no se podía guardar.
+  La causa: `flutter_secure_storage` pide por defecto el llavero **de
+  protección de datos** de macOS, y ese solo se abre a una app cuyo entitlement
+  declare `keychain-access-groups`. Dos intentos lo descartaron por el camino:
+  declararlo hace que Xcode se niegue a compilar —"Runner has entitlements that
+  require signing with a development certificate"— y quitar el sandbox no
+  cambia nada, el error es idéntico. Lo que resuelve es pedir el llavero de
+  archivo de toda la vida: `MacOsOptions(usesDataProtectionKeychain: false)`,
+  ahora en `lib/core/auth/secure_storage.dart` y compartido por `Session` y
+  `Scrobbler`. El sandbox y los entitlements quedaron **como estaban**.
+  Comprobado en el Mac, no supuesto: el login guarda
+  (`security dump-keychain` enseña `youtube_cookies`), la cuenta llega
+  —`accountInfo` con nombre y foto— y **al reiniciar la app vuelve sola** con
+  `signedIn=true`. Dos pruebas en `test/macos_keychain_test.dart`, las dos
+  fallan contra la versión anterior.
+  Dos datos de paso. Uno corrige la nota anterior: en el inicio de sesión sí
+  llegan **dos** avisos, no uno, y el segundo entró mientras el primero estaba
+  en vuelo — el encolado que se añadió el 20 de agosto se estrenó aquí. El
+  otro: `accountInfo` contesta el nombre pero el **correo vacío**; el panel de
+  cuenta lo pinta, así que sale sin correo.
 
 - **La letra ya no se queda pegada a la canción con la que se abrió** (20 de
   agosto de 2026). No era que no se recargara: sí lo hacía. Cada cambio de
