@@ -1,3 +1,62 @@
+/// What a row's own menu said can be done to the track in it.
+///
+/// Every handle here is minted per row, inside the menu YouTube attached to
+/// that row, and none of them is derived from the video id: there is no
+/// endpoint that takes one. So a track listed from somewhere that carries no
+/// menu — a search result, a file on the device — can be played and nothing
+/// else, and that is not a gap to work around. Null is also how the interface
+/// knows not to offer the action.
+///
+/// Grouped rather than spread over [Song] because they travel together, are
+/// dropped together, and belong to the response they arrived in: a token read
+/// back from disk next week would be a stale credential.
+class SongActions {
+  const SongActions({
+    this.removeFromLibrary,
+    this.removeFromHistory,
+    this.pinToRecap,
+    this.unpinFromRecap,
+    this.pinnedToRecap = false,
+    this.playlistSetVideoId,
+    this.hasCredits = false,
+  });
+
+  /// A row that brought no menu at all, which is most of them.
+  static const none = SongActions();
+
+  /// Takes the track out of the library, leaving the like alone. Only the rows
+  /// whose toggle says the track is in the library carry it.
+  final String? removeFromLibrary;
+
+  /// Takes the track out of the account's listening history. The same endpoint
+  /// as [removeFromLibrary] and a different token, which is why the two are
+  /// kept apart: either sent to `feedback` is accepted, and the wrong one
+  /// silently makes the other edit.
+  final String? removeFromHistory;
+
+  /// The two sides of "Pin to Speed dial", which YouTube Music calls "Fijar en
+  /// Vuelve a escucharlo" in Spanish. Both arrive on the same toggle, one per
+  /// side, and [pinnedToRecap] says which one to send.
+  final String? pinToRecap;
+  final String? unpinFromRecap;
+  final bool pinnedToRecap;
+
+  /// Which copy of the track this row is, inside the playlist that listed it.
+  ///
+  /// A playlist can hold the same track twice, so the edit that removes one
+  /// names the row and not the video. Present only where the row offered the
+  /// removal, which is what says the playlist can be edited at all.
+  final String? playlistSetVideoId;
+
+  /// Whether YouTube has credits for this track.
+  ///
+  /// The page they live on is addressed by the video id, so it could be asked
+  /// for on any track — but a track with no credits answers with an empty
+  /// page rather than an error, and only the row knows the difference. 159 of
+  /// 200 history rows carried the entry on 22 August 2026.
+  final bool hasCredits;
+}
+
 /// A playable track. Pure Dart, no Flutter or platform imports, so the whole
 /// data layer stays portable to iOS and desktop later.
 class Song {
@@ -10,7 +69,7 @@ class Song {
     this.artistId,
     this.albumId,
     this.artist,
-    this.removeFromLibraryToken,
+    this.actions = SongActions.none,
   });
 
   final String videoId;
@@ -39,17 +98,14 @@ class Song {
   /// 140M plays".
   final String? artist;
 
-  /// The handle that takes this track out of the account's library.
+  /// What the row's own menu offered, when the row brought one.
   ///
-  /// An opaque token YouTube mints per row, inside the row's own menu, and the
-  /// only way to ask for that edit: it is not derived from the video id and
-  /// there is no endpoint that takes one. Null on the rows that do not offer
-  /// the action — a search result nobody saved, a track from the device — and
-  /// null is also how the menu knows not to offer it.
+  /// Never null so that every caller can ask without checking twice; a row with
+  /// no menu carries [SongActions.none], whose every handle is absent.
   ///
-  /// Not stored in [toJson]: it belongs to the response it arrived in, and a
-  /// token read back from disk next week would be a stale credential.
-  final String? removeFromLibraryToken;
+  /// Not stored in [toJson]: these belong to the response they arrived in, and
+  /// a token read back from disk next week would be a stale credential.
+  final SongActions actions;
 
   /// Larger artwork for the now-playing screen. YouTube encodes the requested
   /// size in the URL, so upgrading is a string substitution rather than
@@ -76,7 +132,7 @@ class Song {
         artistId: artistId,
         albumId: albumId,
         artist: artist,
-        removeFromLibraryToken: removeFromLibraryToken,
+        actions: actions,
       );
 
   /// Stored form, for the on-device play history. Only what a row needs to be

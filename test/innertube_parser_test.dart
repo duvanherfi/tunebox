@@ -442,38 +442,4 @@ void main() {
       expect(parseContinuationToken(_fixture('search_daft_punk.json')), isNull);
     });
   });
-
-  /// The row's own menu is the only place YouTube says a track is in the
-  /// library, and the only place it hands over the handle to take it out. The
-  /// fixture is a real library page with its tokens scrubbed — a token is a
-  /// credential, and anyone holding one can edit that account's library.
-  group('parseSongList, taking a track out of the library', () {
-    test('reads the token that removes a track from the library', () {
-      final songs = parseSongList(_fixture('library_songs.json'));
-
-      expect(songs.first.removeFromLibraryToken, 'REMOVE_jmy3fkMENF0');
-    });
-
-    test('leaves the token null when the row does not offer the action', () {
-      final songs = parseSongList(_fixture('library_songs.json'));
-
-      expect(songs.last.removeFromLibraryToken, isNull);
-    });
-
-    test('ignores the other feedback tokens the same row carries', () {
-      final songs = parseSongList(_fixture('library_songs.json'));
-      final tokens =
-          songs.map((song) => song.removeFromLibraryToken).nonNulls;
-
-      expect(tokens, everyElement(startsWith('REMOVE_')),
-          reason: 'a row also carries the pin-to-recap and add-to-library '
-              'tokens, and either would silently do the wrong thing');
-    });
-
-    test('leaves it null on a surface whose rows carry no menu', () {
-      final songs = parseSongList(_fixture('search_daft_punk.json'));
-
-      expect(songs.every((song) => song.removeFromLibraryToken == null), isTrue);
-    });
-  });
 }

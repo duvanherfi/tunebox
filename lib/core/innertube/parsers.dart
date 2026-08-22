@@ -1,3 +1,4 @@
+import '../../data/models/credits.dart';
 import '../../data/models/playlist.dart';
 import '../../data/models/song.dart';
 
@@ -162,7 +163,7 @@ List<Song> parseSongList(Map<String, dynamic> json) {
       artistId: _linkedPage(item, 'MUSIC_PAGE_TYPE_ARTIST'),
       albumId: _linkedPage(item, 'MUSIC_PAGE_TYPE_ALBUM'),
       artist: _artistName(texts),
-      removeFromLibraryToken: _removeFromLibraryToken(item),
+      actions: _actionsOf(item),
     ));
   }
 
@@ -170,32 +171,103 @@ List<Song> parseSongList(Map<String, dynamic> json) {
 }
 
 
-/// The handle in a row's menu that takes the track out of the library.
+/// Everything a row's menu offers, read off that menu.
 ///
-/// The entry is a toggle — "Save to library" one way, "Remove from library" the
-/// other — and only the toggled side carries the token that removes. Matched by
-/// its icon rather than by its label: `hl` follows the device locale, so the
-/// label arrives in whatever language the listener reads, while `BOOKMARK` is
-/// the same everywhere.
+/// Matched by `iconType` rather than by label: `hl` follows the device locale,
+/// so the labels arrive in whatever language the listener reads, while the
+/// icons are the same everywhere. Measured against a real account on 22 August
+/// 2026, over 200 history rows.
 ///
-/// `isToggled` is what says the track is in the library at all. Without it a
-/// search result nobody ever saved would come back with a token that removes
-/// nothing, and the menu would offer the action on a track that is not there.
-/// A row carries several feedback tokens — pinning to the recap, the add side
-/// of this same toggle, and the like button's own copy — and any of them sent
-/// to `feedback` would silently do something else.
-String? _removeFromLibraryToken(Object? item) {
-  for (final toggle in findAll(item, 'toggleMenuServiceItemRenderer')) {
-    if (readPath(toggle, ['toggledIcon', 'iconType']) != 'BOOKMARK') continue;
-    if (readPath(toggle, ['isToggled']) != true) continue;
+/// The care here is all about telling the row's several feedback tokens apart.
+/// One row carries four — take out of the library, put into it, pin to the
+/// recap, unpin from it — they all go to the same endpoint, and any of them is
+/// accepted. Sending the wrong one does not fail; it silently makes a different
+/// edit.
+SongActions _actionsOf(Object? item) {
+  String? removeFromLibrary;
+  String? pinToRecap;
+  String? unpinFromRecap;
+  var pinnedToRecap = false;
 
-    final token = readPath(
-      toggle,
-      ['toggledServiceEndpoint', 'feedbackEndpoint', 'feedbackToken'],
-    );
-    if (token is String && token.isNotEmpty) return token;
+  for (final toggle in findAll(item, 'toggleMenuServiceItemRenderer')) {
+    // `isToggled` is what says the track is in the library at all. Without it a
+    // search result nobody ever saved would come back with a token that removes
+    // nothing, and the menu would offer the action on a track that is not there.
+    if (readPath(toggle, ['toggledIcon', 'iconType']) == 'BOOKMARK' &&
+        readPath(toggle, ['isToggled']) == true) {
+      removeFromLibrary = _feedbackToken(toggle, 'toggledServiceEndpoint');
+    }
+    // The pin arrives with its two sides either way round: YouTube puts the
+    // action it is currently offering on the `default` side, so a track that is
+    // already pinned comes back offering `KEEP_OFF` there. Measured against the
+    // account's own front page — with the sides read rather than assumed, a
+    // pinned track offered nothing at all and could never be unpinned.
+    //
+    // So the icons say which token is which, and which one is on the default
+    // side says whether the track is pinned right now.
+    final byDefault = readPath(toggle, ['defaultIcon', 'iconType']);
+    if (byDefault == 'KEEP' || byDefault == 'KEEP_OFF') {
+      final pinIsDefault = byDefault == 'KEEP';
+      pinToRecap = _feedbackToken(
+        toggle,
+        pinIsDefault ? 'defaultServiceEndpoint' : 'toggledServiceEndpoint',
+      );
+      unpinFromRecap = _feedbackToken(
+        toggle,
+        pinIsDefault ? 'toggledServiceEndpoint' : 'defaultServiceEndpoint',
+      );
+      pinnedToRecap = !pinIsDefault;
+    }
   }
-  return null;
+
+  String? removeFromHistory;
+  String? playlistSetVideoId;
+
+  for (final service in findAll(item, 'menuServiceItemRenderer')) {
+    switch (readPath(service, ['icon', 'iconType'])) {
+      case 'REMOVE_FROM_HISTORY':
+        final token = readPath(
+          service,
+          ['serviceEndpoint', 'feedbackEndpoint', 'feedbackToken'],
+        );
+        if (token is String && token.isNotEmpty) removeFromHistory = token;
+      case 'REMOVE_FROM_PLAYLIST':
+        // Taken from the removal's own endpoint rather than from the row's
+        // `playlistItemData`, which carries the same value on every row of
+        // every playlist. Here it means what the interface needs it to mean:
+        // this playlist can be edited, and this is the row to name.
+        final setVideoId = readPath(
+          service,
+          ['serviceEndpoint', 'playlistEditEndpoint', 'actions', 0, 'setVideoId'],
+        );
+        if (setVideoId is String && setVideoId.isNotEmpty) {
+          playlistSetVideoId = setVideoId;
+        }
+    }
+  }
+
+  var hasCredits = false;
+  for (final entry in findAll(item, 'menuNavigationItemRenderer')) {
+    if (readPath(entry, ['icon', 'iconType']) == 'PEOPLE_GROUP') {
+      hasCredits = true;
+    }
+  }
+
+  return SongActions(
+    removeFromLibrary: removeFromLibrary,
+    removeFromHistory: removeFromHistory,
+    pinToRecap: pinToRecap,
+    unpinFromRecap: unpinFromRecap,
+    pinnedToRecap: pinnedToRecap,
+    playlistSetVideoId: playlistSetVideoId,
+    hasCredits: hasCredits,
+  );
+}
+
+/// One side of a toggle's feedback token, or null when that side has none.
+String? _feedbackToken(Object? toggle, String side) {
+  final token = readPath(toggle, [side, 'feedbackEndpoint', 'feedbackToken']);
+  return token is String && token.isNotEmpty ? token : null;
 }
 
 /// Picks the performer out of the columns of a row.
@@ -366,6 +438,10 @@ List<Song> parseCardSongs(Map<String, dynamic> json) {
       title: title,
       subtitle: _readRuns(readPath(item, ['subtitle'])),
       thumbnailUrl: thumbnailUrl,
+      // A card's menu is the row's menu: the front page is where a pinned
+      // track is offered the way back off the recap, and it draws its tracks
+      // as cards.
+      actions: _actionsOf(item),
     ));
   }
 
@@ -679,3 +755,51 @@ AudioStream? parseBestAudioStream(
   bool preferMp4 = false,
 }) =>
     parseAudioStreams(json, preferMp4: preferMp4).firstOrNull;
+
+/// Turns the credits page into the roles behind a track.
+///
+/// The response arrives wrapped in a `dismissableDialogRenderer`, which is how
+/// the web player draws it; YouTube Music on Android gives the same content a
+/// whole screen. The wrapper is walked for rather than followed, like every
+/// other renderer here, so a change of container does not empty the screen.
+///
+/// A track with no credits answers the same page with no sections at all, so an
+/// empty result is an ordinary answer and not an error to report.
+TrackCredits parseTrackCredits(Map<String, dynamic> json) {
+  final dialog = findFirst(json, 'dismissableDialogRenderer');
+  if (dialog == null) return const TrackCredits();
+
+  final header = findFirst(dialog, 'musicMultiRowListItemRenderer');
+  final thumbnails = findFirst(header, 'thumbnails');
+
+  final entries = <CreditEntry>[];
+  for (final section in findAll(dialog, 'dismissableDialogContentSectionRenderer')) {
+    final role = _readRuns(readPath(section, ['title']));
+    final name = _readRuns(readPath(section, ['subtitle']));
+    if (role.isEmpty || name.isEmpty) continue;
+    entries.add(CreditEntry(role: role, name: name));
+  }
+
+  return TrackCredits(
+    title: _readRuns(readPath(header, ['title'])),
+    artist: _readRuns(readPath(header, ['subtitle'])),
+    subtitle: _readRuns(readPath(header, ['secondTitle'])),
+    thumbnailUrl: thumbnails is List && thumbnails.isNotEmpty
+        ? readPath(thumbnails.last, ['url']) as String?
+        : null,
+    entries: entries,
+  );
+}
+
+/// Whether this playlist page is one the account can edit.
+///
+/// The two kinds look identical in the library — a list made here and one saved
+/// from someone else sit in the same shelf — and only the page tells them
+/// apart: YouTube attaches an edit header and a delete entry to the first and
+/// neither to the second. Measured against both kinds on a real account.
+///
+/// Asked of the page rather than guessed from the id, because there is nothing
+/// in an id that says who made the list. Offering a rename that always fails
+/// would be worse than not offering it.
+bool parsePlaylistEditable(Map<String, dynamic> json) =>
+    findFirst(json, 'musicPlaylistEditHeaderRenderer') != null;
