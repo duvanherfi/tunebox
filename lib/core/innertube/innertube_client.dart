@@ -4,6 +4,7 @@ import 'dart:math';
 
 import 'package:http/http.dart' as http;
 
+import '../../data/models/credits.dart';
 import '../../data/models/playlist.dart';
 import '../../data/models/song.dart';
 import '../auth/session.dart';
@@ -667,6 +668,37 @@ class InnertubeClient {
     );
   }
 
+  /// Who made a track, as YouTube files it.
+  ///
+  /// The page is addressed by the video id behind an `MPTC` prefix — verified
+  /// against the 159 history rows of a real account that carried the entry, all
+  /// of which pointed exactly there. So it could be asked for on any track;
+  /// whether it is worth asking is what the row says, since a track with no
+  /// credits answers the same page with nothing in it
+  /// ([SongActions.hasCredits]).
+  Future<TrackCredits> trackCredits(String videoId) async =>
+      parseTrackCredits(await browse('MPTC$videoId'));
+
+  /// A playlist's page: its heading, its first tracks, and whether it is the
+  /// account's own to edit.
+  ///
+  /// The twin of [albumPage], and separate from [playlistSongPages] for the
+  /// same reason an album has one: the first request already answers with the
+  /// header and the first hundred tracks, and asking for it a second time to
+  /// read the header would be the slowest request of the lot, repeated.
+  Future<MusicPage> playlistPage(String playlistId) async {
+    final json = await browse(_asBrowseId(playlistId));
+    final header = parsePageHeader(json);
+    return MusicPage(
+      title: header.title,
+      subtitle: header.subtitle,
+      thumbnailUrl: header.thumbnailUrl,
+      songs: parseSongList(json),
+      continuation: parseContinuationToken(json),
+      editable: parsePlaylistEditable(json),
+    );
+  }
+
   /// Adds or removes a track from the account's liked songs.
   ///
   /// The first write this app makes rather than reads. It goes through the same
@@ -691,11 +723,32 @@ class InnertubeClient {
   /// offers both edits in the same menu. This is the library one.
   ///
   /// [token] is what the row handed over: an opaque handle YouTube mints per
-  /// row inside its menu ([Song.removeFromLibraryToken]). There is no endpoint
-  /// that takes a video id for this, which is why the parser has to keep the
-  /// token and why a track listed from somewhere that carries no menu cannot be
-  /// removed at all.
-  Future<void> removeFromLibrary(String token) async {
+  /// row inside its menu ([SongActions.removeFromLibrary]). There is no
+  /// endpoint that takes a video id for this, which is why the parser has to
+  /// keep the token and why a track listed from somewhere that carries no menu
+  /// cannot be removed at all.
+  Future<void> removeFromLibrary(String token) => _feedback(token);
+
+  /// Takes a track out of the account's listening history.
+  ///
+  /// The same endpoint as [removeFromLibrary] with a different token, which is
+  /// the whole reason the parser keeps them apart: `feedback` accepts any token
+  /// a row carries and answers the same way, so the wrong one does not fail —
+  /// it makes the other edit.
+  Future<void> removeFromHistory(String token) => _feedback(token);
+
+  /// Pins a track to "Vuelve a escucharlo", or takes it off again.
+  ///
+  /// One method for both because a toggle is one thing: the row hands over a
+  /// token per side and [SongActions.pinnedToRecap] says which side is the one
+  /// to send.
+  Future<void> setPinnedToRecap(String token) => _feedback(token);
+
+  /// The endpoint behind the edits a row's menu offers as a bare token.
+  ///
+  /// It says nothing about what it is being asked to do — the token carries
+  /// that — so it is private and every caller above names its own edit.
+  Future<void> _feedback(String token) async {
     _requireSession();
     await _post(_musicBase, 'feedback', _webRemix, {
       // A list because the endpoint takes one: YouTube's own client sends
@@ -726,6 +779,57 @@ class InnertubeClient {
         for (final videoId in videoIds)
           {'action': 'ACTION_ADD_VIDEO', 'addedVideoId': videoId},
       ],
+    });
+  }
+
+  /// Takes one track out of one of the account's playlists.
+  ///
+  /// [setVideoId] names the row rather than the track, and it is not optional:
+  /// a playlist can hold the same song twice, so YouTube identifies the copy to
+  /// drop. It arrives on the row itself ([SongActions.playlistSetVideoId]),
+  /// which is also what says the playlist can be edited at all — a list someone
+  /// else made lists no such action.
+  Future<void> removeFromPlaylist(
+    String playlistId, {
+    required String videoId,
+    required String setVideoId,
+  }) async {
+    _requireSession();
+    await _post(_musicBase, 'browse/edit_playlist', _webRemix, {
+      'playlistId': _bareId(playlistId),
+      'actions': [
+        {
+          'action': 'ACTION_REMOVE_VIDEO',
+          'removedVideoId': videoId,
+          'setVideoId': setVideoId,
+        },
+      ],
+    });
+  }
+
+  /// Renames one of the account's playlists.
+  ///
+  /// The same edit endpoint that adds and removes tracks: to YouTube the name
+  /// is one more action on the list rather than a thing of its own.
+  Future<void> renamePlaylist(String playlistId, String title) async {
+    _requireSession();
+    await _post(_musicBase, 'browse/edit_playlist', _webRemix, {
+      'playlistId': _bareId(playlistId),
+      'actions': [
+        {'action': 'ACTION_SET_PLAYLIST_NAME', 'playlistName': title},
+      ],
+    });
+  }
+
+  /// Deletes one of the account's playlists, for good.
+  ///
+  /// Its own endpoint rather than an action on the editor, and there is no
+  /// undo: YouTube's own client puts a confirmation in front of it, and so does
+  /// this one.
+  Future<void> deletePlaylist(String playlistId) async {
+    _requireSession();
+    await _post(_musicBase, 'playlist/delete', _webRemix, {
+      'playlistId': _bareId(playlistId),
     });
   }
 

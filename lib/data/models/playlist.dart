@@ -59,6 +59,7 @@ class MusicPage {
     this.radioPlaylistId,
     this.subscribed,
     this.continuation,
+    this.editable = false,
   });
 
   final String title;
@@ -79,6 +80,11 @@ class MusicPage {
   /// Whether the account follows this artist, as the page reported it. Null
   /// when nobody is signed in, or when the page is not an artist's.
   final bool? subscribed;
+
+  /// Whether this is a list the account can rename, empty or delete — its own,
+  /// rather than one it merely saved. False for everything that is not a
+  /// playlist: an album is nobody's to edit.
+  final bool editable;
 }
 
 /// Who is signed in.

@@ -1,0 +1,178 @@
+{
+ "onResponseReceivedActions": [
+  {
+   "openPopupAction": {
+    "popup": {
+     "dismissableDialogRenderer": {
+      "title": "Créditos de la canción",
+      "sections": [
+       {
+        "dismissableDialogContentSectionRenderer": {
+         "title": {
+          "runs": [
+           {
+            "text": "Interpretada por"
+           }
+          ]
+         },
+         "subtitle": {
+          "runs": [
+           {
+            "text": "Romeo Santos"
+           }
+          ]
+         }
+        }
+       },
+       {
+        "dismissableDialogContentSectionRenderer": {
+         "title": {
+          "runs": [
+           {
+            "text": "Escrita por"
+           }
+          ]
+         },
+         "subtitle": {
+          "runs": [
+           {
+            "text": "Anthony \"Romeo\" Santos"
+           }
+          ]
+         }
+        }
+       },
+       {
+        "dismissableDialogContentSectionRenderer": {
+         "title": {
+          "runs": [
+           {
+            "text": "Producida por"
+           }
+          ]
+         },
+         "subtitle": {
+          "runs": [
+           {
+            "text": "Romeo Santos"
+           }
+          ]
+         }
+        }
+       },
+       {
+        "dismissableDialogContentSectionRenderer": {
+         "title": {
+          "runs": [
+           {
+            "text": "Metadatos de música proporcionados por"
+           }
+          ]
+         },
+         "subtitle": {
+          "runs": [
+           {
+            "text": "Sony Music Latin"
+           }
+          ]
+         }
+        }
+       }
+      ],
+      "metadata": {
+       "musicMultiRowListItemRenderer": {
+        "thumbnail": {
+         "musicThumbnailRenderer": {
+          "thumbnail": {
+           "thumbnails": [
+            {
+             "url": "https://yt3.googleusercontent.com/k6CjUshafSvhyNfNJn-jQxUAYJU261qFDLqI4rFN_deD7fyA6ehvU3H7ZYL2xz8WfMXi0_WTKMHIuUZMAA=w60-h60-l90-rj",
+             "width": 60,
+             "height": 60
+            },
+            {
+             "url": "https://yt3.googleusercontent.com/k6CjUshafSvhyNfNJn-jQxUAYJU261qFDLqI4rFN_deD7fyA6ehvU3H7ZYL2xz8WfMXi0_WTKMHIuUZMAA=w120-h120-l90-rj",
+             "width": 120,
+             "height": 120
+            },
+            {
+             "url": "https://yt3.googleusercontent.com/k6CjUshafSvhyNfNJn-jQxUAYJU261qFDLqI4rFN_deD7fyA6ehvU3H7ZYL2xz8WfMXi0_WTKMHIuUZMAA=w226-h226-l90-rj",
+             "width": 226,
+             "height": 226
+            },
+            {
+             "url": "https://yt3.googleusercontent.com/k6CjUshafSvhyNfNJn-jQxUAYJU261qFDLqI4rFN_deD7fyA6ehvU3H7ZYL2xz8WfMXi0_WTKMHIuUZMAA=w544-h544-l90-rj",
+             "width": 544,
+             "height": 544
+            }
+           ]
+          },
+          "thumbnailCrop": "MUSIC_THUMBNAIL_CROP_UNSPECIFIED",
+          "thumbnailScale": "MUSIC_THUMBNAIL_SCALE_ASPECT_FIT"
+         }
+        },
+        "subtitle": {
+         "runs": [
+          {
+           "text": "Romeo Santos",
+           "navigationEndpoint": {
+            "browseEndpoint": {
+             "browseId": "UCpB_98tUTs3zSiOxZuGPnOA",
+             "browseEndpointContextSupportedConfigs": {
+              "browseEndpointContextMusicConfig": {
+               "pageType": "MUSIC_PAGE_TYPE_ARTIST"
+              }
+             }
+            }
+           }
+          }
+         ]
+        },
+        "title": {
+         "runs": [
+          {
+           "text": "Eres Mía",
+           "navigationEndpoint": {
+            "watchEndpoint": {
+             "videoId": "DYuhnVSOzwE",
+             "watchEndpointMusicSupportedConfigs": {
+              "watchEndpointMusicConfig": {
+               "musicVideoType": "MUSIC_VIDEO_TYPE_ATV"
+              }
+             }
+            }
+           }
+          }
+         ]
+        },
+        "secondTitle": {
+         "runs": [
+          {
+           "text": "Canción"
+          },
+          {
+           "text": " • "
+          },
+          {
+           "text": "2014"
+          }
+         ]
+        },
+        "description": {
+         "runs": [
+          {
+           "text": "La letra no está disponible"
+          }
+         ]
+        },
+        "displayStyle": "MUSIC_MULTI_ROW_LIST_ITEM_DISPLAY_STYLE_SIMPLE_EXPANDED"
+       }
+      },
+      "displayStyle": "DISMISSABLE_DIALOG_DISPLAY_STYLE_TRACK_CREDITS"
+     }
+    },
+    "popupType": "DIALOG"
+   }
+  }
+ ]
+}
