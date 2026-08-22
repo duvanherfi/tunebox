@@ -1,5 +1,9 @@
 # Tunebox
 
+[![Última versión](https://img.shields.io/github/v/release/duvanherfi/tunebox?label=versi%C3%B3n)](https://github.com/duvanherfi/tunebox/releases/latest)
+[![Descargas](https://img.shields.io/github/downloads/duvanherfi/tunebox/total?label=descargas)](https://github.com/duvanherfi/tunebox/releases)
+[![Licencia](https://img.shields.io/github/license/duvanherfi/tunebox)](LICENSE)
+
 Reproductor de música en Flutter que lee el catálogo de YouTube Music a través
 de InnerTube, la API interna que usa la propia web de YouTube.
 
@@ -8,9 +12,32 @@ parcheadas (ReVanced, Vanced) puedan iniciar sesión pese a no estar firmadas po
 Google; esa capa emulada es justamente la que cuesta rendimiento. Aquí se habla
 directo con la API por HTTP y el audio va a ExoPlayer nativo, sin WebView.
 
+## Cómo se ve
+
+| Inicio | Reproductor | Letra sincronizada | Cola |
+|---|---|---|---|
+| ![Inicio](docs/screenshots/inicio.png) | ![Reproductor](docs/screenshots/reproductor.png) | ![Letra sincronizada](docs/screenshots/letra.png) | ![Cola](docs/screenshots/cola.png) |
+
+| Explorar | Buscar | Temporizador, velocidad y ecualizador | Modo mesita de noche |
+|---|---|---|---|
+| ![Explorar](docs/screenshots/explorar.png) | ![Buscar](docs/screenshots/buscar.png) | ![Temporizador, velocidad y ecualizador](docs/screenshots/ajustes-reproduccion.png) | ![Modo mesita de noche](docs/screenshots/mesita.png) |
+
+En el Mac es la misma app y el mismo código; lo que cambia es que el reproductor
+se abre a dos columnas y las estanterías caben enteras.
+
+![Inicio en macOS](docs/screenshots/macos-inicio.png)
+
+![Reproductor en macOS](docs/screenshots/macos-reproductor.png)
+
+Las capturas de Android salen con la interfaz en inglés y las del Mac en
+español: es el mismo build, leyendo el idioma del aparato. La foto de la cuenta
+está difuminada a propósito.
+
 ## Estado
 
-Versión **0.1.4**: usable a diario, en Android y macOS.
+Usable a diario, en Android y macOS. El número de la versión publicada está en
+la insignia de arriba, que lo lee de las releases — así no hay que acordarse de
+actualizarlo aquí.
 
 | Alcance | Estado |
 |---|---|
