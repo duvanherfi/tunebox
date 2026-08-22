@@ -613,6 +613,50 @@ class AppLocalizationsEn extends AppLocalizations {
   String get menuRemovedFromLibrary => 'Removed from library';
 
   @override
+  String get menuRemoveFromHistory => 'Remove from history';
+
+  @override
+  String get menuRemovedFromHistory => 'Removed from history';
+
+  @override
+  String get menuPinToRecap => 'Pin to Speed dial';
+
+  @override
+  String get menuUnpinFromRecap => 'Unpin from Speed dial';
+
+  @override
+  String get menuPinned => 'Pinned to Speed dial';
+
+  @override
+  String get menuUnpinned => 'Unpinned from Speed dial';
+
+  @override
+  String get menuRemoveFromPlaylist => 'Remove from playlist';
+
+  @override
+  String get menuRemovedFromPlaylist => 'Removed from the playlist';
+
+  @override
+  String get menuCredits => 'View song credits';
+
+  @override
+  String get creditsTitle => 'Song credits';
+
+  @override
+  String get creditsEmpty => 'YouTube lists no credits for this track';
+
+  @override
+  String get playlistRenamed => 'Renamed';
+
+  @override
+  String get playlistDeleted => 'Playlist deleted';
+
+  @override
+  String playlistDeleteConfirm(String name) {
+    return 'Delete “$name”? This cannot be undone.';
+  }
+
+  @override
   String get searchRecent => 'Recent searches';
 
   @override

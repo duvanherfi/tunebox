@@ -89,6 +89,8 @@ Future<void> showCollectionMenu(
   required List<Song> songs,
   bool artist = false,
   String? radioId,
+  VoidCallback? onRename,
+  VoidCallback? onDelete,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -104,6 +106,8 @@ Future<void> showCollectionMenu(
       songs: songs,
       artist: artist,
       radioId: radioId,
+      onRename: onRename,
+      onDelete: onDelete,
     ),
   );
 }
@@ -114,6 +118,8 @@ class _CollectionMenu extends StatelessWidget {
     required this.songs,
     this.artist = false,
     this.radioId,
+    this.onRename,
+    this.onDelete,
   });
 
   final Playlist collection;
@@ -122,6 +128,12 @@ class _CollectionMenu extends StatelessWidget {
   /// An artist is kept by subscribing, and their mix has an id of its own.
   final bool artist;
   final String? radioId;
+
+  /// The two edits only the owner of a list can make. Null on everything that
+  /// is not a playlist the account made, which is what keeps the sheet from
+  /// offering an action that would always be refused.
+  final VoidCallback? onRename;
+  final VoidCallback? onDelete;
 
   /// Runs an action after the sheet is gone, reporting on the surface that is
   /// still on screen rather than on the sheet's own dead context.
@@ -291,6 +303,24 @@ class _CollectionMenu extends StatelessWidget {
               );
             },
           ),
+          if (onRename != null)
+            ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: Text(l10n.playlistRename),
+              onTap: () {
+                Navigator.of(context).pop();
+                onRename!();
+              },
+            ),
+          if (onDelete != null)
+            ListTile(
+              leading: const Icon(Icons.delete_outline_rounded),
+              title: Text(l10n.playlistDelete),
+              onTap: () {
+                Navigator.of(context).pop();
+                onDelete!();
+              },
+            ),
           ListTile(
             leading: const Icon(Icons.link_rounded),
             title: Text(l10n.menuCopyLink),

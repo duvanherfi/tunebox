@@ -1196,6 +1196,90 @@ abstract class AppLocalizations {
   /// **'Removed from library'**
   String get menuRemovedFromLibrary;
 
+  /// No description provided for @menuRemoveFromHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from history'**
+  String get menuRemoveFromHistory;
+
+  /// No description provided for @menuRemovedFromHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed from history'**
+  String get menuRemovedFromHistory;
+
+  /// No description provided for @menuPinToRecap.
+  ///
+  /// In en, this message translates to:
+  /// **'Pin to Speed dial'**
+  String get menuPinToRecap;
+
+  /// No description provided for @menuUnpinFromRecap.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpin from Speed dial'**
+  String get menuUnpinFromRecap;
+
+  /// No description provided for @menuPinned.
+  ///
+  /// In en, this message translates to:
+  /// **'Pinned to Speed dial'**
+  String get menuPinned;
+
+  /// No description provided for @menuUnpinned.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpinned from Speed dial'**
+  String get menuUnpinned;
+
+  /// No description provided for @menuRemoveFromPlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from playlist'**
+  String get menuRemoveFromPlaylist;
+
+  /// No description provided for @menuRemovedFromPlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed from the playlist'**
+  String get menuRemovedFromPlaylist;
+
+  /// No description provided for @menuCredits.
+  ///
+  /// In en, this message translates to:
+  /// **'View song credits'**
+  String get menuCredits;
+
+  /// No description provided for @creditsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Song credits'**
+  String get creditsTitle;
+
+  /// No description provided for @creditsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube lists no credits for this track'**
+  String get creditsEmpty;
+
+  /// No description provided for @playlistRenamed.
+  ///
+  /// In en, this message translates to:
+  /// **'Renamed'**
+  String get playlistRenamed;
+
+  /// No description provided for @playlistDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Playlist deleted'**
+  String get playlistDeleted;
+
+  /// No description provided for @playlistDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete “{name}”? This cannot be undone.'**
+  String playlistDeleteConfirm(String name);
+
   /// No description provided for @searchRecent.
   ///
   /// In en, this message translates to:

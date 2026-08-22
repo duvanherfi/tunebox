@@ -4,10 +4,12 @@ import 'package:flutter/services.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/playlist.dart';
 import '../../data/models/song.dart';
+import '../../data/retired_ids.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../browse/album_screen.dart';
 import '../browse/artist_screen.dart';
+import 'credits_screen.dart';
 import 'sheet_body.dart';
 
 /// Everything you can do to a track that is not "play it now".
@@ -15,21 +17,39 @@ import 'sheet_body.dart';
 /// One sheet, reachable from every list in the app, so a song behaves the same
 /// whether it was found in search, in a playlist or in the history. Actions
 /// that write to the account only appear when there is an account.
-Future<void> showSongMenu(BuildContext context, Song song) {
+///
+/// Which of them appear at all is the row's own doing: every edit YouTube makes
+/// on a track is asked for with a handle minted inside that row's menu, so a
+/// track listed from a surface that carries no menu offers none of them. That
+/// is why the same song shows more here when it was opened from the history
+/// than from a search.
+///
+/// [playlistId] is the one thing the row cannot say by itself. It knows it can
+/// be dropped from the list that listed it — that is what
+/// [SongActions.playlistSetVideoId] means — but not which list that was.
+Future<void> showSongMenu(
+  BuildContext context,
+  Song song, {
+  String? playlistId,
+}) {
   return showModalBottomSheet<void>(
     context: context,
     // Above the shell, or it opens under the player bar.
     useRootNavigator: true,
     showDragHandle: true,
     isScrollControlled: true,
-    builder: (_) => _SongMenu(song: song),
+    builder: (_) => _SongMenu(song: song, playlistId: playlistId),
   );
 }
 
 class _SongMenu extends StatelessWidget {
-  const _SongMenu({required this.song});
+  const _SongMenu({required this.song, this.playlistId});
 
   final Song song;
+
+  /// The playlist this row was listed in, when it was listed in one that the
+  /// account can edit.
+  final String? playlistId;
 
   /// Reports the outcome on the surface that is still on screen after the sheet
   /// closes, rather than on the sheet's own context, which is gone by then.
@@ -37,16 +57,23 @@ class _SongMenu extends StatelessWidget {
     messenger.showSnackBar(SnackBar(content: Text(message)));
   }
 
+  /// Runs an action after the sheet is gone, and reports how it went.
+  ///
+  /// [retireFrom] is the list the track leaves on success. Only then: a write
+  /// the account refused has not removed anything, and hiding the row would
+  /// tell the listener the opposite of what happened.
   Future<void> _run(
     BuildContext context,
     Future<void> Function() action,
-    String success,
-  ) async {
+    String success, {
+    String? retireFrom,
+  }) async {
     final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context)!;
     Navigator.of(context).pop();
     try {
       await action();
+      if (retireFrom != null) retiredIds.retire(retireFrom, song.videoId);
       _report(messenger, success);
     } catch (error) {
       _report(messenger, l10n.menuFailed('$error'));
@@ -158,6 +185,7 @@ class _SongMenu extends StatelessWidget {
                     context,
                     () => likes.toggle(song),
                     liked ? l10n.menuUnliked : l10n.menuLiked,
+                    retireFrom: liked ? RetiredIds.likes : null,
                   ),
                 );
               },
@@ -169,17 +197,80 @@ class _SongMenu extends StatelessWidget {
             // takes a video id for it: without the token from the row's own
             // menu the edit cannot be asked for at all, which is why search
             // results and tracks from the device do not offer it.
-            if (song.removeFromLibraryToken != null)
+            if (song.actions.removeFromLibrary != null)
               ListTile(
                 leading: const Icon(Icons.bookmark_remove_outlined),
                 title: Text(l10n.menuRemoveFromLibrary),
                 onTap: () => _run(
                   context,
-                  () => innertube.removeFromLibrary(song.removeFromLibraryToken!),
+                  () =>
+                      innertube.removeFromLibrary(song.actions.removeFromLibrary!),
                   l10n.menuRemovedFromLibrary,
+                  retireFrom: RetiredIds.library,
+                ),
+              ),
+            // Only the history carries this, which is also what makes it safe
+            // to send: the token is the whole instruction, and the one that
+            // takes a track out of the library looks exactly the same.
+            if (song.actions.removeFromHistory != null)
+              ListTile(
+                leading: const Icon(Icons.history_toggle_off_rounded),
+                title: Text(l10n.menuRemoveFromHistory),
+                onTap: () => _run(
+                  context,
+                  () =>
+                      innertube.removeFromHistory(song.actions.removeFromHistory!),
+                  l10n.menuRemovedFromHistory,
+                  retireFrom: RetiredIds.history,
+                ),
+              ),
+            // Both halves have to be there: the row that can be dropped, and
+            // the list it would be dropped from.
+            if (song.actions.playlistSetVideoId != null && playlistId != null)
+              ListTile(
+                leading: const Icon(Icons.playlist_remove_rounded),
+                title: Text(l10n.menuRemoveFromPlaylist),
+                onTap: () => _run(
+                  context,
+                  () => innertube.removeFromPlaylist(
+                    playlistId!,
+                    videoId: song.videoId,
+                    setVideoId: song.actions.playlistSetVideoId!,
+                  ),
+                  l10n.menuRemovedFromPlaylist,
+                  retireFrom: RetiredIds.playlist(playlistId!),
+                ),
+              ),
+            if (_pinToken(song) != null)
+              ListTile(
+                leading: Icon(
+                  song.actions.pinnedToRecap
+                      ? Icons.push_pin_rounded
+                      : Icons.push_pin_outlined,
+                ),
+                title: Text(song.actions.pinnedToRecap
+                    ? l10n.menuUnpinFromRecap
+                    : l10n.menuPinToRecap),
+                onTap: () => _run(
+                  context,
+                  () => innertube.setPinnedToRecap(_pinToken(song)!),
+                  song.actions.pinnedToRecap ? l10n.menuUnpinned : l10n.menuPinned,
                 ),
               ),
           ],
+          // Not an account action: the credits of a track are public, and the
+          // page answers signed out.
+          if (song.actions.hasCredits)
+            ListTile(
+              leading: const Icon(Icons.groups_outlined),
+              title: Text(l10n.menuCredits),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => CreditsScreen(song: song)),
+                );
+              },
+            ),
           ListenableBuilder(
             listenable: downloads,
             builder: (context, _) {
@@ -234,6 +325,12 @@ class _SongMenu extends StatelessWidget {
     );
   }
 }
+
+/// Whichever side of the pin the row is on: the track is either pinned and can
+/// be unpinned, or the other way round, and each side has its own token.
+String? _pinToken(Song song) => song.actions.pinnedToRecap
+    ? song.actions.unpinFromRecap
+    : song.actions.pinToRecap;
 
 /// Picks which playlist a track joins, or starts a new one.
 ///

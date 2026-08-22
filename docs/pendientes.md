@@ -29,24 +29,12 @@ de abajo.
   Sin diagnosticar; la sospecha es que son pistas ya no disponibles o de otro
   tipo. Mientras tanto esos 33 salen con el corazón vacío.
 
-- **Las acciones que YouTube ofrece en el menú de una fila y la app no hace.**
-  Del sondeo del 21 de agosto de 2026, contando sobre la cuenta real cuántas
-  filas de cada superficie las traen:
-  - **Quitar del historial** (`feedbackEndpoint`, 200/200 filas del historial).
-    Es el mismo mecanismo que quitar de la biblioteca, así que una vez hecho
-    aquel esto es casi el mismo código.
-  - **Quitar una canción de una playlist.** La app sabe añadir
-    (`ACTION_ADD_VIDEO`) y no sabe quitar. Ojo: en `VLLM` esa acción es un
-    `likeEndpoint` —quitar de la lista de me gusta *es* quitar el like—, así
-    que la de una playlist de verdad hay que mirarla en una playlist de verdad.
-  - **Renombrar y borrar una playlist** (`playlistEditorEndpoint` y
-    `confirmDialogEndpoint` → `playlist/delete`, en 6 de 8 listas de la
-    cuenta). Hoy solo se pueden crear.
-  - **Fijar / desfijar en "Vuelve a escucharlo"** (`feedbackEndpoint`, en casi
-    todas las filas de todas las superficies).
-  - **Ver créditos de la canción** (`browseEndpoint`, 161/200 filas del
-    historial).
-  - De pódcast: marcar como reproducido, "Episodios para más tarde".
+- **De pódcast: marcar como reproducido y "Episodios para más tarde".** Lo que
+  quedó fuera al hacer el resto de acciones del menú (22 de agosto de 2026), y
+  con motivo medido: son 2 filas de 200 en el historial, las dos episodios, y
+  "Episodios para más tarde" ni siquiera es un `feedbackEndpoint` sino un
+  `commandExecutorCommand` —otro mecanismo—. La app no tiene superficie de
+  pódcast donde eso signifique algo.
 
 - **Ver el vídeo de una canción, como YouTube Music.** Pedido el 21 de agosto
   de 2026. Son dos cosas distintas y conviene no confundirlas:
@@ -64,6 +52,33 @@ de abajo.
     audio. Enseñar el vídeo no es pedir otro endpoint: es meter un reproductor
     de vídeo en la app, y decidir qué hace con él la sesión de medios, el carro
     y la pantalla de bloqueo. Feature grande y aparte.
+
+- **El log de reproducciones no distingue una canción escuchada de una
+  saltada.** Salió al diseñar un modelo de recomendación sobre el historial
+  (22 de agosto de 2026). `_playIndex` llama a `_history.record(song)` en
+  cuanto el stream se abre —`player_service.dart:658`—, así que una pista que
+  sonó tres segundos y una que sonó entera quedan idénticas en
+  `play_log.json`. Todo lo registrado es un positivo, y no hay negativos.
+
+  Lo llamativo es que **la señal ya está calculada y se tira**: catorce líneas
+  más abajo, `_watchtime` espera la mitad de la pista o dos minutos —lo que
+  llegue antes, que es la regla que piden los servicios de scrobbling— y con
+  eso avisa a Last.fm y a ListenBrainz. Ese mismo momento es la etiqueta que
+  falta, y hoy no se escribe en el log local.
+
+  Lo que haría falta: que `Play` lleve si la escucha llegó a contar, y que el
+  temporizador marque esa fila además de scrobblear. Ojo con dos cosas — la
+  fila ya está escrita cuando el temporizador dispara, así que hay que
+  actualizarla y no añadir otra; y si la pista se corta antes, el temporizador
+  se cancela y la fila se queda sin marcar, que es exactamente lo que se quiere
+  registrar.
+
+  **Cuanto antes se haga, más datos habrá**: la etiqueta solo existe hacia
+  adelante, no se puede reconstruir de las 5 000 filas ya guardadas. El
+  proyecto que la usa está descrito en
+  `~/demand-forecast/docs/pendientes.md` y va después de la vuelta 4 de ese
+  otro repo, pero **la instrumentación conviene adelantarla** para que el
+  historial se vaya llenando mientras tanto.
 
 ## Suelto, sin diagnosticar
 
@@ -92,14 +107,23 @@ versión.
   ahí. Es comportamiento de GTK, no de la app, pero conviene saberlo antes de
   dar por rota la pantalla.
 
-- **La fila quitada de la biblioteca sigue en pantalla hasta recargar.**
-  De hacer la acción (21 de agosto de 2026). El menú escribe en la cuenta y
-  avisa, pero la lista de la pestaña es lo que devolvió la página, y nadie la
-  toca: la fila se va al reabrir. Es lo mismo que ya hace quitar un "me gusta"
-  desde la pestaña de Me gusta, así que la app es coherente consigo misma, pero
-  las dos comparten el defecto. Arreglarlo bien pide un `ChangeNotifier` de ids
-  retirados que `SongPages` filtre — el patrón de `Likes`—, y eso vale para las
-  dos a la vez.
+- **El menú sigue ofreciendo "Fijar" en una pista que se acaba de fijar.**
+  De hacer las acciones del menú (22 de agosto de 2026). Los tokens vienen de la
+  página tal como se leyó, y nadie la relee: hasta volver a entrar, el menú
+  ofrece fijar una pista que ya está fijada. Volver a mandarlo no rompe nada
+  —el token es idempotente— y el pin no se dibuja en ninguna parte de la app,
+  así que el coste es sólo esa etiqueta. Arreglarlo bien sería el patrón de
+  `Likes`: un registro de lo que se cambió aquí que mande sobre lo que dijo la
+  página.
+
+- **Una playlist recién creada lista las sugerencias de YouTube como si fueran
+  suyas.** Visto al probar quitar de una lista (22 de agosto de 2026): la
+  cabecera dice 3 pistas y debajo salen quince. YouTube cuelga un estante de
+  sugerencias de la misma respuesta y `parseSongList` camina el árbol entero, así
+  que entran como filas. No es de este cambio —`playlistSongPages` hacía lo
+  mismo— y no rompe nada, porque una fila sugerida no trae `setVideoId` y por
+  tanto no ofrece quitarse. Arreglarlo pide distinguir el estante de contenidos
+  del de sugerencias.
 
 - **El llavero de macOS y la firma ad-hoc, al actualizar: sí pregunta.**
   Medido el 21 de agosto de 2026, que era lo que faltaba. Al abrir un build
@@ -156,11 +180,14 @@ versión.
 - **Los PNG heredados de Android no se han visto en un lanzador.** Sólo los lee
   API 25 y anterior; el emulador a mano es API 36 y sirve el adaptive icon en su
   lugar. Están comprobados como archivo, no como icono en una pantalla.
-- **Escribir en la cuenta solo se ha ejercitado con el "me gusta".** Crear
-  playlists, añadir canciones y suscribirse (`subscription/subscribe`) están
-  implementados y no se han ejecutado nunca contra una cuenta real, para no
-  ensuciar la biblioteca de nadie. De suscribirse, en el emulador salieron bien
-  la marca local, la radio del artista y compartir; la escritura, no.
+- **Lo que ya se ha ejercitado contra la cuenta real, y lo que no.** Hechos
+  contra la cuenta y comprobados leyendo el resultado: el "me gusta", quitar del
+  historial, quitar de una playlist, crear, renombrar y borrar playlists, y
+  fijar y desfijar en "Vuelve a escucharlo" (22 de agosto de 2026). Sigue **sin
+  ejecutarse nunca** suscribirse a un artista (`subscription/subscribe`): en el
+  emulador salieron bien la marca local, la radio del artista y compartir; la
+  escritura, no.
+
 - **El emulador se queda sin sonido y no es la app** (20 de agosto de 2026).
   Comprobado midiendo: con el emulador mudo, `dumpsys media.audio_flinger` daba
   −7 dB de señal continua al altavoz, `Master mute: off` y el volumen de música
@@ -215,6 +242,58 @@ versión.
   repintado, ya contesta null. Si vuelve a salir, ahí es donde hay que mirar.
 
 ## Hecho
+
+- **Las acciones del menú de una fila** (22 de agosto de 2026). Quitar del
+  historial, quitar una canción de una playlist, renombrar y borrar playlists,
+  fijar y desfijar en "Vuelve a escucharlo", y ver los créditos. Todo medido
+  contra la cuenta real antes de escribirlo, y ejercitado en el emulador
+  después.
+  - `SongActions` (`lib/data/models/song.dart`) agrupa lo que la fila trajo:
+    los tokens de biblioteca, historial y pin, el `setVideoId` de la playlist y
+    si hay créditos. `Song` tiene un solo campo `actions` en vez de seis nulos,
+    y sigue fuera de `toJson` — un token es una credencial de la respuesta en
+    que llegó.
+  - **Todas las acciones se identifican por `iconType`**, nunca por etiqueta:
+    `hl` sigue al idioma del aparato. `REMOVE_FROM_HISTORY`,
+    `REMOVE_FROM_PLAYLIST`, `PEOPLE_GROUP` para créditos, `BOOKMARK` y
+    `KEEP`/`KEEP_OFF`.
+  - **El pin llega con los dos lados invertidos cuando la pista ya está
+    fijada.** YouTube pone siempre en `default` la acción que ofrece, así que
+    una pista fijada contesta `KEEP_OFF` ahí. Leyendo el lado en vez del icono
+    —que es como estaba primero— una pista fijada no ofrecía nada y no había
+    forma de desfijarla nunca. Medido pinchando una pista a propósito y
+    devolviéndola a su sitio.
+  - **`RetiredIds`** (`lib/data/retired_ids.dart`) es el `ChangeNotifier` de lo
+    que se quitó aquí, por lista, y `SongPages` lo filtra. Arregla de paso el
+    defecto que ya estaba anotado —la fila quitada seguía en pantalla hasta
+    recargar— y vale igual para el estante de playlists, que lee sus listas una
+    vez y se las queda.
+  - **El historial se fusiona por id** (`SongPages.mergeById`). La pestaña se
+    llena primero con el log local, que se lee de `play_history.json` y por
+    tanto **no trae menú ninguno**, y antes el `seen` descartaba luego la fila
+    de la cuenta para esa misma pista: justo las canciones que sonaron aquí
+    —las de arriba— eran las únicas que nunca podían quitarse del historial.
+    Ahora la fila de la cuenta reemplaza a la local en el sitio que ya tenía.
+  - **`playlistPage()`** espeja a `albumPage()` y contesta además si la lista es
+    de la cuenta, mirando si trae `musicPlaylistEditHeaderRenderer`. Una lista
+    guardada de otro no lo trae, y por eso no ofrece renombrar ni borrar.
+  - **Los créditos son pantalla completa**, como en YouTube Music de Android,
+    aunque la respuesta venga envuelta en un `dismissableDialogRenderer` —que es
+    lo que usa el reproductor web—. El id es literalmente `MPTC` + el `videoId`,
+    verificado en las 159 filas de 200 que traían la entrada. Una pista sin
+    créditos contesta la misma página vacía, así que la entrada se ofrece sólo
+    cuando la fila la trajo.
+  - **Escribir y leer no son inmediatos.** Renombrar contesta
+    `STATUS_SUCCEEDED` y la lectura siguiente todavía devuelve el nombre viejo,
+    así que la pantalla se queda con el nombre nuevo en local en vez de
+    releerlo. Lo mismo con el pin en la portada, que tarda unos segundos en
+    aparecer en "Vuelve a escucharlo".
+
+  Comprobado en el emulador contra la cuenta real: quitar del historial (la fila
+  se va al instante y `FEmusic_history` ya no la lista), quitar de una playlist,
+  renombrar y borrar —sobre listas de prueba creadas y borradas para esto—,
+  fijar (aparece de primera en "Vuelve a escucharlo") y los créditos. La cuenta
+  quedó como estaba salvo la pista quitada del historial.
 
 - **El selector de carpetas del escritorio** (22 de agosto de 2026). La app ya
   llega a Documentos, al escritorio o a un disco externo, en macOS, Windows y

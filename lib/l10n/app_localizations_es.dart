@@ -617,6 +617,50 @@ class AppLocalizationsEs extends AppLocalizations {
   String get menuRemovedFromLibrary => 'Quitada de la biblioteca';
 
   @override
+  String get menuRemoveFromHistory => 'Quitar del historial';
+
+  @override
+  String get menuRemovedFromHistory => 'Quitada del historial';
+
+  @override
+  String get menuPinToRecap => 'Fijar en Vuelve a escucharlo';
+
+  @override
+  String get menuUnpinFromRecap => 'Desfijar de Vuelve a escucharlo';
+
+  @override
+  String get menuPinned => 'Fijada en Vuelve a escucharlo';
+
+  @override
+  String get menuUnpinned => 'Desfijada de Vuelve a escucharlo';
+
+  @override
+  String get menuRemoveFromPlaylist => 'Quitar de la lista';
+
+  @override
+  String get menuRemovedFromPlaylist => 'Quitada de la lista';
+
+  @override
+  String get menuCredits => 'Ver créditos de la canción';
+
+  @override
+  String get creditsTitle => 'Créditos de la canción';
+
+  @override
+  String get creditsEmpty => 'YouTube no tiene créditos de esta canción';
+
+  @override
+  String get playlistRenamed => 'Nombre cambiado';
+
+  @override
+  String get playlistDeleted => 'Lista eliminada';
+
+  @override
+  String playlistDeleteConfirm(String name) {
+    return '¿Eliminar “$name”? No se puede deshacer.';
+  }
+
+  @override
   String get searchRecent => 'Búsquedas recientes';
 
   @override

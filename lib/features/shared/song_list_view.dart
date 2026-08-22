@@ -17,10 +17,19 @@ import 'song_menu.dart';
 /// the same interaction, and tapping any row seeds the queue with the rest of
 /// the list so what is on screen becomes what plays next.
 class SongListView extends StatelessWidget {
-  const SongListView({super.key, required this.songs, this.padding});
+  const SongListView({
+    super.key,
+    required this.songs,
+    this.padding,
+    this.playlistId,
+  });
 
   final List<Song> songs;
   final EdgeInsets? padding;
+
+  /// The playlist these rows were listed in, when they were. Passed on to the
+  /// menu, which is where a track can be dropped from it.
+  final String? playlistId;
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +38,8 @@ class SongListView extends StatelessWidget {
           padding ??
           EdgeInsets.only(bottom: 8 + MediaQuery.paddingOf(context).bottom),
       itemCount: songs.length,
-      itemBuilder: (context, index) => SongRow(songs: songs, index: index),
+      itemBuilder: (context, index) =>
+          SongRow(songs: songs, index: index, playlistId: playlistId),
     );
   }
 }
@@ -45,10 +55,15 @@ class SongRow extends StatelessWidget {
     required this.songs,
     required this.index,
     this.numbered = false,
+    this.playlistId,
   });
 
   final List<Song> songs;
   final int index;
+
+  /// The playlist this row was listed in, when it was one the account can edit.
+  /// The row itself knows it can be dropped; only the screen knows from where.
+  final String? playlistId;
 
   /// Shows the track's position instead of its cover. On an album every row
   /// would otherwise repeat the same sleeve — or, since YouTube omits it there,
@@ -96,7 +111,7 @@ class SongRow extends StatelessWidget {
       // Both ways in, because both are habits: the long press comes from the
       // phone, the button from every music app that has ever had a row of
       // three dots at the end of a track.
-      onLongPress: () => showSongMenu(context, song),
+      onLongPress: () => showSongMenu(context, song, playlistId: playlistId),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Row(
@@ -172,7 +187,7 @@ class SongRow extends StatelessWidget {
             IconButton(
               tooltip: AppLocalizations.of(context)!.tipMore,
               icon: const Icon(Icons.more_vert_rounded),
-              onPressed: () => showSongMenu(context, song),
+              onPressed: () => showSongMenu(context, song, playlistId: playlistId),
             ),
           ],
         ),

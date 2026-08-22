@@ -32,6 +32,8 @@ class CollectionHeader extends StatelessWidget {
     this.round = false,
     this.artist = false,
     this.radioPlaylistId,
+    this.onRename,
+    this.onDelete,
   });
 
   final String title;
@@ -48,6 +50,12 @@ class CollectionHeader extends StatelessWidget {
 
   /// The mix to start, when it is not the collection's own id.
   final String? radioPlaylistId;
+
+  /// Offered only on a list the account made. Null everywhere else — on an
+  /// album, on an artist, and on a playlist that was saved rather than made,
+  /// none of which is anybody's here to rename or delete.
+  final VoidCallback? onRename;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -199,6 +207,8 @@ class CollectionHeader extends StatelessWidget {
                         songs: songs,
                         artist: artist,
                         radioId: radioPlaylistId,
+                        onRename: onRename,
+                        onDelete: onDelete,
                       ),
                       icon: const Icon(Icons.more_vert_rounded),
                     ),
