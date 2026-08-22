@@ -5,23 +5,24 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
 
 ## Pendiente
 
-Orden acordado el 21 de agosto de 2026, un hilo por punto. Hechos el primero y
-el ANR del mensajero de Dart, queda: **el selector de carpetas del
-escritorio**.
+Orden acordado el 21 de agosto de 2026, un hilo por punto. Hechos el primero,
+el ANR del mensajero de Dart y el selector de carpetas del escritorio, queda lo
+de abajo.
 
-- **Llegar a Documentos, Escritorio o un disco externo en macOS.** Lo que
-  quedó fuera al hacer que la pestaña leyera del dispositivo (21 de agosto de
-  2026). El sandbox reparte el disco por carpeta y solo hay entitlement para
-  dos: `assets.music.read-only` y `files.downloads.read-only`. Para el resto no
-  existe ninguno — hace falta el selector de carpetas y guardar un
-  *security-scoped bookmark* para que el permiso sobreviva al reinicio, que pide
-  además `files.bookmarks.app-scope` y un paquete nuevo: no hay selector de
-  archivos en `pubspec.yaml`. Es un feature aparte, no un ajuste de este.
-  Al hacerlo hay que mirar **si aplica igual a Windows y a Linux**: ahí no hay
-  sandbox que reparta el disco por carpeta, así que puede que el selector
-  sobre y baste con elegir una carpeta y recordar la ruta, sin bookmark. Lo
-  que sí hace falta comprobar es qué contesta `rootsFor` en esas dos
-  plataformas, que hoy no las contempla.
+- **Windows y Linux no reproducen nada.** Salió al hacer el selector de
+  carpetas (22 de agosto de 2026), y es el bloqueo de verdad de esas dos
+  plataformas: `just_audio` 0.10.6 y `audio_service` 0.18.19 declaran
+  implementación para `android`, `ios`, `macos` y `web`, y ninguna de las dos
+  para Windows ni Linux. La primera llamada al reproductor contesta
+  `MissingPluginException`. Lo que haría falta es `just_audio_media_kit` —que
+  es libmpv— y decidir qué hace `audio_service` donde no existe: es un feature
+  grande y aparte. Hasta entonces la pestaña del dispositivo ahí **lista
+  canciones que no suenan**, que es justo la fila contra la que avisa el
+  comentario de `extensionsFor`.
+  En Linux hay un segundo hueco: `flutter_inappwebview` tampoco tiene
+  implementación, y es el navegador del inicio de sesión — o sea que ahí ni
+  siquiera se puede entrar a la cuenta. `screen_brightness` tampoco está, así
+  que la mesita de noche no regula el brillo.
 
 - **La cuenta dice 216 me gusta y `LM` contesta 183.** La página dos llega sin
   token, así que no es que el recorrido se corte: son 33 que la API no lista.
@@ -68,6 +69,28 @@ escritorio**.
 
 Cosas que funcionan a medias y conviene mirar antes de dar por cerrada una
 versión.
+
+- **El plural de "1 canciones".** Visto al listar una sola pista del
+  dispositivo (22 de agosto de 2026), en los dos idiomas: la cabecera de
+  `SortedSongs` dice *1 canciones* y *1 tracks*. La clave es `sortCount`, y es
+  `"{count} canciones"` a secas — un marcador dentro de una cadena, no un
+  `plural`. Arreglarlo es pasarla a `{count, plural, ...}` en `app_en.arb` y
+  `app_es.arb`; `collectionDownloading` tiene el mismo defecto. Es de antes de
+  este cambio.
+
+- **Las raíces por defecto de Linux no leen los nombres traducidos.**
+  `rootsFor('linux')` contesta `~/Music` y `~/Downloads`, y un escritorio en
+  español los llama `~/Música` y `~/Descargas`. XDG lo registra en
+  `~/.config/user-dirs.dirs`, que es un archivo y no una variable de entorno:
+  leerlo volvería impura una función que hoy es pura y está probada con un
+  mapa inyectado. Mientras tanto lo cubre el selector, a mano.
+
+- **Elegir una carpeta en GTK se hace desde la carpeta padre.** Medido al
+  conducir el diálogo en Linux (22 de agosto de 2026): estando *dentro* de la
+  carpeta, el botón *Open* queda inactivo, porque en modo «elegir carpeta»
+  GTK exige una fila seleccionada en la lista. Hay que ir al padre y marcarla
+  ahí. Es comportamiento de GTK, no de la app, pero conviene saberlo antes de
+  dar por rota la pantalla.
 
 - **La fila quitada de la biblioteca sigue en pantalla hasta recargar.**
   De hacer la acción (21 de agosto de 2026). El menú escribe en la cuenta y
@@ -192,6 +215,56 @@ versión.
   repintado, ya contesta null. Si vuelve a salir, ahí es donde hay que mirar.
 
 ## Hecho
+
+- **El selector de carpetas del escritorio** (22 de agosto de 2026). La app ya
+  llega a Documentos, al escritorio o a un disco externo, en macOS, Windows y
+  Linux. Lo que hay:
+  - `MusicFolders` (`lib/data/music_folders.dart`) guarda las carpetas
+    añadidas en un JSON bajo el directorio de soporte, con `File` inyectable
+    como los demás almacenes que crecen. Una carpeta que ahora no se alcanza
+    —disco desenchufado, carpeta borrada— **se queda en la lista marcada como
+    no disponible** y no se camina: desconectar un disco no es la decisión de
+    olvidarla.
+  - Los *security-scoped bookmarks* de macOS son **código propio** en
+    `macos/Runner/FolderBookmarks.swift`, por `MethodChannel`. El paquete de
+    pub para esto, `macos_secure_bookmarks`, está muerto: 0.2.1 de 2022, con
+    `sdk: <3.0.0`, no resuelve con Dart 3. El alcance abierto por `resolve` no
+    se cierra nunca mientras la app viva; cerrarlo vaciaría la pestaña a media
+    sesión.
+  - Los entitlements que hacían falta eran **dos**, no uno:
+    `files.user-selected.read-only` para el panel y `files.bookmarks.app-scope`
+    para que sobreviva al reinicio. En `DebugProfile` y en `Release`.
+  - El selector es `file_selector` (1.1.0), que sí tiene implementación viva en
+    las tres plataformas de escritorio.
+  - `rootsFor` y `extensionsFor` ya contestan para `windows` y `linux`, y
+    `asksAtRuntime` sustituye al viejo `_permitted`, que contestaba *denegado*
+    en todo lo que no fuera Android o macOS — o sea que en esas dos el
+    recorrido se rendía antes de empezar.
+  - La gestión vive en *Ajustes › Carpetas de música*, sólo en escritorio, y la
+    pestaña del dispositivo tiene su puerta en el estado vacío.
+
+  Comprobado en pantalla, no sólo con pruebas. **En macOS**: elegir
+  `~/Documents/tunebox-prueba` —que ningún entitlement alcanza—, verla listada,
+  **reproducirla**, cerrar la app y volver a abrirla, y que la carpeta siga
+  ahí sin volver a elegirla; el bookmark guardado son 960 caracteres de base64
+  que empiezan por la cabecera `book`. **En Linux**, dentro de un contenedor
+  (`tool/linux-docker/`, que compila y ejecuta bajo `xvfb` y deja captura):
+  elegir la carpeta en el diálogo de GTK, verla guardada con `bookmark: null`
+  —que es lo correcto donde no hay sandbox— y verla listada en la pestaña.
+  **Windows** no se ejecutó: no hay forma de hacerlo desde este Mac. Lo que sí
+  hay es un job de CI que compila `windows-latest`, junto a otro de Linux.
+
+- **Denegar el llavero de macOS dejaba la app sin abrir, para siempre**
+  (22 de agosto de 2026). Salió al comprobar lo anterior. `main` hace
+  `await session.load()` antes de `runApp`, y con una firma ad-hoc macOS pide
+  la contraseña del llavero en cada compilación; si la respuesta es *Denegar*,
+  `flutter_secure_storage` lanza `PlatformException(-128)`, nadie la atrapa y
+  la ventana se queda negra. `Scrobbler.load` tenía el mismo hueco, con cuatro
+  lecturas. Ahora las dos tratan la negativa como «no hay nada guardado», que
+  no es lo mismo que borrarlo: **no se toca el llavero**, así que autorizarlo
+  en un arranque posterior devuelve la sesión igual que estaba. Lo que sigue
+  sin resolverse es que la app se ve *desconectada* sin decir que fue el
+  llavero — el mismo defecto que ya tiene apuntado el permiso de carpetas.
 
 - **El ANR del mensajero de Dart era el puente del widget** (22 de agosto de
   2026). La sospecha apuntada aquí —la cadena `positionStream` →
