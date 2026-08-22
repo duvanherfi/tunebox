@@ -10,6 +10,7 @@ class Song {
     this.artistId,
     this.albumId,
     this.artist,
+    this.removeFromLibraryToken,
   });
 
   final String videoId;
@@ -38,6 +39,18 @@ class Song {
   /// 140M plays".
   final String? artist;
 
+  /// The handle that takes this track out of the account's library.
+  ///
+  /// An opaque token YouTube mints per row, inside the row's own menu, and the
+  /// only way to ask for that edit: it is not derived from the video id and
+  /// there is no endpoint that takes one. Null on the rows that do not offer
+  /// the action — a search result nobody saved, a track from the device — and
+  /// null is also how the menu knows not to offer it.
+  ///
+  /// Not stored in [toJson]: it belongs to the response it arrived in, and a
+  /// token read back from disk next week would be a stale credential.
+  final String? removeFromLibraryToken;
+
   /// Larger artwork for the now-playing screen. YouTube encodes the requested
   /// size in the URL, so upgrading is a string substitution rather than
   /// another network round trip.
@@ -63,6 +76,7 @@ class Song {
         artistId: artistId,
         albumId: albumId,
         artist: artist,
+        removeFromLibraryToken: removeFromLibraryToken,
       );
 
   /// Stored form, for the on-device play history. Only what a row needs to be

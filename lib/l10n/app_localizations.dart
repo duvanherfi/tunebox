@@ -1184,6 +1184,18 @@ abstract class AppLocalizations {
   /// **'Removed from liked songs'**
   String get menuUnliked;
 
+  /// No description provided for @menuRemoveFromLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from library'**
+  String get menuRemoveFromLibrary;
+
+  /// No description provided for @menuRemovedFromLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed from library'**
+  String get menuRemovedFromLibrary;
+
   /// No description provided for @searchRecent.
   ///
   /// In en, this message translates to:

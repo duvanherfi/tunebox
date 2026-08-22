@@ -162,6 +162,23 @@ class _SongMenu extends StatelessWidget {
                 );
               },
             ),
+            // Only where the row brought the handle. The library and the likes
+            // are two lists — a saved album fills the first without anyone
+            // liking anything — and this takes the track out of the library
+            // while the heart above stays as it was. There is no endpoint that
+            // takes a video id for it: without the token from the row's own
+            // menu the edit cannot be asked for at all, which is why search
+            // results and tracks from the device do not offer it.
+            if (song.removeFromLibraryToken != null)
+              ListTile(
+                leading: const Icon(Icons.bookmark_remove_outlined),
+                title: Text(l10n.menuRemoveFromLibrary),
+                onTap: () => _run(
+                  context,
+                  () => innertube.removeFromLibrary(song.removeFromLibraryToken!),
+                  l10n.menuRemovedFromLibrary,
+                ),
+              ),
           ],
           ListenableBuilder(
             listenable: downloads,

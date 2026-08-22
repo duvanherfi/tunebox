@@ -162,10 +162,40 @@ List<Song> parseSongList(Map<String, dynamic> json) {
       artistId: _linkedPage(item, 'MUSIC_PAGE_TYPE_ARTIST'),
       albumId: _linkedPage(item, 'MUSIC_PAGE_TYPE_ALBUM'),
       artist: _artistName(texts),
+      removeFromLibraryToken: _removeFromLibraryToken(item),
     ));
   }
 
   return songs;
+}
+
+
+/// The handle in a row's menu that takes the track out of the library.
+///
+/// The entry is a toggle — "Save to library" one way, "Remove from library" the
+/// other — and only the toggled side carries the token that removes. Matched by
+/// its icon rather than by its label: `hl` follows the device locale, so the
+/// label arrives in whatever language the listener reads, while `BOOKMARK` is
+/// the same everywhere.
+///
+/// `isToggled` is what says the track is in the library at all. Without it a
+/// search result nobody ever saved would come back with a token that removes
+/// nothing, and the menu would offer the action on a track that is not there.
+/// A row carries several feedback tokens — pinning to the recap, the add side
+/// of this same toggle, and the like button's own copy — and any of them sent
+/// to `feedback` would silently do something else.
+String? _removeFromLibraryToken(Object? item) {
+  for (final toggle in findAll(item, 'toggleMenuServiceItemRenderer')) {
+    if (readPath(toggle, ['toggledIcon', 'iconType']) != 'BOOKMARK') continue;
+    if (readPath(toggle, ['isToggled']) != true) continue;
+
+    final token = readPath(
+      toggle,
+      ['toggledServiceEndpoint', 'feedbackEndpoint', 'feedbackToken'],
+    );
+    if (token is String && token.isNotEmpty) return token;
+  }
+  return null;
 }
 
 /// Picks the performer out of the columns of a row.

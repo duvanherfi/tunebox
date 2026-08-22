@@ -684,6 +684,26 @@ class InnertubeClient {
     );
   }
 
+  /// Takes a track out of the account's library, leaving the like alone.
+  ///
+  /// The library and the likes are two lists — `FEmusic_liked_videos` answered
+  /// 598 tracks against `LM`'s 183 on the same account — and YouTube Music
+  /// offers both edits in the same menu. This is the library one.
+  ///
+  /// [token] is what the row handed over: an opaque handle YouTube mints per
+  /// row inside its menu ([Song.removeFromLibraryToken]). There is no endpoint
+  /// that takes a video id for this, which is why the parser has to keep the
+  /// token and why a track listed from somewhere that carries no menu cannot be
+  /// removed at all.
+  Future<void> removeFromLibrary(String token) async {
+    _requireSession();
+    await _post(_musicBase, 'feedback', _webRemix, {
+      // A list because the endpoint takes one: YouTube's own client sends
+      // several edits at once from a multi-select.
+      'feedbackTokens': [token],
+    });
+  }
+
   /// Adds a track to one of the account's playlists.
   Future<void> addToPlaylist(String playlistId, String videoId) =>
       addAllToPlaylist(playlistId, [videoId]);

@@ -5,9 +5,9 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
 
 ## Pendiente
 
-Orden acordado el 21 de agosto de 2026, un hilo por punto: **quitar de la
-biblioteca sin quitar el like** → **el ANR del mensajero de Dart** → **el
-selector de carpetas del escritorio**.
+Orden acordado el 21 de agosto de 2026, un hilo por punto. Hecho el primero,
+quedan: **el ANR del mensajero de Dart** → **el selector de carpetas del
+escritorio**.
 
 - **Llegar a Documentos, Escritorio o un disco externo en macOS.** Lo que
   quedó fuera al hacer que la pestaña leyera del dispositivo (21 de agosto de
@@ -23,21 +23,60 @@ selector de carpetas del escritorio**.
   que sí hace falta comprobar es qué contesta `rootsFor` en esas dos
   plataformas, que hoy no las contempla.
 
-- **Quitar una canción de la biblioteca sin quitarle el like.** Pedido el 20 de
-  agosto de 2026, para que funcione como YouTube Music. Ahora que las dos
-  listas están separadas la acción tiene sentido, pero falta sondear con qué
-  endpoint se hace: lo más probable es un `feedbackToken` que viene en el menú
-  de la propia fila, no `edit_playlist`, que es lo que la app usa para añadir.
-
 - **La cuenta dice 216 me gusta y `LM` contesta 183.** La página dos llega sin
   token, así que no es que el recorrido se corte: son 33 que la API no lista.
   Sin diagnosticar; la sospecha es que son pistas ya no disponibles o de otro
   tipo. Mientras tanto esos 33 salen con el corazón vacío.
 
+- **Las acciones que YouTube ofrece en el menú de una fila y la app no hace.**
+  Del sondeo del 21 de agosto de 2026, contando sobre la cuenta real cuántas
+  filas de cada superficie las traen:
+  - **Quitar del historial** (`feedbackEndpoint`, 200/200 filas del historial).
+    Es el mismo mecanismo que quitar de la biblioteca, así que una vez hecho
+    aquel esto es casi el mismo código.
+  - **Quitar una canción de una playlist.** La app sabe añadir
+    (`ACTION_ADD_VIDEO`) y no sabe quitar. Ojo: en `VLLM` esa acción es un
+    `likeEndpoint` —quitar de la lista de me gusta *es* quitar el like—, así
+    que la de una playlist de verdad hay que mirarla en una playlist de verdad.
+  - **Renombrar y borrar una playlist** (`playlistEditorEndpoint` y
+    `confirmDialogEndpoint` → `playlist/delete`, en 6 de 8 listas de la
+    cuenta). Hoy solo se pueden crear.
+  - **Fijar / desfijar en "Vuelve a escucharlo"** (`feedbackEndpoint`, en casi
+    todas las filas de todas las superficies).
+  - **Ver créditos de la canción** (`browseEndpoint`, 161/200 filas del
+    historial).
+  - De pódcast: marcar como reproducido, "Episodios para más tarde".
+
+- **Ver el vídeo de una canción, como YouTube Music.** Pedido el 21 de agosto
+  de 2026. Son dos cosas distintas y conviene no confundirlas:
+  - **El interruptor Canción ↔ Vídeo** necesita un `counterpart` en la
+    respuesta de `next`, y **no llega**: medido con `c417rIku6Iw` y
+    `J7p4bzqLvCw`, con `WEB_REMIX` contra `music.youtube.com` y con
+    `ANDROID_MUSIC` contra `youtubei.googleapis.com`, con y sin
+    `playlistId: RDAMVM…` — cero `counterpart` en los cuatro, siempre
+    `MUSIC_VIDEO_TYPE_ATV`. Encontrar dónde sirve YouTube ese dato es un sondeo
+    propio; los clientes móviles de música contestan **400** contra
+    `music.youtube.com`, hay que ir a `youtubei.googleapis.com`.
+  - **Pintar la imagen.** Las filas que YouTube marca "Vídeo •" son vídeo de
+    verdad y la app ya las reproduce, en audio, porque el reproductor es
+    `just_audio` —que no pinta imagen— y el `StreamProxy` sirve el formato de
+    audio. Enseñar el vídeo no es pedir otro endpoint: es meter un reproductor
+    de vídeo en la app, y decidir qué hace con él la sesión de medios, el carro
+    y la pantalla de bloqueo. Feature grande y aparte.
+
 ## Suelto, sin diagnosticar
 
 Cosas que funcionan a medias y conviene mirar antes de dar por cerrada una
 versión.
+
+- **La fila quitada de la biblioteca sigue en pantalla hasta recargar.**
+  De hacer la acción (21 de agosto de 2026). El menú escribe en la cuenta y
+  avisa, pero la lista de la pestaña es lo que devolvió la página, y nadie la
+  toca: la fila se va al reabrir. Es lo mismo que ya hace quitar un "me gusta"
+  desde la pestaña de Me gusta, así que la app es coherente consigo misma, pero
+  las dos comparten el defecto. Arreglarlo bien pide un `ChangeNotifier` de ids
+  retirados que `SongPages` filtre — el patrón de `Likes`—, y eso vale para las
+  dos a la vez.
 
 - **El llavero de macOS y la firma ad-hoc, al actualizar: sí pregunta.**
   Medido el 21 de agosto de 2026, que era lo que faltaba. Al abrir un build
@@ -176,6 +215,39 @@ versión.
   repintado, ya contesta null. Si vuelve a salir, ahí es donde hay que mirar.
 
 ## Hecho
+
+- **Quitar una canción de la biblioteca ya no le quita el like** (21 de agosto
+  de 2026). Pedido el 20 de agosto; lo que faltaba era saber por dónde se pide,
+  y no era ninguna de las dos suposiciones: ni `edit_playlist` ni
+  `like/removelike`. Es **`POST feedback`** con `{"feedbackTokens": [token]}`.
+  El token vive en el menú de la propia fila, en un
+  `toggleMenuServiceItemRenderer` cuyo lado por defecto guarda en la biblioteca
+  y cuyo lado `toggled` la quita. Es **opaco y por fila**: no se deriva del
+  `videoId` y no hay endpoint que acepte uno, así que el parser tiene que
+  quedárselo — `Song.removeFromLibraryToken` — y una fila que no traiga menú no
+  se puede quitar de ninguna manera.
+  Dos detalles que costaría volver a descubrir. La entrada se reconoce **por el
+  icono, no por el texto**: `hl` sale del idioma del aparato, así que la
+  etiqueta llega traducida, mientras que `BOOKMARK` es igual en todas partes. Y
+  `isToggled` es lo que dice que la pista está en la biblioteca — sin mirarlo,
+  un resultado de búsqueda que nadie guardó traería un token que no quita nada.
+  Hace falta porque **la misma fila lleva varios `feedbackToken`**: el de fijar
+  en "Vuelve a escucharlo", el lado de añadir de este mismo interruptor y una
+  copia dentro del botón de "me gusta" (`addToLibraryFeedbackToken`, que es lo
+  que hace que dar like meta la pista en la biblioteca). Cualquiera de ellos
+  enviado a `feedback` haría en silencio otra cosa.
+  Medido contra la cuenta, no supuesto. Antes de escribir nada: `isToggled`
+  cierto en 25/25 filas de la biblioteca, 75/76 de las de "me gusta" que traen
+  el interruptor, 147/180 del historial y 0/5 de la búsqueda. Y desde la app en
+  el emulador, con "No Se Si Fue" —que estaba en las dos listas—: la biblioteca
+  pasó de **598 a 597** pistas y la canción salió de ella, **el "me gusta"
+  siguió ahí** (100 de 100), y volver a añadirla la devolvió a 598. Las dos
+  pruebas de escritura dejaron la cuenta como estaba.
+  Cuatro pruebas de parser en `test/innertube_parser_test.dart` contra un
+  fixture nuevo, `test/fixtures/library_songs.json` — una página real de la
+  biblioteca **con los tokens tachados**, porque un `feedbackToken` es una
+  credencial: quien lo tenga puede editar esa biblioteca. Dos más en
+  `test/library_removal_test.dart` para el cuerpo que va por el cable.
 
 - **El reproductor restaurado ya no dice 1:13 de 0:00** (21 de agosto de 2026).
   Las dos etiquetas del bar no hablaban de lo mismo: `shownPosition` devuelve a

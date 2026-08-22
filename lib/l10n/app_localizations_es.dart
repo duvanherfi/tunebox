@@ -611,6 +611,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get menuUnliked => 'Quitada de Me gusta';
 
   @override
+  String get menuRemoveFromLibrary => 'Quitar de la biblioteca';
+
+  @override
+  String get menuRemovedFromLibrary => 'Quitada de la biblioteca';
+
+  @override
   String get searchRecent => 'Búsquedas recientes';
 
   @override

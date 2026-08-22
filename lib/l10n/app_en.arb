@@ -206,6 +206,8 @@
   "@settingsBackupWritten": {"placeholders": {"path": {"type": "String"}}},
   "menuUnlike": "Remove from liked songs",
   "menuUnliked": "Removed from liked songs",
+  "menuRemoveFromLibrary": "Remove from library",
+  "menuRemovedFromLibrary": "Removed from library",
   "searchRecent": "Recent searches",
   "searchRecentClear": "Clear",
   "settingsStorageRefresh": "Recalculate",

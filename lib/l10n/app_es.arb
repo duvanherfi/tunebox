@@ -206,6 +206,8 @@
   "@settingsBackupWritten": {"placeholders": {"path": {"type": "String"}}},
   "menuUnlike": "Quitar de Me gusta",
   "menuUnliked": "Quitada de Me gusta",
+  "menuRemoveFromLibrary": "Quitar de la biblioteca",
+  "menuRemovedFromLibrary": "Quitada de la biblioteca",
   "searchRecent": "Búsquedas recientes",
   "searchRecentClear": "Borrar",
   "settingsStorageRefresh": "Recalcular",
