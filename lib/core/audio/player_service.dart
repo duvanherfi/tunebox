@@ -267,8 +267,16 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   /// The position to put on screen: the player's own once audio is loaded, and
   /// the remembered one before that. A restored track shows where it will
   /// resume from, rather than sitting at zero until someone presses play.
-  Stream<Duration> get shownPosition => _player.positionStream
-      .map((position) => _loaded ? position : (_pending ?? Duration.zero));
+  ///
+  /// Only while there is a length to go with it. The two labels either side of
+  /// the bar answer the same question, so a remembered position beside a length
+  /// nobody knows reads as 1:13 of 0:00 — two answers, one of them wrong.
+  Stream<Duration> get shownPosition =>
+      _player.positionStream.map((position) {
+        if (_loaded) return position;
+        if (shownDuration == null) return Duration.zero;
+        return _pending ?? Duration.zero;
+      });
 
   /// Likewise for the length: known from the listing before the stream opens.
   Duration? get shownDuration => _player.duration ?? currentSong?.duration;
@@ -567,6 +575,27 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   void _publishState() =>
       playbackState.add(_transformState(_player.playbackEvent));
 
+  /// Writes the measured length back onto the track everywhere it is held.
+  ///
+  /// The listing is not an authority on how long anything is, and for a video
+  /// or a mix it does not say at all. Until this, the answer lived only in the
+  /// media item of the track playing right now, so closing the app threw it
+  /// away: the resume point serialises the queue, and the queue still held the
+  /// track as it was listed. The next launch then had a position to show and no
+  /// length to show it against.
+  void _rememberDuration(Song song, Duration duration) {
+    if (song.duration == duration) return;
+    final measured = song.withDuration(duration);
+
+    // Both lists: the shuffled order is what plays, and the unshuffled one is
+    // what a queue put back in order is rebuilt from.
+    for (final list in [_songs, _unshuffled]) {
+      final at = list.indexWhere((each) => each.videoId == song.videoId);
+      if (at >= 0) list[at] = measured;
+    }
+    _publishQueue();
+  }
+
   void _publishQueue() {
     queue.add(_songs.map(_toMediaItem).toList());
     playbackState.add(playbackState.value.copyWith(queueIndex: _index));
@@ -612,6 +641,7 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     final actual = _player.duration;
     if (actual != null) {
       mediaItem.add(_toMediaItem(song).copyWith(duration: actual));
+      _rememberDuration(song, actual);
     }
 
     unawaited(_fadeIn());

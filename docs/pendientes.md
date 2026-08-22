@@ -158,20 +158,40 @@ versión.
   se hace y no falla, pero un `screencap` no captura la retroiluminación, así
   que el 20 % está probado como código y no como luz. Falta mirarlo en un
   teléfono.
-- **Las etiquetas del reproductor: la izquierda con la posición vieja y la
-  derecha en 0:00.** Visto primero con la cola terminada (1:48 y 0:00) y
-  reproducido el 20 de agosto al abrir la app: sale **al restaurar**, con el
-  cursor al principio y la izquierda marcando el segundo en que se dejó (1:13).
-  Ya no es un misterio de dónde sale: `shownPosition` devuelve a propósito la
-  posición recordada mientras no hay stream abierto
-  (`player_service.dart:253`), pero `shownDuration` es
-  `_player.duration ?? currentSong?.duration`, y si la canción guardada no
-  trajo duración eso es null y se pinta 0:00. Las dos etiquetas no hablan de lo
-  mismo hasta que alguien le da al play. Falta decidir el arreglo: guardar la
-  duración en el punto de reanudación, o no pintar la posición mientras no haya
-  una duración con la que casarla.
+- **Las etiquetas del reproductor con la cola terminada** (1:48 y 0:00). El
+  caso *al restaurar* quedó arreglado el 21 de agosto, pero este avistamiento
+  —el primero, con la cola ya agotada— probablemente es **otro mecanismo** y no
+  se ha vuelto a ver desde entonces. Cuando la cola se acaba nadie vuelve a
+  emitir posición, así que el `StreamBuilder` se queda con la última que
+  recibió mientras `shownDuration`, que es un getter y se relee en cada
+  repintado, ya contesta null. Si vuelve a salir, ahí es donde hay que mirar.
 
 ## Hecho
+
+- **El reproductor restaurado ya no dice 1:13 de 0:00** (21 de agosto de 2026).
+  Las dos etiquetas del bar no hablaban de lo mismo: `shownPosition` devuelve a
+  propósito la posición recordada mientras no hay stream, y `shownDuration` se
+  quedaba en null porque la canción guardada no traía duración.
+  La causa de fondo no era la etiqueta sino **dónde moría la duración
+  medida**. `_playIndex` la aprende al abrir el stream y la metía sólo en el
+  `mediaItem` de la pista que sonaba en ese momento; la cola seguía con la
+  canción tal como la listaron, y el punto de reanudación serializa la cola. Al
+  cerrar la app, la única copia de esa duración se iba con ella. Y hay filas que
+  no la traen nunca: los videos y los mixes de YouTube, y **todas** las
+  canciones del dispositivo, que se listan sin duración.
+  Ahora `_rememberDuration` escribe la medida de vuelta en la canción —en
+  `_songs` y en `_unshuffled`, porque deshacer el barajado reconstruye desde la
+  segunda— y con ella la ganan también la cola del carro y la hoja de cola.
+  `Song.withDuration` es la copia. Y como remate, `shownPosition` sólo devuelve
+  la posición recordada si hay una duración con la que casarla: sin ella, cero.
+  Eso cubre lo que la otra mitad no puede — una cola que se puso y nunca se
+  reprodujo, donde nadie midió nada.
+  Cuatro pruebas en `test/player_duration_test.dart`, tres en rojo contra la
+  versión anterior. Y en el emulador, con el archivo delante: una canción del
+  dispositivo de 3:05 dejó `durationMs: 185051` en `resume.json` —antes ese
+  campo era null siempre para las del dispositivo— y al volver a abrir la app el
+  reproductor salió con **0:20 / 3:05** y el cursor en su sitio, donde antes
+  habría salido 0:20 y 0:00.
 
 - **La pestaña ya lee del dispositivo, en el Mac también, y con los formatos
   que cada reproductor abre** (21 de agosto de 2026). Tres cosas que parecían

@@ -47,6 +47,24 @@ class Song {
     return url.replaceAll(RegExp(r'w\d+-h\d+'), 'w544-h544');
   }
 
+  /// The same track, carrying the length someone finally measured.
+  ///
+  /// Plenty of rows arrive without one — videos, mixes, anything YouTube filed
+  /// loosely — and the open stream is the only place that length ever appears.
+  /// Put back on the track, it reaches everywhere the track goes: the queue the
+  /// car draws, and the resume point, which is what the next launch has to draw
+  /// a progress bar from.
+  Song withDuration(Duration duration) => Song(
+        videoId: videoId,
+        title: title,
+        subtitle: subtitle,
+        thumbnailUrl: thumbnailUrl,
+        duration: duration,
+        artistId: artistId,
+        albumId: albumId,
+        artist: artist,
+      );
+
   /// Stored form, for the on-device play history. Only what a row needs to be
   /// drawn and played again; everything else is fetched fresh anyway.
   Map<String, Object?> toJson() => {
