@@ -1,5 +1,55 @@
+import 'dart:async';
+
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tunebox/core/auth/session.dart';
+
+/// Stands in for the keychain, which no test can reach.
+class _MemoryStorage extends FlutterSecureStorage {
+  final values = <String, String>{};
+
+  /// Holds [delete] open, the way a keychain that is thinking does.
+  Completer<void>? stall;
+
+  @override
+  Future<String?> read({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async => values[key];
+
+  @override
+  Future<void> write({
+    required String key,
+    required String? value,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
+    if (value != null) values[key] = value;
+  }
+
+  @override
+  Future<void> delete({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
+    if (stall != null) await stall!.future;
+    values.remove(key);
+  }
+}
 
 /// The signature scheme is the one part of authentication with no visible
 /// failure mode: a malformed credential just comes back as an empty library,
@@ -68,6 +118,52 @@ void main() {
         Session.authorization('one', now: at),
         isNot(Session.authorization('two', now: at)),
       );
+    });
+  });
+
+  group('signing out', () {
+    test('empties the browser as well as the store it keeps', () async {
+      final storage = _MemoryStorage();
+      var forgotten = 0;
+      final session = Session(
+        storage: storage,
+        forgetBrowser: () async => forgotten++,
+      );
+
+      await session.signIn('SAPISID=secret123');
+      expect(session.isSignedIn, isTrue);
+
+      await session.signOut();
+
+      expect(session.isSignedIn, isFalse);
+      expect(storage.values, isEmpty);
+      // Without this the login page walks straight through on the same Google
+      // session, and signing out to use another account cannot work.
+      expect(forgotten, 1);
+    });
+
+    test('says so without waiting for the stores to answer', () async {
+      final storage = _MemoryStorage();
+      final session = Session(storage: storage);
+      await session.signIn('SAPISID=secret123');
+
+      // A store that has not answered yet is the ordinary case on macOS, where
+      // the keychain is a round trip out of the process. Told last, a sign-out
+      // leaves the account on screen for as long as that takes — and if the
+      // store ever refuses, forever.
+      storage.stall = Completer<void>();
+      var told = false;
+      session.addListener(() => told = true);
+
+      final signingOut = session.signOut();
+      await pumpEventQueue();
+
+      expect(told, isTrue);
+      expect(session.isSignedIn, isFalse);
+
+      storage.stall!.complete();
+      await signingOut;
+      expect(storage.values, isEmpty);
     });
   });
 

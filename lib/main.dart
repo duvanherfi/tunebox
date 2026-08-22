@@ -14,6 +14,7 @@ import 'core/lyrics/lyrics_client.dart';
 import 'core/scrobble/scrobbler.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
+import 'features/auth/browser_session.dart';
 import 'features/shared/app_background.dart';
 import 'data/account_store.dart';
 import 'data/audio_cache.dart';
@@ -69,7 +70,7 @@ Future<void> main() async {
 
   // Restored before the first frame so the library tab knows whether it is
   // signed in without flashing the login prompt.
-  session = Session();
+  session = Session(forgetBrowser: forgetBrowserSession);
   await session.load();
 
   // Loaded before the first frame so the app never flashes the wrong theme.

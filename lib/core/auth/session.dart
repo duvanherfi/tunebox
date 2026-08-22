@@ -14,13 +14,18 @@ import 'secure_storage.dart';
 /// real Google login, plus an `Authorization` header derived from one of them.
 /// Cookies live in secure storage and never leave the device.
 class Session extends ChangeNotifier {
-  Session({FlutterSecureStorage? storage})
-      : _storage = storage ?? secureStorage;
+  Session({FlutterSecureStorage? storage, Future<void> Function()? forgetBrowser})
+      : _storage = storage ?? secureStorage,
+        _forgetBrowser = forgetBrowser;
 
   static const _cookieKey = 'youtube_cookies';
   static const origin = 'https://music.youtube.com';
 
   final FlutterSecureStorage _storage;
+
+  /// Empties the login browser's own cookie jar. Wired in `main.dart`, because
+  /// the browser belongs to the login screen and not to this layer.
+  final Future<void> Function()? _forgetBrowser;
 
   String? _cookieHeader;
 
@@ -38,10 +43,23 @@ class Session extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Forgets the session everywhere it was left, not just here.
+  ///
+  /// The cookies this holds are a copy: the browser the sign-in ran in keeps
+  /// its own, and it is a persistent store that outlives the app. Deleting only
+  /// this copy signs the app out and leaves Google signed in, so the very next
+  /// sign-in walks through the login page without stopping — same account, no
+  /// chooser, no password — and reads as a sign-out that did nothing. Which is
+  /// what someone signing out to use another account is trying to do.
+  ///
+  /// Announced before either store is emptied: the session is already gone as
+  /// far as anything asking is concerned, and a screen should not keep showing
+  /// an account while a keychain write it cannot see is still in flight.
   Future<void> signOut() async {
     _cookieHeader = null;
-    await _storage.delete(key: _cookieKey);
     notifyListeners();
+    await _storage.delete(key: _cookieKey);
+    await _forgetBrowser?.call();
   }
 
   /// Headers that turn an anonymous InnerTube call into a signed-in one.
