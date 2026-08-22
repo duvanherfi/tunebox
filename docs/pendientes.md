@@ -5,6 +5,10 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
 
 ## Pendiente
 
+Orden acordado el 21 de agosto de 2026, un hilo por punto: **quitar de la
+biblioteca sin quitar el like** → **el ANR del mensajero de Dart** → **el
+selector de carpetas del escritorio**.
+
 - **Llegar a Documentos, Escritorio o un disco externo en macOS.** Lo que
   quedó fuera al hacer que la pestaña leyera del dispositivo (21 de agosto de
   2026). El sandbox reparte el disco por carpeta y solo hay entitlement para
@@ -13,6 +17,11 @@ nuevo: se lee esto primero y se actualiza al terminar cada paso, no al final.
   *security-scoped bookmark* para que el permiso sobreviva al reinicio, que pide
   además `files.bookmarks.app-scope` y un paquete nuevo: no hay selector de
   archivos en `pubspec.yaml`. Es un feature aparte, no un ajuste de este.
+  Al hacerlo hay que mirar **si aplica igual a Windows y a Linux**: ahí no hay
+  sandbox que reparta el disco por carpeta, así que puede que el selector
+  sobre y baste con elegir una carpeta y recordar la ruta, sin bookmark. Lo
+  que sí hace falta comprobar es qué contesta `rootsFor` en esas dos
+  plataformas, que hoy no las contempla.
 
 - **Quitar una canción de la biblioteca sin quitarle el like.** Pedido el 20 de
   agosto de 2026, para que funcione como YouTube Music. Ahora que las dos
