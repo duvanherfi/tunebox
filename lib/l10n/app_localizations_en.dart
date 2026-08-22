@@ -812,10 +812,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paletteHoldToRemove => 'Tap to change, hold to remove';
 
   @override
-  String get libraryDevice => 'On the phone';
+  String get libraryDevice => 'On this device';
 
   @override
-  String get libraryDeviceEmpty => 'Music stored on this phone shows up here.';
+  String get libraryDeviceEmpty => 'Music stored on this device shows up here.';
 
   @override
   String get libraryDeviceScan => 'Look for music';

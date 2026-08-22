@@ -5,7 +5,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import 'models/song.dart';
 
-/// Music already on the phone.
+/// Music already on the device.
 ///
 /// Files rather than a media database: the folders people keep music in are
 /// public, and walking them needs one permission and no plugin that has to be
@@ -14,22 +14,62 @@ import 'models/song.dart';
 /// folder is the artist, which is exactly what a well-kept music folder encodes
 /// anyway.
 class DeviceSongs extends ChangeNotifier {
-  DeviceSongs({List<Directory>? roots}) : _roots = roots;
+  DeviceSongs({List<Directory>? roots, Set<String>? extensions})
+      : _roots = roots,
+        _extensions = extensions ?? extensionsFor(Platform.operatingSystem);
 
-  /// Where music lives on Android. Scanned in order, deepest folders included.
-  static const _defaultRoots = [
-    '/storage/emulated/0/Music',
-    '/storage/emulated/0/Download',
-    '/storage/emulated/0/Downloads',
-    '/storage/emulated/0/Documents',
-  ];
+  /// Containers both players open. The rest is decided per platform, because a
+  /// row that cannot be opened is worse than a row that is missing: it looks
+  /// like music and answers silence.
+  static const _common = {'.mp3', '.m4a', '.aac', '.flac', '.wav'};
 
-  static const _extensions = {'.mp3', '.m4a', '.aac', '.flac', '.wav', '.ogg'};
+  /// What the platform's own player can decode.
+  ///
+  /// ExoPlayer reads Ogg, Opus, WebM and Matroska and has no AIFF extractor;
+  /// AVFoundation is the other way round.
+  static Set<String> extensionsFor(String platform) => switch (platform) {
+        'android' => const {
+            ..._common,
+            '.ogg',
+            '.oga',
+            '.opus',
+            '.webm',
+            '.mka',
+            '.m4b',
+          },
+        'macos' => const {..._common, '.aiff', '.aif', '.m4b'},
+        _ => const {},
+      };
+
+  /// Where to start walking.
+  ///
+  /// Android grants its whole shared storage behind one permission, so there is
+  /// one root and everything under it. A sandboxed Mac grants folder by folder,
+  /// and only Music and Downloads have an entitlement — inside the container
+  /// macOS links them under `HOME` once that entitlement is granted, so the
+  /// container's own home is the right place to look and no bookmark is needed.
+  static List<String> rootsFor(String platform,
+      {Map<String, String>? environment}) {
+    switch (platform) {
+      case 'android':
+        return const ['/storage/emulated/0'];
+      case 'macos':
+        final base = (environment ?? Platform.environment)['HOME'];
+        return base == null ? const [] : ['$base/Music', '$base/Downloads'];
+      default:
+        return const [];
+    }
+  }
+
+  /// App data rather than anyone's music, and on Android 11 and later its
+  /// `data` and `obb` throw at whoever lists them.
+  static const _skippedAtRoot = {'Android'};
 
   /// The mark that tells the player this track is a path rather than a video.
   static const prefix = 'local:';
 
   final List<Directory>? _roots;
+  final Set<String> _extensions;
 
   List<Song> _songs = const [];
   bool _scanning = false;
@@ -48,17 +88,10 @@ class DeviceSongs extends ChangeNotifier {
     notifyListeners();
     try {
       final found = <Song>[];
-      for (final directory in _roots ?? _defaultRoots.map(Directory.new)) {
-        if (!directory.existsSync()) continue;
-        await for (final entry in directory.list(recursive: true, followLinks: false)) {
-          if (entry is! File) continue;
-          final path = entry.path;
-          final dot = path.lastIndexOf('.');
-          if (dot < 0 || !_extensions.contains(path.substring(dot).toLowerCase())) {
-            continue;
-          }
-          found.add(_songFrom(entry));
-        }
+      final roots = _roots ??
+          rootsFor(Platform.operatingSystem).map(Directory.new).toList();
+      for (final directory in roots) {
+        await _walk(directory, found, atRoot: true);
       }
       found.sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
       _songs = found;
@@ -66,6 +99,40 @@ class DeviceSongs extends ChangeNotifier {
     } finally {
       _scanning = false;
       notifyListeners();
+    }
+  }
+
+  /// Walks one folder, by hand rather than with `list(recursive: true)`.
+  ///
+  /// A recursive listing is a single stream, so the first folder that refuses
+  /// to be read — `Android/data` on any modern phone — ends it, and everything
+  /// still unvisited is lost with it. Recursing a level at a time makes a
+  /// refusal cost that one folder.
+  Future<void> _walk(Directory directory, List<Song> found,
+      {bool atRoot = false}) async {
+    final List<FileSystemEntity> entries;
+    try {
+      entries = await directory.list(followLinks: false).toList();
+    } on FileSystemException {
+      return;
+    }
+
+    for (final entry in entries) {
+      final name = entry.uri.pathSegments.lastWhere((s) => s.isNotEmpty,
+          orElse: () => '');
+      // Hidden by the only convention the platforms share.
+      if (name.startsWith('.')) continue;
+
+      if (entry is Directory) {
+        if (atRoot && _skippedAtRoot.contains(name)) continue;
+        await _walk(entry, found);
+      } else if (entry is File) {
+        final dot = name.lastIndexOf('.');
+        if (dot < 0 || !_extensions.contains(name.substring(dot).toLowerCase())) {
+          continue;
+        }
+        found.add(_songFrom(entry));
+      }
     }
   }
 
@@ -86,11 +153,14 @@ class DeviceSongs extends ChangeNotifier {
   /// Android 13 split storage permissions by media type; older versions have
   /// only the blanket one. Asking for both and accepting either keeps this
   /// working in both worlds.
+  ///
+  /// macOS has nothing to ask at runtime: its answer was decided when the app
+  /// was signed, by whether the entitlement is there. Everywhere else there are
+  /// no roots to walk, so there is nothing to ask for either — and
+  /// permission_handler ships no desktop implementation, so asking threw
+  /// `MissingPluginException` out of the library tab rather than answering no.
   Future<bool> _permitted() async {
-    // Android's feature, and only Android's: the roots above are Android paths,
-    // and permission_handler ships no desktop implementation — asking there
-    // throws MissingPluginException out of the library tab rather than
-    // answering no.
+    if (Platform.isMacOS) return true;
     if (!Platform.isAndroid) return false;
     if (await Permission.audio.request().isGranted) return true;
     return Permission.storage.request().isGranted;

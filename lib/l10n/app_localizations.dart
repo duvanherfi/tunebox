@@ -1583,13 +1583,13 @@ abstract class AppLocalizations {
   /// No description provided for @libraryDevice.
   ///
   /// In en, this message translates to:
-  /// **'On the phone'**
+  /// **'On this device'**
   String get libraryDevice;
 
   /// No description provided for @libraryDeviceEmpty.
   ///
   /// In en, this message translates to:
-  /// **'Music stored on this phone shows up here.'**
+  /// **'Music stored on this device shows up here.'**
   String get libraryDeviceEmpty;
 
   /// No description provided for @libraryDeviceScan.

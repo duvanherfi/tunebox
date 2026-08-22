@@ -816,11 +816,11 @@ class AppLocalizationsEs extends AppLocalizations {
   String get paletteHoldToRemove => 'Toca para cambiar, mantén para quitar';
 
   @override
-  String get libraryDevice => 'Del teléfono';
+  String get libraryDevice => 'Del dispositivo';
 
   @override
   String get libraryDeviceEmpty =>
-      'Aquí aparece la música guardada en este teléfono.';
+      'Aquí aparece la música guardada en este dispositivo.';
 
   @override
   String get libraryDeviceScan => 'Buscar música';
