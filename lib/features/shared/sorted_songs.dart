@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../data/models/song.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
+import 'collection_menu.dart';
 import 'song_list_view.dart';
 
 /// How a list of tracks can be ordered.
@@ -23,9 +24,18 @@ enum SongOrder {
 /// tracks are shown in several places, and each should be free to order them
 /// its own way.
 class SortedSongs extends StatefulWidget {
-  const SortedSongs({super.key, required this.songs});
+  const SortedSongs({super.key, required this.songs, this.shuffleId});
 
   final List<Song> songs;
+
+  /// The id YouTube shuffles this list under, when it has one.
+  ///
+  /// What the screen holds is one page of the list — a hundred rows at a time
+  /// from a library surface — so shuffling here would draw from that page for
+  /// ever. Where YouTube has an id for the whole list ([playShuffledList]) the
+  /// draw is asked of it instead; a list of this device's has none, and there
+  /// the page and the list are the same thing anyway.
+  final String? shuffleId;
 
   @override
   State<SortedSongs> createState() => _SortedSongsState();
@@ -116,6 +126,13 @@ class _SortedSongsState extends State<SortedSongs> {
                 ),
               ),
               const Spacer(),
+              IconButton(
+                tooltip: l10n.shuffle,
+                icon: const Icon(Icons.shuffle_rounded, size: 20),
+                onPressed: widget.songs.isEmpty
+                    ? null
+                    : () => playShuffledList(widget.shuffleId, _sorted),
+              ),
               IconButton(
                 tooltip: _descending ? l10n.sortDescending : l10n.sortAscending,
                 icon: Icon(

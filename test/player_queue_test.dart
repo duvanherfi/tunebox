@@ -22,9 +22,43 @@ import 'temp_directory.dart';
 /// rest, which is what a real liked-songs playlist looks like: most tracks
 /// play, a few are not served to anyone.
 class _StubInnertube extends InnertubeClient {
-  _StubInnertube({this.unplayable = const {}});
+  _StubInnertube({this.unplayable = const {}, this.mix = const []});
 
   final Set<String> unplayable;
+
+  /// What [radio] answers, which is how a queue running dry is exercised.
+  final List<Song> mix;
+
+  /// Every seed [radio] was asked about.
+  final radios = <String>[];
+
+  /// What [shuffledCollection] answers, a page at a time. Empty means YouTube
+  /// would not shuffle this one, which is the fallback the caller has to take.
+  List<List<Song>> shuffledPages = const [];
+
+  /// Every collection [shuffledCollection] was asked to shuffle.
+  final shuffles = <String>[];
+
+  @override
+  Future<({List<Song> songs, String? continuation})> shuffledCollection(
+    String playlistId,
+  ) async {
+    shuffles.add(playlistId);
+    if (shuffledPages.isEmpty) return (songs: <Song>[], continuation: null);
+    return _page(0);
+  }
+
+  @override
+  Future<({List<Song> songs, String? continuation})> watchQueueAfter(
+    String continuation,
+  ) async =>
+      _page(int.parse(continuation));
+
+  ({List<Song> songs, String? continuation}) _page(int at) => (
+        songs: shuffledPages[at],
+        continuation:
+            at + 1 < shuffledPages.length ? '${at + 1}' : null,
+      );
 
   /// Every track this was asked to resolve, in order.
   final asked = <String>[];
@@ -58,7 +92,10 @@ class _StubInnertube extends InnertubeClient {
   Future<void> reportWatchtime(AudioStream stream, Duration position) async {}
 
   @override
-  Future<List<Song>> radio(String videoId) async => const [];
+  Future<List<Song>> radio(String videoId) async {
+    radios.add(videoId);
+    return mix.where((song) => song.videoId != videoId).toList();
+  }
 }
 
 Song _song(String id) => Song(
@@ -72,11 +109,15 @@ void main() {
   late Directory temp;
   late FakeJustAudio platform;
   late _StubInnertube innertube;
+  late Settings settings;
   late PlayerService player;
 
-  Future<PlayerService> build({Set<String> unplayable = const {}}) async {
-    innertube = _StubInnertube(unplayable: unplayable);
-    final settings = Settings()
+  Future<PlayerService> build({
+    Set<String> unplayable = const {},
+    List<Song> mix = const [],
+  }) async {
+    innertube = _StubInnertube(unplayable: unplayable, mix: mix);
+    settings = Settings()
       // Straight to setUrl: the caching source would stand up just_audio's own
       // proxy, which has nothing to do with what these tests are about.
       ..cacheEnabled = false;
@@ -194,26 +235,89 @@ void main() {
       for (var i = 0; i < 20; i++) _song('s$i'),
     ];
 
-    test('does not lift the playing track to the front', () async {
+    test('turning it on leaves the whole rest of the queue still to come',
+        () async {
       await build();
       await player.setQueue(twenty());
-      expect(player.currentSong?.videoId, 's0');
+      await player.skipToNext();
+      await pumpEventQueue();
+      expect(player.currentSong?.videoId, 's1');
 
-      var everOffTheFront = false;
-      for (var attempt = 0; attempt < 20 && !everOffTheFront; attempt++) {
+      await player.setShuffleMode(AudioServiceShuffleMode.all);
+
+      // The music does not stop to be shuffled: whatever was on is still on.
+      expect(player.currentSong?.videoId, 's1');
+      expect(player.songs, hasLength(20));
+
+      // And nothing unheard was shuffled behind it. Landing the playing track
+      // at a random place is what used to happen, and it made everything that
+      // fell above it unreachable for the rest of the pass: shuffling a
+      // hundred tracks from the second one played, on average, fifty.
+      final ahead = player.songs
+          .sublist(player.currentIndex + 1)
+          .map((song) => song.videoId)
+          .toSet();
+      expect(ahead, {for (var i = 2; i < 20; i++) 's$i'});
+    });
+
+    test('what is still to come really is shuffled', () async {
+      var everReordered = false;
+      for (var attempt = 0; attempt < 20 && !everReordered; attempt++) {
+        await build();
+        await player.setQueue(twenty());
         await player.setShuffleMode(AudioServiceShuffleMode.all);
+        final order = player.songs.map((song) => song.videoId).join(',');
+        if (order != [for (var i = 0; i < 20; i++) 's$i'].join(',')) {
+          everReordered = true;
+        }
+      }
 
-        // The music does not stop to be shuffled: whatever was on is still on.
-        expect(player.currentSong?.videoId, 's0');
-        expect(player.songs, hasLength(20));
+      expect(everReordered, isTrue, reason: 'the queue came back in order');
+    });
 
-        if (player.currentIndex != 0) everOffTheFront = true;
+    test('each lap with repeat on is a new order', () async {
+      await build();
+      await player.setShuffleMode(AudioServiceShuffleMode.all);
+      await player.setQueue(twenty());
+      await player.setRepeatMode(AudioServiceRepeatMode.all);
+
+      final firstLap = player.songs.map((song) => song.videoId).toList();
+      for (var i = 0; i < 20; i++) {
+        await player.skipToNext();
+        await pumpEventQueue();
+      }
+      final secondLap = player.songs.map((song) => song.videoId).toList();
+
+      // Twenty tracks have 20! orders; coming back identical is not luck.
+      expect(secondLap, isNot(firstLap));
+      expect(secondLap.toSet(), firstLap.toSet());
+    });
+
+    test('the radio that keeps the music going arrives shuffled too', () async {
+      final mix = [for (var i = 0; i < 20; i++) _song('r$i')];
+      var everReordered = false;
+      for (var attempt = 0; attempt < 20 && !everReordered; attempt++) {
+        await build(mix: mix);
+        await player.setShuffleMode(AudioServiceShuffleMode.all);
+        await player.setQueue([_song('seed')]);
+
+        platform.player.reachTheEnd();
+        await pumpEventQueue();
+
+        final added = player.songs
+            .where((song) => song.videoId.startsWith('r'))
+            .map((song) => song.videoId)
+            .toList();
+        expect(added, hasLength(20));
+        if (added.join(',') != [for (var i = 0; i < 20; i++) 'r$i'].join(',')) {
+          everReordered = true;
+        }
       }
 
       expect(
-        everOffTheFront,
+        everReordered,
         isTrue,
-        reason: 'shuffling kept opening on the track already playing',
+        reason: 'the radio was appended in the order YouTube listed it',
       );
     });
 
@@ -275,6 +379,143 @@ void main() {
         for (var i = 0; i < 20; i++) 's$i',
       ]);
       expect(player.currentSong?.videoId, playing);
+    });
+  });
+
+  test('a queue that runs out carries on with a radio', () async {
+    await build(mix: [_song('r0'), _song('r1')]);
+    await player.setQueue([_song('a')]);
+    expect(player.currentSong?.videoId, 'a');
+
+    platform.player.reachTheEnd();
+    await pumpEventQueue();
+
+    expect(innertube.radios, ['a']);
+    expect(player.songs.map((song) => song.videoId).toList(),
+        containsAll(['r0', 'r1']));
+    expect(player.currentSong?.videoId, isIn(['r0', 'r1']));
+    expect(player.playbackState.value.playing, isTrue);
+  });
+
+  test('a queue that runs out again asks for another radio', () async {
+    await build(mix: [_song('r0')]);
+    await player.setQueue([_song('a')]);
+
+    platform.player.reachTheEnd();
+    await pumpEventQueue();
+    expect(player.currentSong?.videoId, 'r0');
+
+    // The mix is one track long, so the second ending finds the queue dry
+    // again. Silence here is the queue stopping to expand after one go.
+    platform.player.reachTheEnd();
+    await pumpEventQueue();
+
+    expect(innertube.radios, ['a', 'r0']);
+  });
+
+  test('turning autoplay off lets the queue end', () async {
+    await build(mix: [_song('r0')]);
+    settings.autoplay = false;
+    await player.setQueue([_song('a')]);
+
+    platform.player.reachTheEnd();
+    await pumpEventQueue();
+
+    expect(innertube.radios, isEmpty);
+    expect(player.songs, hasLength(1));
+  });
+
+  group('a collection YouTube shuffles itself', () {
+    test('plays the order the server gave, untouched', () async {
+      await build();
+      innertube.shuffledPages = [
+        [_song('c'), _song('a'), _song('b')],
+      ];
+
+      final done = await player.shuffleCollection(
+        'VLPL123',
+        inOrder: [_song('a'), _song('b'), _song('c')],
+      );
+
+      expect(done, isTrue);
+      expect(innertube.shuffles, ['VLPL123']);
+      // Shuffling it again here would be shuffling a shuffle, and would undo
+      // the one thing the server was asked for: a draw over the whole list.
+      expect(player.songs.map((song) => song.videoId).toList(),
+          ['c', 'a', 'b']);
+      expect(player.currentSong?.videoId, 'c');
+      expect(
+        player.playbackState.value.shuffleMode,
+        AudioServiceShuffleMode.all,
+      );
+    });
+
+    test('the rest of the draw lands behind the music', () async {
+      await build();
+      innertube.shuffledPages = [
+        [_song('c'), _song('a')],
+        [_song('e'), _song('d')],
+      ];
+
+      await player.shuffleCollection('PL123');
+      await pumpEventQueue();
+
+      expect(player.songs.map((song) => song.videoId).toList(),
+          ['c', 'a', 'e', 'd']);
+      // And the music never waited for it.
+      expect(player.currentSong?.videoId, 'c');
+    });
+
+    test('turning shuffle off goes back to the list, whole', () async {
+      await build();
+      innertube.shuffledPages = [
+        [_song('c'), _song('z'), _song('a')],
+      ];
+
+      // 'z' is one the shuffle drew from past the pages the screen holds.
+      await player.shuffleCollection(
+        'PL123',
+        inOrder: [_song('a'), _song('b'), _song('c')],
+      );
+      await player.setShuffleMode(AudioServiceShuffleMode.none);
+
+      // The screen's order first, and what it had never listed kept on the
+      // end. Dropping 'z' would make turning shuffle off shorten the queue.
+      expect(player.songs.map((song) => song.videoId).toList(),
+          ['a', 'c', 'z']);
+    });
+
+    test('the rest of the draw does not double what the list already had',
+        () async {
+      await build();
+      // The second page brings back tracks the screen had listed all along —
+      // which is the normal case, since the shuffle draws from the same list.
+      innertube.shuffledPages = [
+        [_song('c'), _song('z')],
+        [_song('a'), _song('b')],
+      ];
+
+      await player.shuffleCollection(
+        'PL123',
+        inOrder: [_song('a'), _song('b'), _song('c')],
+      );
+      await pumpEventQueue();
+      await player.setShuffleMode(AudioServiceShuffleMode.none);
+
+      // Each of them once. Kept in both lists without checking, a track the
+      // screen had and the draw brought back was counted twice, and the queue
+      // came out longer than the playlist it came from.
+      expect(player.songs.map((song) => song.videoId).toList(),
+          ['a', 'b', 'c', 'z']);
+    });
+
+    test('a collection YouTube will not shuffle is left to the caller',
+        () async {
+      await build();
+      innertube.shuffledPages = const [];
+
+      expect(await player.shuffleCollection('PL123'), isFalse);
+      expect(player.songs, isEmpty);
     });
   });
 

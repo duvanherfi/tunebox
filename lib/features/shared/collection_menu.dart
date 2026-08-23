@@ -45,6 +45,60 @@ Future<void> toggleCollectionSaved(
   }
 }
 
+/// Shuffles a collection, on YouTube's servers wherever it can be.
+///
+/// Shuffling the tracks a screen holds shuffles its first page, because a
+/// hundred rows is all a library surface answers at once — which is how
+/// pressing shuffle on a long list kept drawing from the same first hundred.
+/// YouTube shuffles the whole list itself, so that is asked for first and what
+/// is on screen is the fallback: an album arrives whole and an artist is not a
+/// list, and for those the two are the same thing anyway.
+Future<void> playShuffled(
+  Playlist? collection,
+  List<Song> songs, {
+  bool artist = false,
+}) =>
+    playShuffledList(artist ? null : collection?.browseId, songs);
+
+/// The same, for a list that is not a collection but has an id YouTube knows.
+///
+/// The library's own surfaces are the case: their rows are pages of a much
+/// longer list, and each has an id that is not the one the screen browsed —
+/// `LM` for the likes, `MLCT` for the songs. Measured against a real account on
+/// 22 August 2026: `LM` gave its 183 in four pages and `MLCT` pages 24 at a
+/// time and keeps going, with a fresh draw each press — two in a row shared 3
+/// of 25. A null [serverId] is a list that only exists here, and is shuffled
+/// here.
+Future<void> playShuffledList(String? serverId, List<Song> songs) async {
+  if (serverId != null &&
+      _shuffledOnTheServer(serverId) &&
+      await playerService.shuffleCollection(serverId, inOrder: songs)) {
+    return;
+  }
+
+  // Shuffle first, so the queue arrives already scrambled rather than starting
+  // on track one and jumping.
+  await playerService.setShuffleMode(AudioServiceShuffleMode.all);
+  await playerService.setQueue(songs);
+}
+
+/// Whether YouTube will shuffle this id itself.
+///
+/// A playlist it will, its own and the account's alike, and the two library
+/// surfaces that have an id of their own: `LM`, the likes, and `MLCT`, which is
+/// what the songs tab's page hands out — its browse id, `FEmusic_liked_videos`,
+/// answers nothing. An album's browse id (`MPREb…`) and a channel (`UC…`) name
+/// pages rather than queues and `next` answers nothing for them either, so
+/// those are left where they are.
+bool _shuffledOnTheServer(String browseId) {
+  final id = browseId.startsWith('VL') ? browseId.substring(2) : browseId;
+  return id == 'LM' ||
+      id == 'MLCT' ||
+      id.startsWith('PL') ||
+      id.startsWith('OLAK') ||
+      id.startsWith('RDCLAK');
+}
+
 /// Plays what YouTube says goes with this whole list.
 ///
 /// The radio is a network call, so it can arrive late or not at all: the
@@ -201,9 +255,7 @@ class _CollectionMenu extends StatelessWidget {
             title: Text(l10n.shuffle),
             onTap: () {
               Navigator.of(context).pop();
-              playerService
-                  .setShuffleMode(AudioServiceShuffleMode.all)
-                  .then((_) => playerService.setQueue(songs));
+              playShuffled(collection, songs, artist: artist);
             },
           ),
           ListTile(

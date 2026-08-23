@@ -127,6 +127,11 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
 
   int _index = 0;
 
+  /// Bumped every time the queue is replaced. Reading the rest of a shuffled
+  /// collection happens behind the music, and a page that lands after the
+  /// listener has moved on belongs to a queue that no longer exists.
+  int _generation = 0;
+
   AudioServiceRepeatMode _repeat = AudioServiceRepeatMode.none;
   bool _shuffled = false;
 
@@ -402,6 +407,7 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   Future<void> restore() async {
     if (_resume.isEmpty) return;
 
+    _generation++;
     _songs = List.of(_resume.songs);
     _unshuffled = List.of(_resume.songs);
     _index = _resume.index;
@@ -448,12 +454,29 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   /// opens where it was asked to, without one the shuffle decides. Pinning
   /// track one either way is how shuffling a playlist kept starting on the same
   /// song.
-  Future<void> setQueue(List<Song> songs, {int? startIndex}) async {
+  Future<void> setQueue(
+    List<Song> songs, {
+    int? startIndex,
+    List<Song>? inOrder,
+  }) async {
+    _generation++;
     _songs = List.of(songs);
-    _unshuffled = List.of(songs);
+
+    // [inOrder] says [songs] arrived already in the order it should play — the
+    // server's own shuffle — and carries the order to go back to when shuffle
+    // is turned off. It is what the screen holds, which can be less than what
+    // the shuffle drew, so anything the list does not know is kept on the end
+    // rather than dropped: restoring the order must not shorten the queue.
+    _unshuffled = inOrder == null
+        ? List.of(songs)
+        : [
+            ...inOrder,
+            for (final song in songs)
+              if (!inOrder.contains(song)) song,
+          ];
 
     var start = startIndex ?? 0;
-    if (_shuffled && _songs.isNotEmpty) {
+    if (inOrder == null && _shuffled && _songs.isNotEmpty) {
       final asked = startIndex != null && start >= 0 && start < _songs.length
           ? _songs[start]
           : null;
@@ -552,19 +575,37 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     playbackState.add(playbackState.value.copyWith(shuffleMode: shuffleMode));
   }
 
-  /// Shuffles the queue without stopping the music.
+  /// Shuffles what is still to come, without stopping the music.
   ///
-  /// The track at [around] carries on playing and takes whatever place the
-  /// shuffle gives it. Lifted to the front — which is what this used to do —
-  /// every shuffle opened with the song that was already on, the one order
-  /// nobody asked for, and the queue showed it at the top as though it had just
-  /// been picked out. What lands above it is the part of the shuffle this pass
-  /// has already gone by: a tap away in the queue, and repeat comes round to it.
+  /// The track at [around] stays where it is and everything after it is
+  /// reordered. Shuffling the whole queue instead — which is what this used to
+  /// do — dropped the playing track at a random place and turned everything
+  /// that landed above it into the part of the pass already gone by: a switch
+  /// flicked on the second track of a hundred played, on average, fifty of
+  /// them. Nobody reading "shuffle" means "and skip half of it".
+  ///
+  /// This is not the shuffle a playlist's own button runs. That one arrives
+  /// through [setQueue] with no track asked for, and the whole list is fair
+  /// game there — which is what keeps it from opening on track one every time.
   void _shuffleAround(int around) {
     if (_songs.isEmpty) return;
-    final current = _songs[around.clamp(0, _songs.length - 1)];
-    _songs = List.of(_songs)..shuffle();
-    _index = _songs.indexOf(current);
+    final at = around.clamp(0, _songs.length - 1);
+    final ahead = _songs.sublist(at + 1)..shuffle();
+    _songs = [..._songs.sublist(0, at + 1), ...ahead];
+    _index = at;
+  }
+
+  /// Adds tracks to the order that turning shuffle off goes back to, once each.
+  ///
+  /// The two lists do not hold the same tracks while a shuffle is running: the
+  /// order is what the screen listed, and the queue is what the shuffle drew,
+  /// which reaches past it. So a page arriving with something new to the queue
+  /// is not news to the order, and adding it blind put it in twice — measured
+  /// on a 124-track playlist, turning shuffle off gave a queue of 180.
+  void _rememberOrder(Iterable<Song> songs) {
+    for (final song in songs) {
+      if (!_unshuffled.contains(song)) _unshuffled.add(song);
+    }
   }
 
   /// Republishes the state from the player as it is right now.
@@ -1030,6 +1071,13 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
       if (_index + 1 < _songs.length) {
         next = _index + 1;
       } else if (_repeat == AudioServiceRepeatMode.all && _songs.isNotEmpty) {
+        // A shuffled queue coming round again is a new draw. Without this the
+        // shuffle was one permutation played on a loop for as long as repeat
+        // was on, which is an order, not a shuffle.
+        if (_shuffled && _songs.length > 1) {
+          _songs = List.of(_songs)..shuffle();
+          _publishQueue();
+        }
         next = 0;
       } else if (await _extendWithRadio()) {
         // Nothing queued and nothing to repeat: rather than fall silent, ask
@@ -1054,8 +1102,11 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
       final related = await _innertube.radio(seed.videoId);
       final fresh = related.where((song) => !_songs.contains(song)).toList();
       if (fresh.isEmpty) return false;
-      _songs.addAll(fresh);
-      _unshuffled.addAll(fresh);
+      // The order it arrives in is YouTube's ranking of what goes with the
+      // seed, which is an order — so shuffled, it gets shuffled too, or the
+      // queue turns back into a list the moment it has to feed itself.
+      _rememberOrder(fresh);
+      _songs.addAll(_shuffled ? (List.of(fresh)..shuffle()) : fresh);
       _publishQueue();
       return true;
     } catch (_) {
@@ -1076,6 +1127,70 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
         userAgent: stream.userAgent,
       );
     });
+  }
+
+  /// Plays a whole collection shuffled, the way YouTube Music's own button does.
+  ///
+  /// Shuffling what the screen holds shuffles its first hundred rows, because
+  /// that is all a library surface answers at once — so pressing shuffle on a
+  /// long list drew, again and again, from the same first hundred. YouTube
+  /// shuffles it server-side over the whole thing instead, and answers with the
+  /// first fifty of that draw straight away; the rest is read behind the music.
+  ///
+  /// [inOrder] is the list as the screen shows it, kept as what turning shuffle
+  /// off goes back to.
+  ///
+  /// Answers false when there was nothing to play — signed out, no network, or
+  /// an id YouTube will not shuffle — and then the caller shuffles what it has,
+  /// which is the behaviour this replaces rather than an error.
+  Future<bool> shuffleCollection(
+    String playlistId, {
+    List<Song> inOrder = const [],
+  }) async {
+    final ({List<Song> songs, String? continuation}) page;
+    try {
+      page = await _innertube.shuffledCollection(playlistId);
+    } catch (_) {
+      return false;
+    }
+    if (page.songs.isEmpty) return false;
+
+    _shuffled = true;
+    await setQueue(page.songs, inOrder: inOrder);
+    playbackState.add(playbackState.value
+        .copyWith(shuffleMode: AudioServiceShuffleMode.all));
+
+    final more = page.continuation;
+    if (more != null) unawaited(_growQueue(more, _generation));
+    return true;
+  }
+
+  /// Reads the rest of a shuffled collection behind the music.
+  ///
+  /// Fifty tracks are three hours and enough to start on, so nothing waits for
+  /// this. A queue replaced while it runs is a different queue, and the
+  /// generation is what tells the two apart.
+  Future<void> _growQueue(String continuation, int generation) async {
+    var token = continuation;
+    while (_generation == generation) {
+      final ({List<Song> songs, String? continuation}) page;
+      try {
+        page = await _innertube.watchQueueAfter(token);
+      } catch (_) {
+        return;
+      }
+      if (_generation != generation) return;
+
+      final fresh = page.songs.where((song) => !_songs.contains(song)).toList();
+      if (fresh.isEmpty) return;
+      _songs.addAll(fresh);
+      _rememberOrder(fresh);
+      _publishQueue();
+
+      final next = page.continuation;
+      if (next == null) return;
+      token = next;
+    }
   }
 
   /// Starts a radio from one track: it plays, and what YouTube says goes with

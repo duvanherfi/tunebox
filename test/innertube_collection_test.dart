@@ -24,6 +24,126 @@ void main() {
     return session;
   }
 
+  group('shuffledCollection', () {
+    /// The shape `next` really answers with, cut to two tracks: the queue hangs
+    /// off a `playlistPanelRenderer` and the token for the next fifty arrives
+    /// in the older `nextContinuationData` form rather than a command.
+    String queueJson() => jsonEncode({
+          'contents': {
+            'singleColumnMusicWatchNextResultsRenderer': {
+              'tabbedRenderer': {
+                'watchNextTabbedResultsRenderer': {
+                  'tabs': [
+                    {
+                      'tabRenderer': {
+                        'content': {
+                          'musicQueueRenderer': {
+                            'content': {
+                              'playlistPanelRenderer': {
+                                'contents': [
+                                  {
+                                    'playlistPanelVideoRenderer': {
+                                      'videoId': 'zzz',
+                                      'title': {
+                                        'runs': [
+                                          {'text': 'Last one'}
+                                        ]
+                                      },
+                                      'longBylineText': {
+                                        'runs': [
+                                          {'text': 'Someone'}
+                                        ]
+                                      },
+                                    }
+                                  },
+                                  {
+                                    'playlistPanelVideoRenderer': {
+                                      'videoId': 'aaa',
+                                      'title': {
+                                        'runs': [
+                                          {'text': 'First one'}
+                                        ]
+                                      },
+                                      'longBylineText': {
+                                        'runs': [
+                                          {'text': 'Someone'}
+                                        ]
+                                      },
+                                    }
+                                  },
+                                ],
+                                'continuations': [
+                                  {
+                                    'nextContinuationData': {
+                                      'continuation': 'more-please'
+                                    }
+                                  }
+                                ],
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        });
+
+    test('asks YouTube to shuffle the whole list', () async {
+      late http.Request captured;
+      final innertube = InnertubeClient(
+        httpClient: MockClient((request) async {
+          captured = request;
+          return http.Response(queueJson(), 200);
+        }),
+      );
+
+      await innertube.shuffledCollection('VLPL123');
+
+      expect(captured.url.path, endsWith('/next'));
+      final body = jsonDecode(captured.body) as Map<String, dynamic>;
+      // The bare id: `VL` names a browse page, and `next` answers nothing for
+      // it. The params are YouTube's own shuffle, copied off the menu its
+      // playlist page ships.
+      expect(body['playlistId'], 'PL123');
+      expect(body['params'], 'wAEB8gECKAE%3D');
+      expect(body['isAudioOnly'], isTrue);
+    });
+
+    test('reads the queue and the token for the rest of it', () async {
+      final innertube = InnertubeClient(
+        httpClient: MockClient((_) async => http.Response(queueJson(), 200)),
+      );
+
+      final page = await innertube.shuffledCollection('PL123');
+
+      // In the order YouTube gave them, which is the whole point: sorting them
+      // here would undo the shuffle that was asked for.
+      expect(page.songs.map((song) => song.videoId).toList(), ['zzz', 'aaa']);
+      expect(page.continuation, 'more-please');
+    });
+
+    test('pages the rest with the token and nothing else', () async {
+      late http.Request captured;
+      final innertube = InnertubeClient(
+        httpClient: MockClient((request) async {
+          captured = request;
+          return http.Response(queueJson(), 200);
+        }),
+      );
+
+      await innertube.watchQueueAfter('more-please');
+
+      final body = jsonDecode(captured.body) as Map<String, dynamic>;
+      expect(body['continuation'], 'more-please');
+      expect(body.containsKey('playlistId'), isFalse);
+      expect(body.containsKey('params'), isFalse);
+    });
+  });
+
   group('collectionRadio', () {
     test('asks for the radio of the whole list, not of one track', () async {
       late http.Request captured;

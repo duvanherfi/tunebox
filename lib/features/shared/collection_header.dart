@@ -140,14 +140,7 @@ class CollectionHeader extends StatelessWidget {
                   FilledButton.tonalIcon(
                     onPressed: songs.isEmpty
                         ? null
-                        : () async {
-                            // Shuffle first, so the queue arrives already scrambled
-                            // rather than starting on track one and jumping.
-                            await playerService.setShuffleMode(
-                              AudioServiceShuffleMode.all,
-                            );
-                            await playerService.setQueue(songs);
-                          },
+                        : () => playShuffled(collection, songs, artist: artist),
                     icon: const Icon(Icons.shuffle_rounded),
                     label: Text(l10n.shuffle),
                   ),

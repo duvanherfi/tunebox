@@ -117,6 +117,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     pages: innertube.likedSongPages,
                     empty: l10n.libraryEmptyLikes,
                     list: RetiredIds.likes,
+                    shuffleId: 'LM',
                   )
                 else
                   _SignedOut(onSignIn: _signIn),
@@ -125,6 +126,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     pages: innertube.librarySongPages,
                     empty: l10n.libraryEmptySongs,
                     list: RetiredIds.library,
+                    // Not the id this tab browsed: `FEmusic_liked_videos`
+                    // answers nothing to `next`, and the shuffle its own page
+                    // offers names `MLCT`.
+                    shuffleId: 'MLCT',
                   )
                 else
                   _SignedOut(onSignIn: _signIn),
@@ -673,10 +678,16 @@ class _GrowingShelf extends StatelessWidget {
     required this.empty,
     this.list,
     this.mergeById = false,
+    this.shuffleId,
   });
 
   final Stream<List<Song>> Function() pages;
   final String empty;
+
+  /// The id YouTube shuffles this list under, for the tabs that have one. See
+  /// [SortedSongs.shuffleId]: what the tab holds is one page of the list, and
+  /// the history — which YouTube offers no shuffle for at all — has none.
+  final String? shuffleId;
 
   /// Which list this is, so a track taken off it here leaves the screen at
   /// once rather than at the next read.
@@ -704,7 +715,7 @@ class _GrowingShelf extends StatelessWidget {
           onRefresh: () async => view.reload(),
           // Sorted rather than shown in arrival order: [SortedSongs] reorders
           // whatever it is given, and half a list sorted reads as a whole one.
-          child: SortedSongs(songs: view.songs),
+          child: SortedSongs(songs: view.songs, shuffleId: shuffleId),
         );
       },
     );

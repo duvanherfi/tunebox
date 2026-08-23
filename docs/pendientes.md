@@ -243,6 +243,113 @@ versión.
 
 ## Hecho
 
+- **El botón de aleatorio en la biblioteca** (22 de agosto de 2026). El
+  aleatorio de servidor ya existía y sólo tenía puerta en playlist, álbum y
+  artista: las pestañas de la biblioteca no tenían ninguna, así que la lista
+  más larga de todas sólo se podía barajar tocando una fila y dándole al
+  interruptor, que ve la cola cargada y no la lista.
+  - **Qué baraja YouTube y bajo qué id**, medido contra la cuenta con `next` y
+    `params: wAEB8gECKAE%3D`: **`LM`** (Me gusta) da 50 por página y las 183 en
+    cuatro llamadas; **`MLCT`** —el id que ofrece la propia página de
+    `FEmusic_liked_videos`, que es la pestaña Canciones— pagina de 24 en 24 y
+    sigue (361 a las 40 llamadas), con sorteo fresco: dos seguidos comparten 3
+    de 25. Una playlist `PL…` y el `OLAK…` de un álbum también. Y contestan
+    **cero**: `VLLM`, `FEmusic_liked_videos` y `MPREb…` —hay que mandar el id
+    pelado, el `MLCT` y el `OLAK`—.
+  - **El historial no se puede barajar en el servidor y no es un olvido**:
+    `FEmusic_history` no trae ningún `watchPlaylistEndpoint`. YouTube tampoco
+    lo ofrece. Ahí, como en lo del dispositivo, se baraja lo que la pantalla
+    tiene.
+  - El botón vive en la cabecera de `SortedSongs`, que comparten todas las
+    listas de canciones, así que sale de una vez en Me gusta, Canciones,
+    Dispositivo, Descargas, Historial y las tres listas automáticas. Cada una
+    pasa su id —`LM`, `MLCT`, o ninguno— y `playShuffledList` pide el sorteo al
+    servidor si lo hay y baraja lo que tiene si no. Sin claves ARB nuevas: el
+    tooltip es el `shuffle` que ya usaba la cabecera de colección.
+  - Cuatro pruebas nuevas en `library_shuffle_test.dart`; 314 en verde y
+    `flutter analyze` limpio.
+  - **Comprobado en el emulador contra la cuenta real**, y las dos rutas se
+    distinguen por el tamaño de la cola en `dumpsys media_session`: "Me gusta"
+    (183 filas) arrancó en *Hello* de Adele, que no es la fila uno; "Canciones"
+    (598 filas en pantalla) arrancó en *Sigues Con Él (Remix)* y la cola quedó
+    en **337** —el sorteo del servidor, que fue creciendo de 24 en 24 detrás de
+    la música— en vez de las 598 que habría dado barajar lo cargado; y el
+    historial (383 filas) dio cola de **383** clavadas, que es el barajado
+    local. De paso: `MLCT` se queda en 337 de 598, el mismo hueco que ya está
+    apuntado arriba para 183 de 216.
+
+- **El aleatorio, entero** (22 de agosto de 2026). Se probó y se quedaba corto;
+  el barajado en sí nunca estuvo mal —`List.shuffle()` es Fisher-Yates— pero
+  lo que se barajaba y hasta dónde llegaba, sí. Cuatro cosas, medidas y
+  arregladas.
+  - **Barajaba sólo lo que había llegado.** El botón sale en cuanto hay una
+    fila, y una superficie de biblioteca contesta cien por página: la cola se
+    congelaba sobre la primera centena y el resto no entraba nunca. Ahí estaba
+    la sensación de "siempre salen las mismas".
+  - **YouTube tiene aleatorio de servidor y no lo usábamos.** Está en las
+    propias grabaciones: el menú de la playlist trae
+    `watchPlaylistEndpoint` con `params: wAEB8gECKAE%3D`, que va a `next`.
+    Medido contra la cuenta el 22 de agosto: devuelve **50 por página** con
+    continuación, dos llamadas seguidas comparten sólo **22 de 50** —así que
+    el sorteo es nuevo cada vez— y **baraja la lista entera**: de las veinte
+    primeras que dio para "Cool" (124 pistas), **ocho no estaban** en las 91
+    que había listado la primera página del `browse`. Paginando "Me gusta"
+    (`LM`) salen las **183** en cuatro peticiones. `VLLM` contesta 0: hay que
+    mandar el id pelado, que es lo que ya hacía `_bareId`.
+    Ahora `InnertubeClient.shuffledCollection` lo pide y
+    `PlayerService.shuffleCollection` lo pone a sonar; lo que la pantalla
+    tenía queda como el orden al que se vuelve al apagar el aleatorio, y el
+    resto del sorteo entra detrás de la música (`_growQueue`). Si la red o el
+    id no dan, se baraja lo que hay, que es lo de antes. Un álbum llega
+    entero y un artista no es una lista, así que ésos siguen locales.
+  - **Con repetir-todo, la segunda vuelta era la primera.** `_advance` volvía
+    al índice 0 sin rebarajar: una sola permutación en bucle. Ahora cada
+    vuelta es un sorteo nuevo.
+  - **El interruptor a mitad de cola dejaba media cola fuera.** `_shuffleAround`
+    soltaba la pista que sonaba en un sitio al azar, y todo lo que caía por
+    encima quedaba como parte ya pasada del recorrido: encender el aleatorio
+    en la segunda de cien tocaba, de media, cincuenta. Ahora la que suena se
+    queda donde está y se baraja lo que falta. Esto **revierte a propósito**
+    la mitad de `b6ce096`: aquella decisión estaba atada a que el botón de
+    barajar una playlist pasaba por aquí, y ya no —pasa por `setQueue` sin
+    índice, que es lo que impide que abra siempre por la pista uno.
+  - **El radio que continúa la cola se pegaba sin barajar.** El orden en que
+    YouTube lo manda es su ranking; con el aleatorio encendido, ahora se
+    baraja también.
+  - **Y un defecto que salió al comprobarlo en el emulador**: la cola de 115
+    pasaba a **180** al apagar el aleatorio. `_unshuffled` y `_songs` no
+    guardan lo mismo mientras hay un sorteo —el orden es lo que listó la
+    pantalla, la cola es lo que sacó el sorteo, que llega más lejos—, así que
+    una pista nueva *para la cola* no lo era para el orden y se metía dos
+    veces. `_rememberOrder` la mete una sola vez. Con la corrección: 115
+    únicas antes y después, la música sin cortarse (0:25 → 0:30), y al apagar
+    salen las 91 que la pantalla tenía **en su orden** y detrás las 24 que no
+    había listado.
+  - Comprobado en el emulador contra la cuenta real: tres pulsaciones de
+    "Aleatorio" en "Cool" dieron tres arranques distintos, ninguno la pista
+    uno —uno de ellos ni siquiera estaba en la primera página—, de 7 a 12
+    pistas de cada cola venían de más allá de esa página, y el solapamiento
+    entre dos colas fue de 24 de 50. La cola creció sola a 115.
+    Trece pruebas nuevas en `player_queue_test.dart` y tres en
+    `innertube_collection_test.dart`; 310 en verde y `flutter analyze` limpio.
+  - **Lo que quedó abierto de esto:** la puerta que faltaba en la biblioteca,
+    hecha justo después —la entrada de abajo—. Sigue abierto que de 124 pistas
+    de "Cool" la cola se queda en 115, como "Me gusta" se queda en 183 de 216:
+    mismo hueco, sin diagnosticar.
+
+- **La cola sí se expande al acabarse, y no hay ningún servicio que estemos
+  desaprovechando** (22 de agosto de 2026). Medido, porque la sospecha era que
+  faltaba algo: el radio de una pista (`RDAMVM…`) devuelve 50 y **sin
+  continuación**, también pidiéndolo con `enablePersistentPlaylistPanel` y
+  `tunerSettingValue: AUTOMIX_SETTING_NORMAL`, que es lo que manda el cliente
+  oficial. O sea que la forma de seguir es re-sembrar un radio desde la última
+  pista, que es justo lo que `_extendWithRadio` ya hacía. "Seguir sonando" está
+  encendida por defecto y no hay clave en las preferencias del emulador que
+  diga lo contrario. Ahora hay tres pruebas que lo fijan —una cola que se acaba
+  pide radio, una que se vuelve a acabar pide otro, y con la opción apagada no
+  pide ninguno—, así que si vuelve a pararse será algo que estas pruebas no
+  cubren y hay dónde empezar a mirar.
+
 - **Las acciones del menú de una fila** (22 de agosto de 2026). Quitar del
   historial, quitar una canción de una playlist, renombrar y borrar playlists,
   fijar y desfijar en "Vuelve a escucharlo", y ver los créditos. Todo medido
