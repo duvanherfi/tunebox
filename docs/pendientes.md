@@ -85,6 +85,18 @@ de abajo.
 Cosas que funcionan a medias y conviene mirar antes de dar por cerrada una
 versión.
 
+- **Una prueba del reproductor se pone roja bajo carga.** Salió al lanzar la
+  0.1.9 (22 de agosto de 2026): en la corrida completa, `player_queue_test` →
+  *a queue that ran out with repeat on comes back to the top* falló con
+  `PathNotFoundException … history.json` y "*This test failed after it had
+  already completed*"; aislada pasa tres de tres, y la corrida siguiente pasó
+  entera. Diagnóstico: `_playIndex` graba en el log **sin `await`** —nadie
+  guarda ese futuro—, así que la escritura puede seguir en vuelo cuando el
+  `tearDown` ya borró la carpeta temporal. `removeWhenSettled` cubre el caso
+  contrario —el borrado que falla porque algo escribe— pero no éste. Arreglarlo
+  de verdad pide que la prueba pueda esperar a que la última escritura aterrice
+  (un futuro observable en `PlayHistory`), no un `delayed` a ojo.
+
 - **El plural de "1 canciones".** Visto al listar una sola pista del
   dispositivo (22 de agosto de 2026), en los dos idiomas: la cabecera de
   `SortedSongs` dice *1 canciones* y *1 tracks*. La clave es `sortCount`, y es
