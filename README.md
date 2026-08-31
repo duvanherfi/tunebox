@@ -1,63 +1,63 @@
 # Tunebox
 
-[![Última versión](https://img.shields.io/github/v/release/duvanherfi/tunebox?label=versi%C3%B3n)](https://github.com/duvanherfi/tunebox/releases/latest)
-[![Descargas](https://img.shields.io/github/downloads/duvanherfi/tunebox/total?label=descargas)](https://github.com/duvanherfi/tunebox/releases)
-[![Licencia](https://img.shields.io/github/license/duvanherfi/tunebox)](LICENSE)
+[![Latest version](https://img.shields.io/github/v/release/duvanherfi/tunebox?label=version)](https://github.com/duvanherfi/tunebox/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/duvanherfi/tunebox/total?label=downloads)](https://github.com/duvanherfi/tunebox/releases)
+[![License](https://img.shields.io/github/license/duvanherfi/tunebox)](LICENSE)
 
-Reproductor de música en Flutter que lee el catálogo de YouTube Music a través
-de InnerTube, la API interna que usa la propia web de YouTube. Corre en Android
-y en macOS, y se usa a diario.
+A Flutter music player that reads the YouTube Music catalogue through InnerTube,
+the internal API that YouTube's own web app uses. It runs on Android and macOS,
+and it gets daily use.
 
-**No usa microG ni Google Play Services.** microG existe para que las apps
-parcheadas (ReVanced, Vanced) puedan iniciar sesión pese a no estar firmadas por
-Google; esa capa emulada es justamente la que cuesta rendimiento. Aquí se habla
-directo con la API por HTTP y el audio va a ExoPlayer nativo, sin WebView.
+**No microG, no Google Play Services.** microG exists so that patched apps
+(ReVanced, Vanced) can sign in despite not being signed by Google; that emulated
+layer is exactly what costs performance. Here the API is spoken to directly over
+HTTP and the audio goes to native ExoPlayer, with no WebView.
 
-El historial **no** se escribe en la cuenta de YouTube: los pings se envían tal
-y como los manda la web, YouTube responde 204 y no aparece nada en
-`FEmusic_history`. Por eso el historial, las estadísticas y el scrobbling se
-llevan en el dispositivo. Lo medido está en
+History is **not** written back to the YouTube account: the pings are sent
+exactly as the web app sends them, YouTube answers 204, and nothing shows up in
+`FEmusic_history`. That is why history, statistics and scrobbling are kept on
+the device. The measurements are in
 [`docs/streaming-findings.md`](docs/streaming-findings.md).
 
-## Cómo se ve
+## What it looks like
 
-| Inicio | Reproductor | Letra sincronizada | Cola |
+| Home | Player | Synced lyrics | Queue |
 |---|---|---|---|
-| ![Inicio](docs/screenshots/inicio.png) | ![Reproductor](docs/screenshots/reproductor.png) | ![Letra sincronizada](docs/screenshots/letra.png) | ![Cola](docs/screenshots/cola.png) |
+| ![Home](docs/screenshots/inicio.png) | ![Player](docs/screenshots/reproductor.png) | ![Synced lyrics](docs/screenshots/letra.png) | ![Queue](docs/screenshots/cola.png) |
 
-| Explorar | Buscar | Temporizador, velocidad y ecualizador | Modo mesita de noche |
+| Explore | Search | Sleep timer, speed and equalizer | Nightstand mode |
 |---|---|---|---|
-| ![Explorar](docs/screenshots/explorar.png) | ![Buscar](docs/screenshots/buscar.png) | ![Temporizador, velocidad y ecualizador](docs/screenshots/ajustes-reproduccion.png) | ![Modo mesita de noche](docs/screenshots/mesita.png) |
+| ![Explore](docs/screenshots/explorar.png) | ![Search](docs/screenshots/buscar.png) | ![Sleep timer, speed and equalizer](docs/screenshots/ajustes-reproduccion.png) | ![Nightstand mode](docs/screenshots/mesita.png) |
 
-En el Mac es la misma app y el mismo código; lo que cambia es que el reproductor
-se abre a dos columnas y las estanterías caben enteras.
+On the Mac it is the same app and the same code; what changes is that the player
+opens in two columns and the shelves fit whole.
 
-![Inicio en macOS](docs/screenshots/macos-inicio.png)
+![Home on macOS](docs/screenshots/macos-inicio.png)
 
-![Reproductor en macOS](docs/screenshots/macos-reproductor.png)
+![Player on macOS](docs/screenshots/macos-reproductor.png)
 
-Las capturas de Android salen con la interfaz en inglés y las del Mac en
-español: es el mismo build, leyendo el idioma del aparato. La foto de la cuenta
-está difuminada a propósito.
+The Android screenshots show the interface in English and the Mac ones in
+Spanish: same build, reading the device's language. The account picture is
+blurred on purpose.
 
-## Instalar
+## Install
 
-El APK de cada versión está en las
-[releases](https://github.com/duvanherfi/tunebox/releases). Es universal: un
-solo archivo con `arm64-v8a`, `armeabi-v7a` y `x86_64` dentro, así que sirve
-para cualquier teléfono con Android 7 o superior.
+The APK for each version is on the
+[releases](https://github.com/duvanherfi/tunebox/releases) page. It is
+universal: a single file carrying `arm64-v8a`, `armeabi-v7a` and `x86_64`, so it
+works on any phone running Android 7 or later.
 
-A partir de la 0.1.4 **la app se actualiza sola**: mira una vez al día si hay
-una versión nueva, la ofrece y la instala. Comprueba que el APK descargado esté
-firmado con la misma clave que la copia instalada antes de entregárselo al
-instalador del sistema; uno que no lo esté se descarta. Se apaga en
-Ajustes › System.
+From 0.1.4 on, **the app updates itself**: it checks once a day for a new
+version, offers it and installs it. It verifies that the downloaded APK is
+signed with the same key as the installed copy before handing it to the system
+installer; one that is not gets discarded. It can be turned off in
+Settings › System.
 
-Windows y Linux no están: `audio_service` y `just_audio` solo declaran android,
-ios, macos y web, y el reproductor **es** un `BaseAudioHandler`, así que esas
-plataformas compilarían y morirían al arrancar el servicio.
+Windows and Linux are not there: `audio_service` and `just_audio` only declare
+android, ios, macos and web, and the player **is** a `BaseAudioHandler`, so
+those platforms would build and then die as soon as the service started.
 
-## Compilar
+## Build
 
 ```bash
 flutter pub get
@@ -65,8 +65,8 @@ flutter test
 flutter run
 ```
 
-Para una compilación firmada hace falta `android/key.properties` —ignorado por
-git— apuntando al almacén de claves:
+A signed build needs `android/key.properties` — git-ignored — pointing at the
+keystore:
 
 ```properties
 storePassword=…
@@ -75,39 +75,39 @@ keyAlias=tunebox
 storeFile=tunebox-release.jks
 ```
 
-Sin ese archivo la compilación sigue funcionando y firma con la clave de
-depuración. **La clave de release no se puede perder**: Android se niega a
-actualizar una app instalada si la nueva versión viene firmada con otra clave, y
-aquí no hay tienda que rehaga la firma por su cuenta.
+Without that file the build still works and signs with the debug key. **The
+release key must not be lost**: Android refuses to update an installed app if
+the new version is signed with a different key, and there is no store here to
+re-sign it.
 
-Publicar una versión es `tool/release.sh <notas>`, que construye, comprueba la
-firma y los recursos que el *shrinker* podría haberse comido, etiqueta y sube la
-release con el APK nombrado por su número de compilación.
+Publishing a version is `tool/release.sh <notes>`, which builds, checks the
+signature and the resources the shrinker might have eaten, tags, and uploads the
+release with the APK named after its build number.
 
-## Dónde está lo demás
+## Where everything else is
 
-- [`CLAUDE.md`](CLAUDE.md) — el mapa de trabajo: cómo está cableado el proyecto,
-  qué decisión hay detrás de cada pieza y qué no conviene deshacer.
-- [`docs/streaming-findings.md`](docs/streaming-findings.md) — lo que se midió
-  contra los servidores de YouTube: por qué la reproducción necesita un proxy
-  que trocee, qué identidades de cliente funcionan y qué pasa con el historial.
-  **Léelo antes de tocar `core/innertube` o `core/audio`**: casi toda
-  simplificación evidente de ahí ya se probó y falló.
-- [`docs/pendientes.md`](docs/pendientes.md) — qué está hecho, qué falta y qué
-  quedó a medias.
+- [`CLAUDE.md`](CLAUDE.md) — the working map: how the project is wired, the
+  decision behind each piece, and what should not be undone.
+- [`docs/streaming-findings.md`](docs/streaming-findings.md) — what was measured
+  against YouTube's servers: why playback needs a chunking proxy, which client
+  identities work, and what happens with history. **Read it before touching
+  `core/innertube` or `core/audio`**: nearly every obvious simplification in
+  there has already been tried, and failed.
+- [`docs/pendientes.md`](docs/pendientes.md) — what is done, what is missing and
+  what was left half-way.
 
-Si la reproducción deja de funcionar de golpe —`player` respondiendo 400 o
-`LOGIN_REQUIRED` para todo—, no es un bloqueo ni un problema de cookies: es que
-YouTube retiró el build del cliente. Sube `version` en los perfiles de
-`lib/core/innertube/innertube_client.dart` y el *user agent* a juego. Es un
-cambio de dos líneas y está explicado en `CLAUDE.md`.
+If playback suddenly stops working — `player` answering 400 or `LOGIN_REQUIRED`
+for everything — it is not a block and not a cookie problem: YouTube retired the
+client build. Bump `version` in the profiles in
+`lib/core/innertube/innertube_client.dart` and the matching user agent. It is a
+two-line change and it is explained in `CLAUDE.md`.
 
-## Licencia
+## License
 
-GPL-3.0. Copyright (C) 2026 Duvan Hernandez Figueroa. El texto completo está en
+GPL-3.0. Copyright (C) 2026 Duvan Hernandez Figueroa. The full text is in
 [`LICENSE`](LICENSE).
 
-Copyleft fuerte: puedes usar, estudiar, modificar y redistribuir este código,
-pero si distribuyes una versión — con cambios o sin ellos — estás obligado a
-publicar su fuente bajo esta misma licencia. Es la que usan NewPipe, InnerTune y
-OuterTune, y viene sin garantía de ningún tipo.
+Strong copyleft: you may use, study, modify and redistribute this code, but if
+you distribute a version — modified or not — you are required to publish its
+source under this same license. It is the one NewPipe, InnerTune and OuterTune
+use, and it comes with no warranty of any kind.
