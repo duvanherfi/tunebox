@@ -2,10 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_theme.dart';
 import '../../l10n/app_localizations.dart';
-import '../../core/innertube/innertube_client.dart';
-import '../../data/models/song.dart';
+import '../../data/models/playlist.dart';
+import '../../data/models/search.dart';
 import '../../main.dart';
+import '../shared/chip_row.dart';
+import '../shared/shelf_row.dart';
 import '../shared/skeleton.dart';
 import '../shared/song_list_view.dart';
 
@@ -24,8 +27,11 @@ class _SearchScreenState extends State<SearchScreen>
 
   final _focus = FocusNode();
 
-  List<Song> _results = const [];
-  SearchFilter? _filter;
+  SearchResults _results = const SearchResults();
+
+  /// The token of the filter in force, as YouTube handed it out. Null is
+  /// everything.
+  String? _filter;
   String _lastQuery = '';
   bool _loading = false;
   String? _error;
@@ -88,7 +94,7 @@ class _SearchScreenState extends State<SearchScreen>
     });
 
     try {
-      final results = await innertube.search(text, filter: _filter);
+      final results = await innertube.search(text, params: _filter);
       if (!mounted) return;
       setState(() {
         _results = results;
@@ -103,16 +109,9 @@ class _SearchScreenState extends State<SearchScreen>
     }
   }
 
-  void _selectFilter(SearchFilter? filter) {
-    setState(() => _filter = filter);
+  void _selectFilter(String? params) {
+    setState(() => _filter = params);
     if (_lastQuery.isNotEmpty) _search(query: _lastQuery);
-  }
-
-  String _filterLabel(AppLocalizations l10n, SearchFilter filter) {
-    return switch (filter) {
-      SearchFilter.songs => l10n.filterSongs,
-      SearchFilter.videos => l10n.filterVideos,
-    };
   }
 
   @override
@@ -135,7 +134,7 @@ class _SearchScreenState extends State<SearchScreen>
                   icon: const Icon(Icons.close_rounded),
                   onPressed: () => setState(() {
                     _controller.clear();
-                    _results = const [];
+                    _results = const SearchResults();
                     _lastQuery = '';
                   }),
                 ),
@@ -148,26 +147,19 @@ class _SearchScreenState extends State<SearchScreen>
         // Only shown once there is something to narrow, so an empty screen
         // stays empty instead of offering controls that do nothing.
         if (_lastQuery.isNotEmpty && !_suggesting)
-          SizedBox(
-            height: 44,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: [
-                _Chip(
-                  label: l10n.filterAll,
-                  selected: _filter == null,
-                  onSelected: () => _selectFilter(null),
-                ),
-                for (final filter in SearchFilter.values)
-                  _Chip(
-                    label: _filterLabel(l10n, filter),
-                    selected: _filter == filter,
-                    onSelected: () => _selectFilter(filter),
-                  ),
-              ],
+          ChipRow(options: [
+            (
+              label: l10n.filterAll,
+              selected: _filter == null,
+              onSelected: () => _selectFilter(null),
             ),
-          ),
+            for (final filter in _results.filters)
+              (
+                label: filter.label,
+                selected: _filter == filter.params,
+                onSelected: () => _selectFilter(filter.params),
+              ),
+          ]),
         Expanded(child: _buildBody(l10n)),
       ],
     );
@@ -213,7 +205,115 @@ class _SearchScreenState extends State<SearchScreen>
       );
     }
 
-    return SongListView(songs: _results);
+    return _Results(results: _results);
+  }
+}
+
+/// Everything the search answered with, in the order it ranked it.
+///
+/// One column with both shapes in it, which is what YouTube Music does: an
+/// album, an artist and a track sit next to each other and the metadata line
+/// says which is which — YouTube writes it there itself, translated. Grouping
+/// them would mean inventing sections the response never sent.
+class _Results extends StatelessWidget {
+  const _Results({required this.results});
+
+  final SearchResults results;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = results.results;
+
+    return ListView.builder(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: EdgeInsets.only(bottom: 8 + MediaQuery.paddingOf(context).bottom),
+      itemCount: rows.length,
+      itemBuilder: (context, index) {
+        final row = rows[index];
+        if (row.song != null) {
+          // A tap starts that track and its radio, not the other results: they
+          // are ranked answers to a query, not a list anyone chose to hear in
+          // order. It is the link YouTube Music puts on the same row — a video
+          // id with no list behind it.
+          return SongRow(
+            songs: [row.song!],
+            index: 0,
+            startsRadio: true,
+          );
+        }
+        return _CollectionRow(collection: row.collection!, kind: row.kind!);
+      },
+    );
+  }
+}
+
+/// A result that opens a page instead of playing something.
+///
+/// The same shape as a track's row — cover, title, metadata line — because the
+/// two are mixed into one column and a different shape would read as a
+/// different list. Only the cover changes: a person is round, and the arrow
+/// says this row goes somewhere rather than starting.
+class _CollectionRow extends StatelessWidget {
+  const _CollectionRow({required this.collection, required this.kind});
+
+  final Playlist collection;
+  final CollectionKind kind;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final person =
+        kind == CollectionKind.artist || kind == CollectionKind.profile;
+
+    return InkWell(
+      onTap: () => openCollection(context, collection, kind: kind),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          children: [
+            Artwork(
+              url: collection.thumbnailUrl,
+              radius: person ? 26 : AppTheme.radiusArtwork,
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    collection.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    collection.subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // The width a track's menu button takes, so both kinds of row end
+            // on the same line.
+            SizedBox(
+              width: 48,
+              child: Icon(
+                Icons.chevron_right_rounded,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -288,31 +388,6 @@ class _Recents extends StatelessWidget {
               onTap: () => onPick(query),
             ),
         ],
-      ),
-    );
-  }
-}
-
-class _Chip extends StatelessWidget {
-  const _Chip({
-    required this.label,
-    required this.selected,
-    required this.onSelected,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: FilterChip(
-        label: Text(label),
-        selected: selected,
-        showCheckmark: true,
-        onSelected: (_) => onSelected(),
       ),
     );
   }

@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 
 import '../../data/models/credits.dart';
 import '../../data/models/playlist.dart';
+import '../../data/models/search.dart';
 import '../../data/models/song.dart';
 import '../auth/session.dart';
 import 'parsers.dart';
@@ -166,19 +167,6 @@ const _streamClients = <_ClientProfile>[
   ),
 ];
 
-/// Search filters, as the opaque tokens InnerTube expects.
-///
-/// Only the token lives here; the visible name belongs to the UI, where the
-/// translations are.
-enum SearchFilter {
-  songs('EgWKAQIIAWoKEAkQBRAKEAMQBA=='),
-  videos('EgWKAQIQAWoKEAkQBRAKEAMQBA==');
-
-  const SearchFilter(this.params);
-
-  final String params;
-}
-
 class InnertubeException implements Exception {
   InnertubeException(this.message);
   final String message;
@@ -273,14 +261,18 @@ class InnertubeClient {
 
   /// Full-text search across YouTube Music.
   ///
-  /// [filter] narrows results to one kind of thing. Only the filters that
-  /// yield playable rows are offered: album and artist results come back as
-  /// browse cards with no video id, so they would render as an empty list.
-  Future<List<Song>> search(String query, {SearchFilter? filter}) async {
-    if (query.trim().isEmpty) return const [];
+  /// Answers with everything the response ranked — tracks, albums, artists,
+  /// playlists, profiles and podcasts — rather than only what can start
+  /// playing, and with the ways YouTube offers to narrow it. [params] is one of
+  /// those ways, passed back exactly as it arrived: the filters used to be two
+  /// tokens written out here, and they are nine that come with every response.
+  ///
+  /// One page and no more. Search hands out no continuation, filtered or not.
+  Future<SearchResults> search(String query, {String? params}) async {
+    if (query.trim().isEmpty) return const SearchResults();
     final json = await _post(_musicBase, 'search', _webRemix, {
       'query': query,
-      if (filter != null) 'params': filter.params,
+      'params': ?params,
     });
     return parseSearchResults(json);
   }
@@ -325,13 +317,52 @@ class InnertubeClient {
       _post(_musicBase, 'browse', _webRemix, {'continuation': token});
 
   /// What the app shows on opening: whatever YouTube Music puts on its front
-  /// page for this client.
+  /// page for this client, one page at a time.
   ///
   /// Signed out this is a couple of rows of playlists rather than songs, which
   /// is not a limitation to work around — recommendations need a listening
   /// history, and without one there is nothing personal to recommend.
-  Future<List<Shelf>> homeFeed() async =>
-      parseShelves(await browse('FEmusic_home'));
+  ///
+  /// A page and not the whole thing because `FEmusic_home` hands over a handful
+  /// of shelves and hides the rest behind a continuation: measured against the
+  /// account on the web, six shelves on loading and twenty after scrolling.
+  /// Asking for one page was showing not the front page but its first third.
+  ///
+  /// [params] is a mood chip's token — the same browse id refiltered, which is
+  /// what the chips over the web's home do — and [continuation] the token the
+  /// previous page ended with.
+  ///
+  /// The continuation only answers if it is asked for as whoever asked for the
+  /// first page. Sent without the visitor id that response carried, YouTube
+  /// answers an empty tab instead of the next shelves — measured signed out on
+  /// 10 September 2026: 1 KB of nothing without it, three more shelves with it.
+  Future<({List<Shelf> shelves, List<Playlist> chips, String? nextToken})>
+      homeFeed({String? params, String? continuation}) async {
+    final json = await _post(
+      _musicBase,
+      'browse',
+      _webRemix,
+      continuation == null
+          ? {'browseId': 'FEmusic_home', 'params': ?params}
+          : {'continuation': continuation},
+      visitorData: _visitorData,
+    );
+
+    // The home is the first request the app makes, so it is also the cheapest
+    // place to learn the identity YouTube hands this client: the continuation
+    // below needs it, and taking it here saves [visitorData] the round trip it
+    // would otherwise make on its own before the first track resolves.
+    _visitorData ??=
+        readPath(json, ['responseContext', 'visitorData']) as String?;
+
+    return (
+      shelves: parseShelves(json),
+      // Only the first page carries them, and they are the same ten whichever
+      // chip is selected; a continuation is shelves and nothing else.
+      chips: continuation == null ? parseHomeChips(json) : const <Playlist>[],
+      nextToken: parseContinuationToken(json),
+    );
+  }
 
   /// Tells YouTube a track started, so it lands in the account's history.
   ///
@@ -932,10 +963,13 @@ class InnertubeClient {
     return parseSongList(await browse(_asBrowseId(playlistId)));
   }
 
-  /// Albums are addressed directly; playlists need a `VL` prefix. Prefixing an
-  /// album id would ask for a playlist that does not exist.
+  /// Albums and podcast shows are addressed directly; playlists need a `VL`
+  /// prefix. Prefixing an album id would ask for a playlist that does not
+  /// exist, and a show (`MPSP`) is the same story.
   static String _asBrowseId(String id) {
-    if (id.startsWith('VL') || id.startsWith('MPRE')) return id;
+    if (id.startsWith('VL') || id.startsWith('MPRE') || id.startsWith('MPSP')) {
+      return id;
+    }
     return 'VL$id';
   }
 

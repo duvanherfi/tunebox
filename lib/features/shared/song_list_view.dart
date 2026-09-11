@@ -48,7 +48,7 @@ class SongListView extends StatelessWidget {
 ///
 /// It takes the whole list rather than a single song because tapping a row has
 /// always meant "play from here": the queue that follows is the rest of what
-/// was on screen.
+/// was on screen. Where that list is not a queue, [startsRadio] says so.
 class SongRow extends StatelessWidget {
   const SongRow({
     super.key,
@@ -56,6 +56,7 @@ class SongRow extends StatelessWidget {
     required this.index,
     this.numbered = false,
     this.playlistId,
+    this.startsRadio = false,
   });
 
   final List<Song> songs;
@@ -70,12 +71,22 @@ class SongRow extends StatelessWidget {
   /// the same grey placeholder.
   final bool numbered;
 
+  /// Plays the track on its own and lets YouTube say what follows, instead of
+  /// queueing the list around it. For a list that is not a queue — search
+  /// results, where the rows only share the words that were typed — the rest of
+  /// what is on screen is the wrong thing to hear next.
+  final bool startsRadio;
+
   Future<void> _play(BuildContext context) async {
     // A tap that starts a track resolves over the network before anything
     // moves on screen; the tick is the acknowledgement in the meantime.
     unawaited(HapticFeedback.selectionClick());
     try {
-      await playerService.setQueue(songs, startIndex: index);
+      if (startsRadio) {
+        await playerService.startRadio(songs[index]);
+      } else {
+        await playerService.setQueue(songs, startIndex: index);
+      }
     } catch (error) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

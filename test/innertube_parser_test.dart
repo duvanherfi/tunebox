@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tunebox/core/innertube/parsers.dart';
+import 'package:tunebox/data/models/search.dart';
 
 /// These run against real responses recorded from InnerTube.
 ///
@@ -17,7 +18,7 @@ Map<String, dynamic> _fixture(String name) =>
 void main() {
   group('parseSearchResults', () {
     test('extracts playable tracks from a search response', () {
-      final songs = parseSearchResults(_fixture('search_daft_punk.json'));
+      final songs = parseSearchResults(_fixture('search_daft_punk.json')).songs;
 
       expect(songs, isNotEmpty);
       expect(songs.every((song) => song.videoId.isNotEmpty), isTrue);
@@ -25,14 +26,14 @@ void main() {
     });
 
     test('deduplicates tracks repeated across shelves', () {
-      final songs = parseSearchResults(_fixture('search_daft_punk.json'));
+      final songs = parseSearchResults(_fixture('search_daft_punk.json')).songs;
       final ids = songs.map((song) => song.videoId).toSet();
 
       expect(ids.length, songs.length);
     });
 
     test('reads artwork and duration when present', () {
-      final songs = parseSearchResults(_fixture('search_daft_punk.json'));
+      final songs = parseSearchResults(_fixture('search_daft_punk.json')).songs;
 
       expect(songs.any((song) => song.thumbnailUrl != null), isTrue,
           reason: 'thumbnail path changed');
@@ -41,7 +42,7 @@ void main() {
     });
 
     test('keeps the duration out of the metadata line', () {
-      final songs = parseSearchResults(_fixture('search_daft_punk.json'));
+      final songs = parseSearchResults(_fixture('search_daft_punk.json')).songs;
       final timed = songs.where((song) => song.duration != null);
 
       expect(timed, isNotEmpty, reason: 'nothing to check otherwise');
@@ -54,8 +55,102 @@ void main() {
       }
     });
 
+    // The whole point of the parser: the response holds far more than tracks,
+    // and every row of it is a page the app can open. Measured on 10 September
+    // 2026 against the same query these fixtures were recorded from.
+    test('keeps the rows that are pages, not tracks', () {
+      final results = parseSearchResults(_fixture('search_daft_punk.json'));
+      final kinds = <CollectionKind, int>{};
+      for (final row in results.results) {
+        if (row.kind != null) kinds.update(row.kind!, (n) => n + 1, ifAbsent: () => 1);
+      }
+
+      // 14 playable rows plus the top-result card, which is not one of them.
+      expect(results.songs.length, 15);
+      expect(kinds, {
+        CollectionKind.album: 3,
+        CollectionKind.artist: 3,
+        CollectionKind.playlist: 6,
+        CollectionKind.profile: 3,
+        CollectionKind.podcast: 3,
+      });
+    });
+
+    test('tells a profile from an artist, which share a prefix', () {
+      final results = parseSearchResults(_fixture('search_daft_punk.json'));
+      final profiles = results.results
+          .where((row) => row.kind == CollectionKind.profile)
+          .map((row) => row.collection!);
+
+      expect(profiles, isNotEmpty);
+      expect(
+        profiles.every((profile) => profile.browseId.startsWith('UC')),
+        isTrue,
+        reason: 'the id alone would call these artists',
+      );
+    });
+
+    test('leads with the top-result card', () {
+      final results = parseSearchResults(_fixture('search_daft_punk.json'));
+
+      expect(results.results.first.song?.videoId, '5NV6Rdv1a3I');
+      expect(
+        results.songs.map((song) => song.videoId).toSet().length,
+        results.songs.length,
+        reason: 'the card is often listed again below, and would show twice',
+      );
+    });
+
+    test('reads the filters YouTube offers, tokens included', () {
+      final filters = parseSearchResults(_fixture('search_daft_punk.json')).filters;
+
+      expect(filters.length, 9);
+      expect(filters.every((filter) => filter.label.isNotEmpty), isTrue);
+      expect(filters.every((filter) => filter.params.isNotEmpty), isTrue);
+      expect(
+        filters.any((filter) => filter.params.contains('%')),
+        isFalse,
+        reason: 'an escaped token asks for nothing',
+      );
+    });
+
     test('returns nothing for a response with no result renderers', () {
-      expect(parseSearchResults(const {'contents': {}}), isEmpty);
+      expect(parseSearchResults(const {'contents': {}}).isEmpty, isTrue);
+    });
+  });
+
+  group('podcasts and channels', () {
+    // A show's episodes arrive in a renderer nothing else in the app uses, and
+    // they were the reason a podcast opened as an empty list.
+    test('reads a show as the list of tracks it is', () {
+      final songs = parseSongList(_fixture('podcast_page.json'));
+
+      expect(songs, isNotEmpty);
+      expect(songs.every((song) => song.videoId.isNotEmpty), isTrue);
+      expect(songs.every((song) => song.title.isNotEmpty), isTrue);
+      expect(songs.every((song) => song.thumbnailUrl != null), isTrue);
+    });
+
+    test('names the show', () {
+      expect(parsePageHeader(_fixture('podcast_page.json')).title, 'Music Story');
+    });
+
+    // A profile from search opens on the artist page, and a channel heads
+    // itself with a renderer no other page uses: without it the page came up
+    // blank at the top.
+    test('names a channel, which heads itself differently', () {
+      final header = parsePageHeader(_fixture('channel_page.json'));
+
+      expect(header.title, isNotEmpty);
+      expect(header.thumbnailUrl, isNotNull);
+    });
+
+    test('reads what a channel published', () {
+      final shelves = parseShelves(_fixture('channel_page.json'));
+
+      expect(shelves, isNotEmpty);
+      expect(shelves.every((shelf) => shelf.title.isNotEmpty), isTrue);
+      expect(shelves.any((shelf) => shelf.playlists.isNotEmpty), isTrue);
     });
   });
 
@@ -143,6 +238,38 @@ void main() {
       });
 
       expect(shelves, isEmpty);
+    });
+  });
+
+  group('parseHomeChips', () {
+    test('reads the moods over the front page', () {
+      final chips = parseHomeChips(_fixture('home_page.json'));
+
+      expect(chips, hasLength(10));
+      expect(chips.map((chip) => chip.title), contains('Relax'));
+      expect(
+        chips.every((chip) => chip.browseId == 'FEmusic_home'),
+        isTrue,
+        reason: 'a mood is the same page asked for again, refiltered',
+      );
+      expect(
+        chips.map((chip) => chip.params).toSet(),
+        hasLength(10),
+        reason: 'the token is the only thing telling one mood from another',
+      );
+    });
+
+    test('leaves the chips of a search alone', () {
+      expect(
+        parseHomeChips(_fixture('search_daft_punk.json')),
+        isEmpty,
+        reason: 'a search filter is the same renderer over a search endpoint, '
+            'and it narrows a query rather than a page',
+      );
+    });
+
+    test('finds where the front page carries on', () {
+      expect(parseContinuationToken(_fixture('home_page.json')), isNotEmpty);
     });
   });
 

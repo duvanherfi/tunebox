@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../data/models/playlist.dart';
+import '../../data/models/search.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../browse/album_screen.dart';
@@ -73,15 +74,35 @@ class ShelfRow extends StatelessWidget {
 
 /// Opens whatever a card points at.
 ///
-/// YouTube encodes the kind of page in the id itself, which is the only clue a
-/// card carries: albums start with `MPRE`, artist channels with `UC`. Anything
-/// else is a playlist, including every mix.
-void openCollection(BuildContext context, Playlist collection) {
+/// A card from a shelf carries only its id, and YouTube encodes the kind of
+/// page in the id itself: albums start with `MPRE`, artist channels with `UC`,
+/// and anything else is a playlist, including every mix. A search row knows
+/// better than the id does — a profile's id starts with `UC` exactly like an
+/// artist's — so it says so with [kind].
+///
+/// A profile opens on the artist page on purpose: a channel answers with the
+/// same shape an artist does, shelves of what they published, and the page
+/// already draws that.
+void openCollection(
+  BuildContext context,
+  Playlist collection, {
+  CollectionKind? kind,
+}) {
   final id = collection.browseId;
-  final screen = switch (id) {
-    _ when id.startsWith('MPRE') => AlbumScreen(browseId: id, title: collection.title),
-    _ when isArtistId(id) => ArtistScreen(browseId: id, name: collection.title),
-    _ => PlaylistScreen(playlist: collection),
+  final screen = switch (kind) {
+    CollectionKind.album => AlbumScreen(browseId: id, title: collection.title),
+    CollectionKind.artist ||
+    CollectionKind.profile =>
+      ArtistScreen(browseId: id, name: collection.title),
+    CollectionKind.playlist ||
+    CollectionKind.podcast =>
+      PlaylistScreen(playlist: collection),
+    null => switch (id) {
+      _ when id.startsWith('MPRE') =>
+        AlbumScreen(browseId: id, title: collection.title),
+      _ when isArtistId(id) => ArtistScreen(browseId: id, name: collection.title),
+      _ => PlaylistScreen(playlist: collection),
+    },
   };
   Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
 }

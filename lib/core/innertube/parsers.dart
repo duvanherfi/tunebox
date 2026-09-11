@@ -1,5 +1,6 @@
 import '../../data/models/credits.dart';
 import '../../data/models/playlist.dart';
+import '../../data/models/search.dart';
 import '../../data/models/song.dart';
 
 /// Reads a nested value, returning null instead of throwing when any hop is
@@ -81,8 +82,183 @@ Duration? _parseDuration(String text) {
   );
 }
 
-/// Turns a search response into playable tracks.
-List<Song> parseSearchResults(Map<String, dynamic> json) => parseSongList(json);
+/// Which page a row points at, by the type YouTube files it under.
+///
+/// Only the five kinds search answers with. Anything else — a page shape this
+/// app has nowhere to open — is left out rather than sent somewhere wrong.
+const _collectionKinds = <String, CollectionKind>{
+  'MUSIC_PAGE_TYPE_ALBUM': CollectionKind.album,
+  'MUSIC_PAGE_TYPE_PLAYLIST': CollectionKind.playlist,
+  'MUSIC_PAGE_TYPE_ARTIST': CollectionKind.artist,
+  'MUSIC_PAGE_TYPE_USER_CHANNEL': CollectionKind.profile,
+  'MUSIC_PAGE_TYPE_PODCAST_SHOW_DETAIL_PAGE': CollectionKind.podcast,
+};
+
+/// Turns a search response into the mixed list YouTube ranked.
+///
+/// Search answers with far more than tracks, and reading only the rows that
+/// carry a `videoId` threw away more than half of it: measured against the real
+/// endpoint on 10 September 2026, "daft punk" came back with 32 rows of which
+/// only 14 were playable — the other 18 were 3 albums, 3 artists, 6 playlists,
+/// 3 profiles and 3 podcasts, every one of them a page this app already knows
+/// how to open.
+///
+/// The rows stay in the order they arrived, mixed. YouTube sends no section
+/// headings with an unfiltered search — one top-result card and 29 loose rows —
+/// so grouping by kind would mean inventing a grouping that never came, and the
+/// kind is already written into the subtitle of every row, in the listener's
+/// own language.
+SearchResults parseSearchResults(Map<String, dynamic> json) {
+  final results = <SearchResult>[];
+  final seen = <String>{};
+
+  // The card YouTube puts above everything else. It is not one of the rows —
+  // its own three rows are — so it is read first and separately. First is also
+  // what keeps it from showing twice when the list below repeats it, which is
+  // ordinary for a top result.
+  final card = findFirst(json, 'musicCardShelfRenderer');
+  if (card != null) {
+    final top = _cardResult(card, seen);
+    if (top != null) results.add(top);
+  }
+
+  for (final item in findAll(json, 'musicResponsiveListItemRenderer')) {
+    if (findFirst(item, 'videoId') != null) {
+      final song = _songRow(item, seen);
+      if (song != null) results.add(SearchResult.song(song));
+      continue;
+    }
+    final collection = _collectionRow(item, seen);
+    if (collection != null) results.add(collection);
+  }
+
+  return SearchResults(
+    results: results,
+    filters: parseSearchFilters(json),
+  );
+}
+
+/// The ways YouTube offers to narrow this query.
+///
+/// Nine of them arrive with every response, tokens included, so they are read
+/// rather than hard-coded: what the app used to offer was two filters written
+/// out by hand, and the reason there were only two was that everything else
+/// came back as rows the parser dropped.
+///
+/// The chip that clears the filter comes with no label and no token, and a
+/// filtered response leads with it; it is skipped, since clearing the filter is
+/// the app's own "All" chip.
+List<SearchFilter> parseSearchFilters(Map<String, dynamic> json) {
+  final filters = <SearchFilter>[];
+  final seen = <String>{};
+
+  for (final chip in findAll(json, 'chipCloudChipRenderer')) {
+    final label = _readRuns(readPath(chip, ['text']));
+    final params = readPath(chip, ['navigationEndpoint', 'searchEndpoint', 'params']);
+    if (label.isEmpty || params is! String || !seen.add(params)) continue;
+
+    filters.add(SearchFilter(
+      label: label,
+      // Two of the nine arrive percent-escaped and the rest do not; decoding is
+      // a no-op on those, and sending an escaped token asks for nothing.
+      params: Uri.decodeComponent(params),
+      selected: readPath(chip, ['isSelected']) == true,
+    ));
+  }
+
+  return filters;
+}
+
+/// The top-result card, as one more row.
+///
+/// Everything the card shows is a title, a subtitle and one endpoint, which is
+/// exactly what a row is, so it goes into the same list rather than becoming a
+/// second shape on screen. Its own menu is not read: the card wraps the three
+/// rows underneath it, and their tokens would come back as if they were its.
+SearchResult? _cardResult(Object? card, Set<String> seen) {
+  final title = _readRuns(readPath(card, ['title']));
+  if (title.isEmpty) return null;
+
+  final subtitle = _readRuns(readPath(card, ['subtitle']));
+  final thumbnails = findFirst(readPath(card, ['thumbnail']), 'thumbnails');
+  String? thumbnailUrl;
+  if (thumbnails is List && thumbnails.isNotEmpty) {
+    thumbnailUrl = readPath(thumbnails.last, ['url']) as String?;
+  }
+
+  final videoId = readPath(card, ['onTap', 'watchEndpoint', 'videoId']);
+  if (videoId is String && seen.add(videoId)) {
+    return SearchResult.song(Song(
+      videoId: videoId,
+      title: title,
+      subtitle: _withoutDuration(subtitle),
+      thumbnailUrl: thumbnailUrl,
+      duration: _parseDuration(subtitle),
+    ));
+  }
+
+  final browse = readPath(card, ['onTap', 'browseEndpoint']);
+  final browseId = readPath(browse, ['browseId']);
+  final kind = _collectionKinds[readPath(browse, [
+    'browseEndpointContextSupportedConfigs',
+    'browseEndpointContextMusicConfig',
+    'pageType',
+  ])];
+  if (browseId is! String || kind == null || !seen.add(browseId)) return null;
+
+  return SearchResult.collection(
+    Playlist(
+      browseId: browseId,
+      title: title,
+      subtitle: subtitle,
+      thumbnailUrl: thumbnailUrl,
+    ),
+    kind,
+  );
+}
+
+/// A row that points at a page instead of a track.
+///
+/// The kind comes from the row's own `navigationEndpoint` rather than from any
+/// browse endpoint inside it: an album row also links to its artist and a
+/// playlist row to whoever made it, so reading the first page type found in the
+/// subtree would open the wrong page about a third of the time.
+SearchResult? _collectionRow(Object? item, Set<String> seen) {
+  final browse = readPath(item, ['navigationEndpoint', 'browseEndpoint']);
+  final browseId = readPath(browse, ['browseId']);
+  final kind = _collectionKinds[readPath(browse, [
+    'browseEndpointContextSupportedConfigs',
+    'browseEndpointContextMusicConfig',
+    'pageType',
+  ])];
+  if (browseId is! String || kind == null || !seen.add(browseId)) return null;
+
+  final columns = readPath(item, ['flexColumns']);
+  if (columns is! List || columns.isEmpty) return null;
+
+  final texts = columns
+      .map((column) => _readRuns(
+          readPath(column, ['musicResponsiveListItemFlexColumnRenderer', 'text'])))
+      .where((text) => text.isNotEmpty)
+      .toList();
+  if (texts.isEmpty) return null;
+
+  final thumbnails = findFirst(item, 'thumbnails');
+  String? thumbnailUrl;
+  if (thumbnails is List && thumbnails.isNotEmpty) {
+    thumbnailUrl = readPath(thumbnails.last, ['url']) as String?;
+  }
+
+  return SearchResult.collection(
+    Playlist(
+      browseId: browseId,
+      title: texts.first,
+      subtitle: texts.length > 1 ? texts.sublist(1).join(' · ') : '',
+      thumbnailUrl: thumbnailUrl,
+    ),
+    kind,
+  );
+}
 
 /// Lists the track ids of a response, without building the tracks.
 ///
@@ -122,52 +298,99 @@ String? parseContinuationToken(Map<String, dynamic> json) {
 /// with the same list-item renderer, so one parser covers every surface.
 /// Items with no `videoId` — artist and album cards, "did you mean" rows — are
 /// dropped, since these screens only offer things that can start playing.
+///
+/// A podcast is the exception in shape but not in kind: its episodes come in a
+/// renderer of their own and they do carry a video id, so they are read here
+/// too and a show ends up being a list of tracks like any other.
 List<Song> parseSongList(Map<String, dynamic> json) {
   final songs = <Song>[];
   final seen = <String>{};
 
   for (final item in findAll(json, 'musicResponsiveListItemRenderer')) {
-    final videoId = findFirst(item, 'videoId');
-    if (videoId is! String || !seen.add(videoId)) continue;
+    final song = _songRow(item, seen);
+    if (song != null) songs.add(song);
+  }
 
-    final columns = readPath(item, ['flexColumns']);
-    if (columns is! List || columns.isEmpty) continue;
-
-    final texts = columns
-        .map((column) => _readRuns(
-            readPath(column, ['musicResponsiveListItemFlexColumnRenderer', 'text'])))
-        .where((text) => text.isNotEmpty)
-        .toList();
-    if (texts.isEmpty) continue;
-
-    final title = texts.first;
-    var subtitle = texts.length > 1 ? texts.sublist(1).join(' · ') : '';
-
-    final duration = _parseDuration(subtitle);
-    // Shown in its own column, so leaving it in the metadata line too would
-    // print every track's length twice.
-    if (duration != null) subtitle = _withoutDuration(subtitle);
-
-    final thumbnails = findFirst(item, 'thumbnails');
-    String? thumbnailUrl;
-    if (thumbnails is List && thumbnails.isNotEmpty) {
-      thumbnailUrl = readPath(thumbnails.last, ['url']) as String?;
-    }
-
-    songs.add(Song(
-      videoId: videoId,
-      title: title,
-      subtitle: subtitle,
-      thumbnailUrl: thumbnailUrl,
-      duration: duration,
-      artistId: _linkedPage(item, 'MUSIC_PAGE_TYPE_ARTIST'),
-      albumId: _linkedPage(item, 'MUSIC_PAGE_TYPE_ALBUM'),
-      artist: _artistName(texts),
-      actions: _actionsOf(item),
-    ));
+  for (final item in findAll(json, 'musicMultiRowListItemRenderer')) {
+    final episode = _episodeRow(item, seen);
+    if (episode != null) songs.add(episode);
   }
 
   return songs;
+}
+
+/// One track, out of the row that lists it. Null when the row is not a track or
+/// when [seen] has it already.
+Song? _songRow(Object? item, Set<String> seen) {
+  final videoId = findFirst(item, 'videoId');
+  if (videoId is! String || !seen.add(videoId)) return null;
+
+  final columns = readPath(item, ['flexColumns']);
+  if (columns is! List || columns.isEmpty) return null;
+
+  final texts = columns
+      .map((column) => _readRuns(
+          readPath(column, ['musicResponsiveListItemFlexColumnRenderer', 'text'])))
+      .where((text) => text.isNotEmpty)
+      .toList();
+  if (texts.isEmpty) return null;
+
+  final title = texts.first;
+  var subtitle = texts.length > 1 ? texts.sublist(1).join(' · ') : '';
+
+  final duration = _parseDuration(subtitle);
+  // Shown in its own column, so leaving it in the metadata line too would
+  // print every track's length twice.
+  if (duration != null) subtitle = _withoutDuration(subtitle);
+
+  final thumbnails = findFirst(item, 'thumbnails');
+  String? thumbnailUrl;
+  if (thumbnails is List && thumbnails.isNotEmpty) {
+    thumbnailUrl = readPath(thumbnails.last, ['url']) as String?;
+  }
+
+  return Song(
+    videoId: videoId,
+    title: title,
+    subtitle: subtitle,
+    thumbnailUrl: thumbnailUrl,
+    duration: duration,
+    artistId: _linkedPage(item, 'MUSIC_PAGE_TYPE_ARTIST'),
+    albumId: _linkedPage(item, 'MUSIC_PAGE_TYPE_ALBUM'),
+    artist: _artistName(texts),
+    actions: _actionsOf(item),
+  );
+}
+
+/// One episode of a podcast.
+///
+/// A different renderer from every other track in the app: instead of columns
+/// it carries a title, a line of metadata and a description, and the video id
+/// hangs off the row's tap rather than off a menu. Read by path rather than by
+/// search because the description holds links of its own, and a video id found
+/// anywhere in the subtree could be one of those.
+///
+/// No duration: the one the row prints is spelled out ("5 min 32 s"), not a
+/// timestamp, and it is the open stream that measures a track's length anyway.
+Song? _episodeRow(Object? item, Set<String> seen) {
+  final videoId = readPath(item, ['onTap', 'watchEndpoint', 'videoId']);
+  if (videoId is! String || !seen.add(videoId)) return null;
+
+  final title = _readRuns(readPath(item, ['title']));
+  if (title.isEmpty) return null;
+
+  final thumbnails = findFirst(readPath(item, ['thumbnail']), 'thumbnails');
+  String? thumbnailUrl;
+  if (thumbnails is List && thumbnails.isNotEmpty) {
+    thumbnailUrl = readPath(thumbnails.last, ['url']) as String?;
+  }
+
+  return Song(
+    videoId: videoId,
+    title: title,
+    subtitle: _readRuns(readPath(item, ['subtitle'])),
+    thumbnailUrl: thumbnailUrl,
+  );
 }
 
 
@@ -460,6 +683,10 @@ List<Song> parseCardSongs(Map<String, dynamic> json) {
     'musicImmersiveHeaderRenderer',
     'musicDetailHeaderRenderer',
     'musicResponsiveHeaderRenderer',
+    // A channel's page — a profile from search is one — heads itself with this
+    // one and none of the others, and without it the page opened under a blank
+    // title with no picture.
+    'musicVisualHeaderRenderer',
   ];
 
   for (final renderer in renderers) {
@@ -639,6 +866,36 @@ List<String> parseSearchSuggestions(Map<String, dynamic> json) {
   }
 
   return suggestions;
+}
+
+/// The mood buttons over the front page.
+///
+/// Ten of them arrive with the home response — Energy, Feel good, Relax,
+/// Workout… — and each is the same browse id with a different token, so tapping
+/// one asks for the home page again, refiltered. They are read rather than
+/// written out here: the labels arrive translated by the device's own `hl`, and
+/// the tokens mean nothing outside the response that handed them over.
+///
+/// A different renderer from the explore page's moods ([parseMoodChips]), and a
+/// different thing: those open a page of their own instead of refiltering this
+/// one. The chip cloud of a search response is this same renderer, which is why
+/// only chips carrying a `browseEndpoint` are read.
+List<Playlist> parseHomeChips(Map<String, dynamic> json) {
+  final chips = <Playlist>[];
+  final seen = <String>{};
+
+  for (final chip in findAll(json, 'chipCloudChipRenderer')) {
+    final label = _readRuns(readPath(chip, ['text']));
+    final endpoint = readPath(chip, ['navigationEndpoint', 'browseEndpoint']);
+    final browseId = readPath(endpoint, ['browseId']);
+    final params = readPath(endpoint, ['params']);
+    if (label.isEmpty || browseId is! String) continue;
+    if (params is! String || !seen.add(params)) continue;
+
+    chips.add(Playlist(browseId: browseId, title: label, params: params));
+  }
+
+  return chips;
 }
 
 /// The mood and genre buttons of the explore page.

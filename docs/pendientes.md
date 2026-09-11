@@ -9,6 +9,23 @@ Orden acordado el 21 de agosto de 2026, un hilo por punto. Hechos el primero,
 el ANR del mensajero de Dart y el selector de carpetas del escritorio, queda lo
 de abajo.
 
+Las tres entradas diagnosticadas el 10 de septiembre de 2026 —la búsqueda, el
+radio tras buscar y el home— están hechas.
+
+- **Firmar y repartir la de iOS.** Compila y corre, pero un `.ipa` no se
+  instala tocándolo: iOS sólo ejecuta lo firmado con un certificado que
+  reconoce. Sin cuenta de pago hay dos caminos —cable con el Apple ID gratis,
+  que caduca a los 7 días, o `.ipa` sin firmar en la release para que cada
+  quien lo firme con Sideloadly— y con los 99 USD al año se abren TestFlight
+  (los externos pasan por revisión, que esta app no pasa) y ad-hoc con los UDID
+  registrados. Falta decidir cuál y, si es el `.ipa`, añadir el job de macOS a
+  `release.yml` que empaquete `Runner.app` en `Payload/`.
+
+  Aparte de la firma, en iOS no existen: la autoactualización
+  (`installer.dart` es `Platform.isAndroid`), el widget, las cuentas del
+  aparato, el ecualizador, la caché de stream en disco y CarPlay —que además
+  pide un *entitlement* que Apple concede a petición.
+
 - **Windows y Linux no reproducen nada.** Salió al hacer el selector de
   carpetas (22 de agosto de 2026), y es el bloqueo de verdad de esas dos
   plataformas: `just_audio` 0.10.6 y `audio_service` 0.18.19 declaran
@@ -79,6 +96,17 @@ de abajo.
   `~/demand-forecast/docs/pendientes.md` y va después de la vuelta 4 de ese
   otro repo, pero **la instrumentación conviene adelantarla** para que el
   historial se vaya llenando mientras tanto.
+
+- **De la búsqueda quedaron dos cosas fuera** (10 de septiembre de 2026, al
+  hacerla). La pulsación larga sobre una fila que es una colección no abre nada:
+  `showCollectionMenu` pide las canciones de la colección y una fila de búsqueda
+  no las trae, así que el menú saldría con "Reproducir" y "Aleatorio" apagados.
+  La respuesta sí trae de qué tirar —cada álbum y cada lista llevan su
+  `RDAMPL…` en el menú, cada artista su `RDEM…`, que es justo lo que
+  `startCollectionRadio` espera—, o se le cargan las canciones al abrir el
+  menú. Y la tarjeta de resultado principal se pinta como una fila más: se lee
+  su título, su subtítulo y su destino, pero no sus dos botones (Aleatorio y
+  Mix).
 
 ## Suelto, sin diagnosticar
 
@@ -254,6 +282,134 @@ versión.
   repintado, ya contesta null. Si vuelve a salir, ahí es donde hay que mirar.
 
 ## Hecho
+
+- **El home ya no se queda en la primera página** (10 de septiembre de 2026).
+  Era lo diagnosticado: `homeFeed()` era un solo `browse('FEmusic_home')` sin
+  continuación. Medido en el emulador con la cuenta, la respuesta trae **tres
+  estanterías por página y veinte en total**, en siete páginas —la última de
+  dos—: la app enseñaba tres de veinte y las llamaba el inicio. Ahora la
+  siguiente página se pide **al llegar al pie de la lista**, no todas al abrir:
+  el inicio es lo primero que se pinta al arrancar y siete peticiones seguidas
+  son mucho que esperar por filas a las que nadie ha bajado todavía.
+
+  Lo que faltaba no era fontanería: `browseContinuation` y
+  `parseContinuationToken` ya existían. Lo que sí hacía falta averiguarlo es
+  que **la continuación sólo contesta si se pide como quien pidió la primera
+  página**: sin el `visitorData` que trajo aquella respuesta, YouTube devuelve
+  1 KB con la pestaña vacía en vez de las estanterías siguientes —medido sin
+  sesión el 10 de septiembre de 2026: nada sin él, tres estanterías más con
+  él—. `homeFeed` lo lee de la primera respuesta y de paso ceba el que
+  `visitorData()` iba a buscar por su cuenta, que era una petición de más antes
+  de resolver la primera pista.
+
+  Comprobado bajando hasta el final con la cuenta: aparecen las que el
+  diagnóstico echaba en falta —De tu biblioteca, Vídeos musicales para ti,
+  Canciones en tendencia para ti, Escuchas de larga duración…— y el pie deja de
+  girar cuando se acaban. Una página que no llega detiene la lectura ahí y deja
+  lo ya leído en pantalla, que es lo mismo que hace el resto de la app.
+
+  **Los diez humores** de la web (Entrenamiento, Energía, Sentirse bien,
+  Relax…) están también: vienen en el `chipCloudRenderer` de la propia
+  respuesta —traducidos por el `hl` del aparato— y cada uno es el mismo
+  `FEmusic_home` con otros `params`, así que tocar uno vuelve a pedir el inicio
+  refiltrado y pagina igual. El chip de "Todo" es de la app, como en la
+  búsqueda. Comprobado: Entrenamiento contesta Workout Mix 1-3, Listen again y
+  Cardio, y "Todo" devuelve el feed personal.
+
+  La fila de chips se fue a `features/shared/chip_row.dart`, que es la misma
+  que ya tenía la búsqueda. Fixture nueva: `home_page.json`, recortada de la
+  respuesta real. Pruebas nuevas: `test/home_feed_test.dart` —qué se pide y
+  cuándo: la primera página al abrir, la siguiente sólo al llegar al pie, una
+  nueva primera página al tocar un humor— y las de `parseHomeChips`.
+
+- **Tras una búsqueda, el radio ya no llega catorce canciones tarde** (10 de
+  septiembre de 2026). Era lo diagnosticado: la fila de un resultado sembraba
+  la cola con las demás pistas de la búsqueda, así que el radio de la que se
+  tocó sólo entraba cuando esas catorce se habían acabado. Ahora una fila de
+  búsqueda arranca `startRadio`, que es lo que hace YouTube Music con el mismo
+  enlace —un `videoId` sin `list=` detrás—: suena la pista y lo que YouTube
+  dice que va con ella se encola.
+
+  El interruptor vive en `SongRow` (`startsRadio`), no en la pantalla: el resto
+  de las listas —una playlist, los me gusta, un álbum— sí son colas, y tocar
+  una fila ahí sigue significando "desde aquí". Los resultados no lo son, sólo
+  comparten las palabras que se escribieron.
+
+  Comprobado en el emulador con la cuenta: buscando "daft punk" y tocando
+  *Instant Crush*, la cola es la pista y su radio —Aaron Smith, Depeche Mode,
+  Calvin Harris, Milky Chance, Tame Impala, Gorillaz, The xx— y no los
+  *Derezzed* y *The Grid* que venían debajo en los resultados. Prueba nueva:
+  `test/search_radio_test.dart`, que pinta la pantalla de búsqueda con un
+  InnerTube de mentira y mira la cola después del toque; con el interruptor
+  apagado se pone roja.
+
+  Con "Seguir reproduciendo" apagado la fila reproduce esa pista y para, que es
+  lo que dice ese ajuste: `_extendWithRadio` no pide nada si está apagado.
+
+- **La búsqueda ya muestra todo lo que YouTube manda** (10 de septiembre de
+  2026). Era lo diagnosticado: `parseSearchResults` era literalmente
+  `parseSongList`, que descarta toda fila sin `videoId`, y con "daft punk" eso
+  tiraba 18 de 32 filas. Ahora la búsqueda contesta una lista mezclada
+  —`SearchResults` en `data/models/search.dart`— con las filas en el orden en
+  que YouTube las ordenó, que es lo que hace YouTube Music: la respuesta sin
+  filtro no trae cabeceras de sección, así que agrupar por tipo habría sido
+  inventarse un agrupamiento que nadie manda, y el tipo ya viene escrito en el
+  subtítulo de cada fila y traducido.
+
+  Comprobado en el emulador con la cuenta: la tarjeta de resultado principal
+  (Daft Punk, Artista) encabeza la lista, y debajo salen canciones, álbumes,
+  listas, perfiles y pódcasts, cada uno a su pantalla. Los álbumes, los
+  artistas y las listas ya tenían encaminamiento; los otros dos pedían algo:
+
+  - **Los perfiles** empiezan por `UC` igual que un artista, así que el tipo se
+    lee del `navigationEndpoint` de la propia fila y no del prefijo. Van a la
+    pantalla de artista a propósito: un canal contesta con la misma forma
+    —estanterías de lo que publicó— y la pantalla ya la dibuja. Lo único que
+    faltaba era el encabezado, que en un canal es `musicVisualHeaderRenderer` y
+    en ningún otro sitio: sin él la página abría sin nombre y sin foto.
+  - **Los pódcasts** abrían vacíos por dos motivos: `_asBrowseId` le ponía el
+    `VL` delante a un `MPSP…`, que pide una lista que no existe, y sus
+    episodios vienen en `musicMultiRowListItemRenderer`, un renderer que no se
+    leía en ningún sitio. `parseSongList` lo lee ahora también, así que un
+    programa es una lista de pistas como cualquier otra en todas partes.
+    Probado: un episodio suena.
+
+  Los filtros pasan de dos escritos a mano a los **nueve que la respuesta trae
+  con sus `params` resueltos** —Artistas, Álbumes, Canciones, Vídeos,
+  Episodios, Listas de la comunidad, Listas destacadas, Perfiles, Pódcasts—,
+  con la etiqueta ya traducida por el `hl` del aparato. Dos de los nueve llegan
+  con el `=` escapado y hay que decodificarlos; un token escapado no pide nada.
+  Comprobado el de Álbumes: 20 álbumes, que antes habría sido una lista vacía.
+  Se fueron `filterSongs` y `filterVideos` de los dos `.arb`; `filterAll` se
+  queda, que el chip de "Todo" es de la app.
+
+  La búsqueda no pide continuación, ni con filtro ni sin él: es una página y ya.
+  Fixtures nuevas: `podcast_page.json` y `channel_page.json`, recortadas de las
+  respuestas reales.
+
+- **La app corre en el iPhone** (26 de agosto de 2026). El proyecto de iOS
+  estaba como lo dejó `flutter create`: nunca se había compilado. Cuatro cosas
+  faltaban, y las cuatro están hechas.
+
+  `home_widget` pide iOS 14 y el proyecto pedía 13, así que `pod install` ni
+  resolvía: subido el objetivo a 14.0 en `ios/Podfile` y en los tres sitios de
+  `project.pbxproj`. El `Info.plist` no declaraba `UIBackgroundModes: audio`,
+  que es lo que `audio_service` necesita para que la sesión sobreviva a salir
+  de pantalla; añadido y comprobado —con la app en el escritorio del simulador
+  los buffers de audio siguen encolándose en el log. Xcode 26.6 no tenía
+  descargada la plataforma de iOS: `xcodebuild -downloadPlatform iOS`, 8,5 GB,
+  y no pidió contraseña. Y CocoaPods está instalado bajo rbenv 3.4.4 mientras
+  el ruby por defecto es el 3.3.6, así que Flutter lo ve como "installed but
+  broken": hasta que se arregle, los builds de iOS van con
+  `RBENV_VERSION=3.4.4` delante.
+
+  Probado en un iPhone 17 Pro con iOS 26.5, sin cuenta: el inicio carga las
+  estanterías, la búsqueda contesta y **la reproducción funciona**. Eso último
+  era lo dudoso, porque el `StreamProxy` es un `HttpServer` en loopback y ATS
+  podía negarse: no se niega. En el log se ven las peticiones por ventanas
+  contra googlevideo y los buffers entrando en la cola de audio, y el Now
+  Playing de iOS recibe título, artista y carátula. El único error del log es
+  un `NSURLErrorDomain -999`, que es una ventana cancelada por el propio proxy.
 
 - **El botón de aleatorio en la biblioteca** (22 de agosto de 2026). El
   aleatorio de servidor ya existía y sólo tenía puerta en playlist, álbum y

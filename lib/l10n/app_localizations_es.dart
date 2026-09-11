@@ -55,12 +55,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get filterAll => 'Todo';
 
   @override
-  String get filterSongs => 'Canciones';
-
-  @override
-  String get filterVideos => 'Vídeos';
-
-  @override
   String get searchStartTitle => 'Busca algo para empezar';
 
   @override

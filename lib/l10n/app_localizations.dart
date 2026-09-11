@@ -188,18 +188,6 @@ abstract class AppLocalizations {
   /// **'All'**
   String get filterAll;
 
-  /// No description provided for @filterSongs.
-  ///
-  /// In en, this message translates to:
-  /// **'Songs'**
-  String get filterSongs;
-
-  /// No description provided for @filterVideos.
-  ///
-  /// In en, this message translates to:
-  /// **'Videos'**
-  String get filterVideos;
-
   /// No description provided for @searchStartTitle.
   ///
   /// In en, this message translates to:

@@ -15,8 +15,6 @@
   "retry": "Try again",
   "searchHint": "Search songs or artists",
   "filterAll": "All",
-  "filterSongs": "Songs",
-  "filterVideos": "Videos",
   "searchStartTitle": "Search for something to begin",
   "searchStartBody": "Songs, artists or albums from YouTube Music.",
   "searchEmptyTitle": "No results",
