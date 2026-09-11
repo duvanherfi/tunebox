@@ -82,13 +82,20 @@ decidir, no de programar, y están arriba del todo.
   cobra dos veces si se hace aquello; si el vídeo acaba descartándose, quitarla
   devuelve esos megas.
 
-- **La release con el vídeo dentro no se ha instalado.** El emulador lleva la
-  de depuración y la firma no deja poner una encima de la otra sin desinstalar
-  —y desinstalar se lleva el llavero, o sea la sesión—. No se hizo por eso. El
-  riesgo conocido es el de siempre, el encogedor de recursos contra los
-  drawables que se nombran desde Dart, y este cambio no añadió ninguno;
-  `android_icon_resources_test` sigue en verde. Conviene comprobarlo igual
-  antes de publicar.
+- **La 0.1.10 está publicada y hay que probarla en el teléfono.** Cortada el 11
+  de septiembre de 2026 con el vídeo dentro. Dos cosas se comprueban de una vez
+  al instalarla, y las dos sólo se pueden ver ahí:
+
+  - **Si la imagen se dibuja.** En el emulador sale negra por
+    `GFXSTREAM: EGL_BAD_ATTRIBUTE`, que es su capa de GPU. Si en el teléfono
+    también sale negra, entonces sí es la app y hay hilo nuevo.
+  - **Si el encogedor de recursos se llevó algo.** Es el riesgo conocido de
+    toda release —los drawables que se nombran desde Dart— y se ve en la
+    notificación y en los iconos de Android Auto. Este cambio no añadió
+    ninguno y `android_icon_resources_test` sigue en verde, así que no debería;
+    pero sólo las release encogen, y ninguna se había instalado con esto
+    dentro. Ojo con el aviso de CLAUDE.md: si un icono sale como triángulo,
+    reinicia Android Auto antes de darlo por roto.
 
 - **El log de reproducciones no distingue una canción escuchada de una
   saltada.** Salió al diseñar un modelo de recomendación sobre el historial
