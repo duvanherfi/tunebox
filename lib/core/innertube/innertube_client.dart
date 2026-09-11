@@ -645,6 +645,21 @@ class InnertubeClient {
         'params': _shuffleParams,
       });
 
+  /// The queue one of the top-result card's buttons names.
+  ///
+  /// The card hands out a playlist id together with the params that say how to
+  /// play it — the same `OLAK` album id answers in order or shuffled depending
+  /// on which of the two rides with it, and an artist's `RDAO` and `RDEM` are
+  /// their shuffle and their mix — so both are passed back exactly as they
+  /// arrived rather than rebuilt here.
+  Future<List<Song>> cardQueue(String playlistId, {String? params}) async {
+    final queue = await _watchQueue({
+      'playlistId': _bareId(playlistId),
+      'params': ?params,
+    });
+    return queue.songs;
+  }
+
   /// The next page of a watch queue, from a token [shuffledCollection] gave.
   Future<({List<Song> songs, String? continuation})> watchQueueAfter(
     String continuation,

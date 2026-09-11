@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_theme.dart';
@@ -7,7 +8,9 @@ import '../../l10n/app_localizations.dart';
 import '../../data/models/playlist.dart';
 import '../../data/models/search.dart';
 import '../../main.dart';
+import '../../data/models/song.dart';
 import '../shared/chip_row.dart';
+import '../shared/collection_menu.dart';
 import '../shared/shelf_row.dart';
 import '../shared/skeleton.dart';
 import '../shared/song_list_view.dart';
@@ -230,6 +233,7 @@ class _Results extends StatelessWidget {
       itemCount: rows.length,
       itemBuilder: (context, index) {
         final row = rows[index];
+        if (row.top && row.buttons.isNotEmpty) return _TopResultCard(result: row);
         if (row.song != null) {
           // A tap starts that track and its radio, not the other results: they
           // are ranked answers to a query, not a list anyone chose to hear in
@@ -243,6 +247,173 @@ class _Results extends StatelessWidget {
         }
         return _CollectionRow(collection: row.collection!, kind: row.kind!);
       },
+    );
+  }
+}
+
+/// The result YouTube ranked above the rest, drawn the way it sent it.
+///
+/// The card is the same title, subtitle and destination as any other row — what
+/// makes it a card is the two buttons YouTube attaches, and those are the
+/// reason it cannot stay a row: they are the whole point of the shape. What
+/// they are depends on what is on top. Measured against the real endpoint on
+/// 11 September 2026: an artist gets Shuffle and Mix, an album Play and
+/// Shuffle, a track Play. The labels arrive translated and are shown as they
+/// came; what each button does is read from its command, never from its text.
+class _TopResultCard extends StatelessWidget {
+  const _TopResultCard({required this.result});
+
+  final SearchResult result;
+
+  void _open(BuildContext context) {
+    final collection = result.collection;
+    if (collection != null) {
+      openCollection(context, collection, kind: result.kind);
+      return;
+    }
+    playerService.startRadio(result.song!);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final person = result.kind == CollectionKind.artist ||
+        result.kind == CollectionKind.profile;
+    // Read off one side or the other, never mixed: a collection with no cover
+    // would otherwise fall through to a track that is not there.
+    final collection = result.collection;
+    final song = result.song;
+    final title = collection?.title ?? song!.title;
+    final subtitle = collection?.subtitle ?? song!.subtitle;
+    final art = collection != null ? collection.thumbnailUrl : song!.thumbnailUrl;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      child: Material(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(AppTheme.radiusArtwork),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => _open(context),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Artwork(url: art, size: 72, radius: person ? 36 : AppTheme.radiusArtwork),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                // Wrap rather than Row: two translated labels are not two
+                // predictable widths, and a narrow phone is where they meet.
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final button in result.buttons)
+                      _CardButton(button: button, song: result.song),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// One of the card's buttons, doing what its command says.
+class _CardButton extends StatelessWidget {
+  const _CardButton({required this.button, this.song});
+
+  final SearchCardButton button;
+
+  /// The track the card is about, when it is about a track. The button names
+  /// the same video id, and this is the row that already carries its title and
+  /// its cover — building a second one from the id alone would put a nameless
+  /// track in the player.
+  final Song? song;
+
+  /// YouTube's icon names, mapped to the ones already on screen elsewhere in
+  /// the app. Anything unrecognised falls back to a plain play arrow rather
+  /// than to nothing: the button still works, it just looks ordinary.
+  static const _icons = <String, IconData>{
+    'PLAY_ARROW': Icons.play_arrow_rounded,
+    'MUSIC_SHUFFLE': Icons.shuffle_rounded,
+    'SHUFFLE': Icons.shuffle_rounded,
+    'MIX': Icons.radio_rounded,
+    'RADIO': Icons.radio_rounded,
+  };
+
+  Future<void> _run(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
+
+    if (button.videoId != null && song != null) {
+      // The card over a track carries the track itself, so there is nothing to
+      // fetch: it plays exactly as its row would.
+      await playerService.startRadio(song!);
+      return;
+    }
+    if (button.playlistId == null) return;
+
+    try {
+      final songs = await innertube.cardQueue(
+        button.playlistId!,
+        params: button.params,
+      );
+      if (songs.isEmpty) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.libraryPlaylistEmpty)),
+        );
+        return;
+      }
+      // The order is the server's answer — these params are what tell one id
+      // apart in order from the same id shuffled — so the player is put back in
+      // sequence rather than shuffling what has already been shuffled.
+      await playerService.setShuffleMode(AudioServiceShuffleMode.none);
+      await playerService.setQueue(songs);
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.menuFailed('$error'))));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FilledButton.tonalIcon(
+      onPressed: () => _run(context),
+      icon: Icon(_icons[button.icon] ?? Icons.play_arrow_rounded, size: 20),
+      label: Text(button.label),
     );
   }
 }
@@ -267,6 +438,17 @@ class _CollectionRow extends StatelessWidget {
 
     return InkWell(
       onTap: () => openCollection(context, collection, kind: kind),
+      // The same two ways in a track's row offers, doing the collection-level
+      // version of the same thing. The track list it acts on is not in a search
+      // row, so it is fetched while the sheet is already open.
+      onLongPress: () => showCollectionMenu(
+        context,
+        collection: collection,
+        pending: collectionSongs(collection, kind),
+        artist: kind == CollectionKind.artist,
+        radio: kind != CollectionKind.profile && kind != CollectionKind.podcast,
+        radioId: collection.radioPlaylistId,
+      ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Row(

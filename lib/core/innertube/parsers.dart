@@ -186,15 +186,21 @@ SearchResult? _cardResult(Object? card, Set<String> seen) {
     thumbnailUrl = readPath(thumbnails.last, ['url']) as String?;
   }
 
+  final buttons = _cardButtons(card);
+
   final videoId = readPath(card, ['onTap', 'watchEndpoint', 'videoId']);
   if (videoId is String && seen.add(videoId)) {
-    return SearchResult.song(Song(
-      videoId: videoId,
-      title: title,
-      subtitle: _withoutDuration(subtitle),
-      thumbnailUrl: thumbnailUrl,
-      duration: _parseDuration(subtitle),
-    ));
+    return SearchResult.song(
+      Song(
+        videoId: videoId,
+        title: title,
+        subtitle: _withoutDuration(subtitle),
+        thumbnailUrl: thumbnailUrl,
+        duration: _parseDuration(subtitle),
+      ),
+      top: true,
+      buttons: buttons,
+    );
   }
 
   final browse = readPath(card, ['onTap', 'browseEndpoint']);
@@ -212,9 +218,81 @@ SearchResult? _cardResult(Object? card, Set<String> seen) {
       title: title,
       subtitle: subtitle,
       thumbnailUrl: thumbnailUrl,
+      radioPlaylistId: _radioIdOf(readPath(card, ['buttons'])),
     ),
     kind,
+    top: true,
+    buttons: buttons,
   );
+}
+
+/// The buttons the top-result card carries, keeping only the ones this app can
+/// honour.
+///
+/// Measured against the real endpoint on 11 September 2026: the card always
+/// ships exactly two, and what they are depends on what it tops — an artist
+/// gets Shuffle (`RDAO`) and Mix (`RDEM`), an album Play and Shuffle (the same
+/// `OLAK` id with different params), a track Play and Save. The last of those
+/// is a `modalEndpoint`, which is YouTube asking someone to sign in rather than
+/// anything to play, so it is dropped: a button that cannot do what it says is
+/// worse than no button.
+///
+/// The card's `menu` is still not read — it wraps the three rows underneath it
+/// and their tokens would come back as if they were its — but these buttons are
+/// the card's own.
+List<SearchCardButton> _cardButtons(Object? card) {
+  final buttons = readPath(card, ['buttons']);
+  if (buttons is! List) return const [];
+
+  final read = <SearchCardButton>[];
+  for (final button in buttons) {
+    final renderer = readPath(button, ['buttonRenderer']);
+    if (renderer == null) continue;
+
+    final label = _readRuns(readPath(renderer, ['text']));
+    final icon = readPath(renderer, ['icon', 'iconType']);
+    if (label.isEmpty || icon is! String) continue;
+
+    final command = readPath(renderer, ['command']) ??
+        readPath(renderer, ['navigationEndpoint']);
+
+    final queue = readPath(command, ['watchPlaylistEndpoint']);
+    final playlistId = readPath(queue, ['playlistId']);
+    if (playlistId is String) {
+      read.add(SearchCardButton(
+        label: label,
+        icon: icon,
+        playlistId: playlistId,
+        params: readPath(queue, ['params']) as String?,
+      ));
+      continue;
+    }
+
+    final videoId = readPath(command, ['watchEndpoint', 'videoId']);
+    if (videoId is String) {
+      read.add(SearchCardButton(label: label, icon: icon, videoId: videoId));
+    }
+  }
+  return read;
+}
+
+/// Where a collection row says its mix lives.
+///
+/// A row's menu ships two `watchPlaylistEndpoint`s and they are not
+/// interchangeable: measured against the real response on 11 September 2026, an
+/// album or playlist offers its own id for "Shuffle" and an `RDAMPL` one for
+/// "Start radio", and an artist offers `RDAO` and `RDEM`. Picking the first
+/// `RD` id found would take the artist's shuffle for their radio, so the two
+/// prefixes YouTube gives a radio are named outright. Null is the ordinary
+/// answer for a profile or a podcast: those rows carry no such endpoint at all.
+String? _radioIdOf(Object? item) {
+  for (final endpoint in findAll(item, 'watchPlaylistEndpoint')) {
+    final id = readPath(endpoint, ['playlistId']);
+    if (id is String && (id.startsWith('RDEM') || id.startsWith('RDAMPL'))) {
+      return id;
+    }
+  }
+  return null;
 }
 
 /// A row that points at a page instead of a track.
@@ -255,6 +333,7 @@ SearchResult? _collectionRow(Object? item, Set<String> seen) {
       title: texts.first,
       subtitle: texts.length > 1 ? texts.sublist(1).join(' · ') : '',
       thumbnailUrl: thumbnailUrl,
+      radioPlaylistId: _radioIdOf(readPath(item, ['menu'])),
     ),
     kind,
   );

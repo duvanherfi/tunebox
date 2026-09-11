@@ -16,16 +16,64 @@ enum CollectionKind { album, playlist, artist, profile, podcast }
 /// says; what kind of thing it is, the subtitle already spells out in the
 /// listener's language.
 class SearchResult {
-  const SearchResult.song(Song this.song)
-      : collection = null,
+  const SearchResult.song(
+    Song this.song, {
+    this.top = false,
+    this.buttons = const [],
+  })  : collection = null,
         kind = null;
 
-  const SearchResult.collection(Playlist this.collection, CollectionKind this.kind)
-      : song = null;
+  const SearchResult.collection(
+    Playlist this.collection,
+    CollectionKind this.kind, {
+    this.top = false,
+    this.buttons = const [],
+  }) : song = null;
 
   final Song? song;
   final Playlist? collection;
   final CollectionKind? kind;
+
+  /// Whether this is the card YouTube put above everything else. It is the same
+  /// title, subtitle and destination as any other row — what makes it a card is
+  /// that YouTube also sent [buttons] with it.
+  final bool top;
+
+  /// The ways into the top result that the card itself offers, as it offered
+  /// them: an artist gets Shuffle and Mix, an album Play and Shuffle, a track
+  /// Play. Empty on every other row, and empty on a card whose buttons ask for
+  /// something this app cannot do.
+  final List<SearchCardButton> buttons;
+}
+
+/// One button on the top-result card.
+///
+/// The label arrives translated, like every other label in a response, so it is
+/// shown as it came rather than matched against anything: what the button
+/// *does* is read from its command, not from what it says.
+class SearchCardButton {
+  const SearchCardButton({
+    required this.label,
+    required this.icon,
+    this.videoId,
+    this.playlistId,
+    this.params,
+  });
+
+  final String label;
+
+  /// YouTube's own `iconType`, passed on for the screen to map. A name rather
+  /// than an icon because this file knows nothing about Flutter.
+  final String icon;
+
+  /// A single track to play, for the card that tops a track.
+  final String? videoId;
+
+  /// A queue to play, for the card that tops an album, a playlist or an artist.
+  /// [params] rides with it: the same id answers the album in order or shuffled
+  /// depending on which one it carries.
+  final String? playlistId;
+  final String? params;
 }
 
 /// One of the ways YouTube offers to narrow a search, as it offered it.

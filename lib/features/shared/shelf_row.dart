@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/playlist.dart';
 import '../../data/models/search.dart';
+import '../../data/models/song.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../browse/album_screen.dart';
@@ -105,6 +106,36 @@ void openCollection(
     },
   };
   Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
+}
+
+/// The tracks of a collection named by a row rather than opened as a page.
+///
+/// A search row carries a title, a cover and an id and nothing else, so the
+/// menu it opens has nothing to play until the page behind it is asked for.
+/// That is one request, made when the menu opens rather than when the row is
+/// drawn: a screen of results would otherwise fetch thirty pages nobody asked
+/// to see. Which request it is follows [openCollection] exactly, so the menu
+/// and the page always agree about what a row is.
+Future<List<Song>> collectionSongs(
+  Playlist collection,
+  CollectionKind? kind,
+) async {
+  final id = collection.browseId;
+  final page = switch (kind) {
+    CollectionKind.album => await innertube.albumPage(id),
+    CollectionKind.artist ||
+    CollectionKind.profile =>
+      await innertube.artistPage(id),
+    CollectionKind.playlist ||
+    CollectionKind.podcast =>
+      await innertube.playlistPage(id),
+    null => id.startsWith('MPRE')
+        ? await innertube.albumPage(id)
+        : isArtistId(id)
+            ? await innertube.artistPage(id)
+            : await innertube.playlistPage(id),
+  };
+  return page.songs;
 }
 
 /// Whether a browse id names a person rather than a list. The saved shelf holds

@@ -16,6 +16,7 @@ import 'package:tunebox/data/models/song.dart';
 import 'package:tunebox/data/play_history.dart';
 import 'package:tunebox/data/recent_searches.dart';
 import 'package:tunebox/data/resume_point.dart';
+import 'package:tunebox/data/saved_collections.dart';
 import 'package:tunebox/data/settings.dart';
 import 'package:tunebox/features/search/search_screen.dart';
 import 'package:tunebox/l10n/app_localizations.dart';
@@ -41,6 +42,40 @@ class _StubInnertube extends InnertubeClient {
 
   @override
   Future<List<String>> searchSuggestions(String query) async => const [];
+
+  /// What a collection's page answers with when the menu asks for it, and the
+  /// ids it was asked about.
+  List<Song> pageSongs = const [];
+  final pagesAsked = <String>[];
+
+  @override
+  Future<MusicPage> albumPage(String browseId) async {
+    pagesAsked.add(browseId);
+    return MusicPage(title: 'Discovery', songs: pageSongs);
+  }
+
+  @override
+  Future<MusicPage> artistPage(String browseId) async {
+    pagesAsked.add(browseId);
+    return MusicPage(title: 'Someone', songs: pageSongs);
+  }
+
+  @override
+  Future<MusicPage> playlistPage(String playlistId) async {
+    pagesAsked.add(playlistId);
+    return MusicPage(title: 'A list', songs: pageSongs);
+  }
+
+  /// What one of the top-result card's buttons answers with, and the id and
+  /// params it carried.
+  List<Song> cardSongs = const [];
+  final cardsAsked = <({String id, String? params})>[];
+
+  @override
+  Future<List<Song>> cardQueue(String playlistId, {String? params}) async {
+    cardsAsked.add((id: playlistId, params: params));
+    return cardSongs;
+  }
 
   @override
   Future<List<Song>> radio(String videoId) async {
@@ -92,6 +127,12 @@ void main() {
     innertube = _StubInnertube();
     app.innertube = innertube;
     app.recentSearches = RecentSearches();
+    // The collection menu reads it to draw Save, so the sheet cannot be opened
+    // without one.
+    app.savedCollections = SavedCollections(
+      innertube: innertube,
+      file: File('${temp.path}/saved.json'),
+    );
     final settings = Settings()..cacheEnabled = false;
     app.playerService = PlayerService(
       innertube,
@@ -118,6 +159,8 @@ void main() {
 
   setUp(() async {
     innertube.seeds.clear();
+    innertube.pagesAsked.clear();
+    innertube.cardsAsked.clear();
     await app.playerService.setQueue(const []);
   });
 
@@ -206,5 +249,130 @@ void main() {
       app.playerService.songs.map((song) => song.videoId).toList(),
       ['one', 'after'],
     );
+  });
+
+  /// The two gaps the search left behind on 10 September 2026: a row that is a
+  /// collection opened no menu on a long press, and the top-result card was
+  /// drawn as one more row, with the buttons YouTube attached to it unread.
+
+  testWidgets('a long press on a collection opens a menu that can play it',
+      (tester) async {
+    innertube.results = const SearchResults(
+      results: [
+        SearchResult.collection(
+          Playlist(
+            browseId: 'MPREb_album',
+            title: 'Discovery',
+            subtitle: 'Album',
+            radioPlaylistId: 'RDAMPLOLAK_discovery',
+          ),
+          CollectionKind.album,
+        ),
+      ],
+    );
+    innertube.pageSongs = [_song('one'), _song('two')];
+
+    await search(tester);
+
+    // The long press itself runs on the test's own clock: inside runAsync the
+    // gesture's deadline timer never fires and the press comes out a tap.
+    await tester.longPress(find.text('Discovery'));
+    await tester.pumpAndSettle();
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 50)),
+    );
+    await tester.pumpAndSettle();
+
+    // The sheet is open on the press, and the page it needs is asked for then
+    // rather than when the row was drawn.
+    expect(innertube.pagesAsked, ['MPREb_album']);
+    expect(find.byIcon(Icons.radio_rounded), findsOneWidget);
+
+    await tester.runAsync(() async {
+      await tester.tap(find.byIcon(Icons.play_arrow_rounded));
+      for (var i = 0; i < 200 && app.playerService.songs.isEmpty; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+    });
+    await tester.pumpAndSettle();
+
+    expect(
+      app.playerService.songs.map((song) => song.videoId).toList(),
+      ['one', 'two'],
+    );
+  });
+
+  testWidgets('a profile is offered no radio, because it has none',
+      (tester) async {
+    innertube.results = const SearchResults(
+      results: [
+        SearchResult.collection(
+          Playlist(browseId: 'UCprofile', title: 'Someone', subtitle: 'Profile'),
+          CollectionKind.profile,
+        ),
+      ],
+    );
+
+    await search(tester);
+
+    await tester.longPress(find.text('Someone'));
+    await tester.pumpAndSettle();
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 50)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.radio_rounded), findsNothing);
+  });
+
+  testWidgets("the top-result card plays what its button names", (tester) async {
+    innertube.results = const SearchResults(
+      results: [
+        SearchResult.collection(
+          Playlist(
+            browseId: 'UCartist',
+            title: 'Daft Punk',
+            subtitle: 'Artist',
+            radioPlaylistId: 'RDEMartist',
+          ),
+          CollectionKind.artist,
+          top: true,
+          buttons: [
+            SearchCardButton(
+              label: 'Shuffle',
+              icon: 'MUSIC_SHUFFLE',
+              playlistId: 'RDAOartist',
+              params: 'wAEB8gECGAE%3D',
+            ),
+            SearchCardButton(
+              label: 'Mix',
+              icon: 'MIX',
+              playlistId: 'RDEMartist',
+              params: 'wAEB',
+            ),
+          ],
+        ),
+      ],
+    );
+    innertube.cardSongs = [_song('mixed')];
+
+    await search(tester);
+
+    expect(find.text('Shuffle'), findsOneWidget);
+    expect(find.text('Mix'), findsOneWidget);
+
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Shuffle'));
+      for (var i = 0; i < 200 && app.playerService.songs.isEmpty; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+    });
+    await tester.pumpAndSettle();
+
+    // The params are what tell the same id in order from the same id shuffled,
+    // so they travel with it exactly as they arrived.
+    expect(innertube.cardsAsked.single.id, 'RDAOartist');
+    expect(innertube.cardsAsked.single.params, 'wAEB8gECGAE%3D');
+    expect(app.playerService.songs.single.videoId, 'mixed');
   });
 }

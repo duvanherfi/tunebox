@@ -8,6 +8,7 @@ class Playlist {
     this.subtitle = '',
     this.thumbnailUrl,
     this.params,
+    this.radioPlaylistId,
   });
 
   /// InnerTube's identifier for the collection. Already carries the `VL`
@@ -23,12 +24,21 @@ class Playlist {
   /// Meaningless on its own, and never inspected: it is passed back as given.
   final String? params;
 
+  /// The mix YouTube builds around this collection, when the row that named it
+  /// also said where its mix lives. A search row does: every album and playlist
+  /// carries an `RDAMPL` id in its menu and every artist an `RDEM` one, and
+  /// neither is derivable from the browse id — an artist's names a channel and
+  /// an album's a page, and `next` answers nothing for either. Null for the
+  /// rows that ship no mix at all, which is how profiles and podcasts arrive.
+  final String? radioPlaylistId;
+
   Map<String, Object?> toJson() => {
         'browseId': browseId,
         'title': title,
         'subtitle': subtitle,
         'thumbnailUrl': thumbnailUrl,
         'params': params,
+        'radioPlaylistId': radioPlaylistId,
       };
 
   factory Playlist.fromJson(Map<String, dynamic> json) => Playlist(
@@ -37,6 +47,7 @@ class Playlist {
         subtitle: json['subtitle'] as String? ?? '',
         thumbnailUrl: json['thumbnailUrl'] as String?,
         params: json['params'] as String?,
+        radioPlaylistId: json['radioPlaylistId'] as String?,
       );
 
   @override

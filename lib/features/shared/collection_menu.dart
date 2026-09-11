@@ -137,11 +137,23 @@ Future<void> startCollectionRadio(
 ///
 /// The collection-level twin of the song menu, and deliberately the same shape:
 /// the same verbs in the same order, applied to every track at once.
+/// [pending] is for the surfaces that name a collection without holding it — a
+/// search row is one — and it is awaited with the sheet already open: the menu
+/// appears on the press that asked for it and the verbs that need a track list
+/// arrive a moment later, which is the opposite way round from making someone
+/// wait on a long press for a sheet that may not be what they wanted.
+///
+/// [radio] is false where the response says there is no mix to start. Measured
+/// on 11 September 2026: every album, playlist and artist row carries a
+/// `watchPlaylistEndpoint` for its radio and no profile or podcast row carries
+/// one, so offering it there would be offering a button that answers nothing.
 Future<void> showCollectionMenu(
   BuildContext context, {
   required Playlist collection,
-  required List<Song> songs,
+  List<Song> songs = const [],
+  Future<List<Song>>? pending,
   bool artist = false,
+  bool radio = true,
   String? radioId,
   VoidCallback? onRename,
   VoidCallback? onDelete,
@@ -155,14 +167,35 @@ Future<void> showCollectionMenu(
     constraints: BoxConstraints(
       maxHeight: MediaQuery.sizeOf(context).height * 0.8,
     ),
-    builder: (_) => _CollectionMenu(
-      collection: collection,
-      songs: songs,
-      artist: artist,
-      radioId: radioId,
-      onRename: onRename,
-      onDelete: onDelete,
-    ),
+    builder: (_) {
+      if (pending == null) {
+        return _CollectionMenu(
+          collection: collection,
+          songs: songs,
+          artist: artist,
+          radio: radio,
+          radioId: radioId,
+          onRename: onRename,
+          onDelete: onDelete,
+        );
+      }
+      return FutureBuilder<List<Song>>(
+        future: pending,
+        builder: (context, snapshot) => _CollectionMenu(
+          collection: collection,
+          // A page that will not load leaves the verbs that need it disabled
+          // rather than putting an error over the ones that still work: the
+          // radio, the share and the link never needed the track list.
+          songs: snapshot.data ?? songs,
+          artist: artist,
+          radio: radio,
+          radioId: radioId,
+          loading: snapshot.connectionState != ConnectionState.done,
+          onRename: onRename,
+          onDelete: onDelete,
+        ),
+      );
+    },
   );
 }
 
@@ -171,7 +204,9 @@ class _CollectionMenu extends StatelessWidget {
     required this.collection,
     required this.songs,
     this.artist = false,
+    this.radio = true,
     this.radioId,
+    this.loading = false,
     this.onRename,
     this.onDelete,
   });
@@ -181,7 +216,13 @@ class _CollectionMenu extends StatelessWidget {
 
   /// An artist is kept by subscribing, and their mix has an id of its own.
   final bool artist;
+  final bool radio;
   final String? radioId;
+
+  /// Whether the track list is still on its way. Only the difference between a
+  /// verb that is waiting and a verb that has nothing to act on, which is worth
+  /// drawing: the first comes back by itself.
+  final bool loading;
 
   /// The two edits only the owner of a list can make. Null on everything that
   /// is not a playlist the account made, which is what keeps the sheet from
@@ -239,7 +280,7 @@ class _CollectionMenu extends StatelessWidget {
           ),
           const Divider(height: 1),
           ListTile(
-            leading: const Icon(Icons.play_arrow_rounded),
+            leading: _Leading(Icons.play_arrow_rounded, waiting: loading),
             enabled: !empty,
             title: Text(l10n.play),
             onTap: () {
@@ -250,7 +291,7 @@ class _CollectionMenu extends StatelessWidget {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.shuffle_rounded),
+            leading: _Leading(Icons.shuffle_rounded, waiting: loading),
             enabled: !empty,
             title: Text(l10n.shuffle),
             onTap: () {
@@ -258,14 +299,15 @@ class _CollectionMenu extends StatelessWidget {
               playShuffled(collection, songs, artist: artist);
             },
           ),
-          ListTile(
-            leading: const Icon(Icons.radio_rounded),
-            title: Text(l10n.menuRadio),
-            onTap: () {
-              Navigator.of(context).pop();
-              startCollectionRadio(context, collection, radioId: radioId);
-            },
-          ),
+          if (radio)
+            ListTile(
+              leading: const Icon(Icons.radio_rounded),
+              title: Text(l10n.menuRadio),
+              onTap: () {
+                Navigator.of(context).pop();
+                startCollectionRadio(context, collection, radioId: radioId);
+              },
+            ),
           ListTile(
             leading: const Icon(Icons.playlist_play_rounded),
             enabled: !empty,
@@ -413,4 +455,33 @@ String collectionLink(String browseId) {
   }
   final id = browseId.startsWith('VL') ? browseId.substring(2) : browseId;
   return 'https://music.youtube.com/playlist?list=$id';
+}
+
+/// A menu icon that says the list it acts on has not arrived yet.
+///
+/// The same size either way, so nothing on the sheet moves when it does.
+class _Leading extends StatelessWidget {
+  const _Leading(this.icon, {required this.waiting});
+
+  final IconData icon;
+  final bool waiting;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!waiting) return Icon(icon);
+    return SizedBox(
+      width: 24,
+      height: 24,
+      child: Center(
+        child: SizedBox(
+          width: 16,
+          height: 16,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
+    );
+  }
 }

@@ -10,7 +10,8 @@ el ANR del mensajero de Dart y el selector de carpetas del escritorio, queda lo
 de abajo.
 
 Las tres entradas diagnosticadas el 10 de septiembre de 2026 —la búsqueda, el
-radio tras buscar y el home— están hechas.
+radio tras buscar y el home— están hechas, y las dos cosas que quedaron fuera de
+la búsqueda también, el 11 de septiembre de 2026.
 
 - **Firmar y repartir la de iOS.** Compila y corre, pero un `.ipa` no se
   instala tocándolo: iOS sólo ejecuta lo firmado con un certificado que
@@ -97,16 +98,6 @@ radio tras buscar y el home— están hechas.
   otro repo, pero **la instrumentación conviene adelantarla** para que el
   historial se vaya llenando mientras tanto.
 
-- **De la búsqueda quedaron dos cosas fuera** (10 de septiembre de 2026, al
-  hacerla). La pulsación larga sobre una fila que es una colección no abre nada:
-  `showCollectionMenu` pide las canciones de la colección y una fila de búsqueda
-  no las trae, así que el menú saldría con "Reproducir" y "Aleatorio" apagados.
-  La respuesta sí trae de qué tirar —cada álbum y cada lista llevan su
-  `RDAMPL…` en el menú, cada artista su `RDEM…`, que es justo lo que
-  `startCollectionRadio` espera—, o se le cargan las canciones al abrir el
-  menú. Y la tarjeta de resultado principal se pinta como una fila más: se lee
-  su título, su subtítulo y su destino, pero no sus dos botones (Aleatorio y
-  Mix).
 
 ## Suelto, sin diagnosticar
 
@@ -282,6 +273,56 @@ versión.
   repintado, ya contesta null. Si vuelve a salir, ahí es donde hay que mirar.
 
 ## Hecho
+
+- **Las dos cosas que quedaron fuera de la búsqueda, hechas** (11 de septiembre
+  de 2026).
+
+  **La pulsación larga sobre una colección** abre el mismo menú que la fila de
+  una lista en cualquier otra pantalla. Lo que faltaba era de dónde sacar las
+  canciones: una fila de búsqueda trae un título, una carátula y un id y nada
+  más, así que la página de detrás **se pide al abrir el menú**, no al pintar la
+  fila —una pantalla de resultados habría pedido treinta páginas que nadie
+  quiere ver—. El menú sale en la pulsación que lo pidió y los verbos que
+  necesitan la lista se encienden un momento después, que es al revés de hacer
+  esperar a alguien con el dedo encima por una hoja que a lo mejor no era la que
+  quería. `collectionSongs` elige la petición igual que `openCollection` elige
+  la pantalla, para que el menú y la página nunca discrepen sobre qué es una
+  fila.
+
+  El radio no espera a nada: lo trae la propia fila. Y ahí había una trampa
+  medida el 11 de septiembre — **el menú de una fila trae dos
+  `watchPlaylistEndpoint` y los dos empiezan por `RD`**. En un artista el
+  primero es su aleatorio (`RDAO`) y sólo el segundo es su mix (`RDEM`); en un
+  álbum o una lista el primero es su propio id y el segundo el `RDAMPL`. Coger
+  el primer `RD` que aparece pone un aleatorio donde va el radio, así que los
+  dos prefijos que YouTube le da a un radio se nombran a mano.
+
+  Un perfil y un pódcast **no traen ninguno de los dos**, así que a esos no se
+  les ofrece radio: un botón que no contesta nada es peor que no tenerlo.
+
+  **La tarjeta de resultado principal** deja de ser una fila más y se dibuja con
+  los botones que YouTube le cuelga, que son la razón de que sea una tarjeta.
+  Medido contra el endpoint real: siempre son dos, y cuáles depende de qué
+  encabeza —un artista trae Aleatorio (`RDAO` con los params del aleatorio) y
+  Mix (`RDEM`), un álbum Reproducir y Aleatorio (**el mismo `OLAK` con params
+  distintos**, que es lo único que los separa), una canción Reproducir y
+  Guardar—. Ese último es un `modalEndpoint`, o sea YouTube pidiendo iniciar
+  sesión y no algo que suene, y se tira: un botón que no puede hacer lo que dice
+  es peor que no estar. La etiqueta llega traducida y se pinta como vino; lo que
+  hace cada botón se lee de su comando, nunca de su texto.
+
+  Comprobado en el emulador con la cuenta: "daft punk" encabeza con la tarjeta
+  de Daft Punk (Artista · 79,8 M de oyentes al mes) y sus botones Shuffle y Mix,
+  y la pulsación larga sobre *Discovery* abre el menú entero —Play, Shuffle,
+  Start radio, Play next, Add to queue, Add to playlist, Save to library,
+  Download every track, Share, Copy link— y Play arranca *One More Time*, que es
+  la primera del álbum. Pruebas nuevas: cuatro en `innertube_parser_test` —la
+  trampa del `RDAO` incluida— y tres en `search_radio_test`.
+
+  Un fallo que encontraron las pruebas al escribirlas: la tarjeta leía la
+  carátula como `collection?.thumbnailUrl ?? song!.thumbnailUrl`, que revienta
+  en cuanto una colección llega sin carátula. Se lee de un lado o del otro, sin
+  mezclar.
 
 - **El home ya no se queda en la primera página** (10 de septiembre de 2026).
   Era lo diagnosticado: `homeFeed()` era un solo `browse('FEmusic_home')` sin

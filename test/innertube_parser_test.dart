@@ -114,6 +114,68 @@ void main() {
       );
     });
 
+    // The trap this guards: an artist row's menu carries two watch playlist
+    // endpoints and both begin with `RD`. The first is their shuffle (`RDAO`)
+    // and only the second is their mix, so taking whichever came first put a
+    // shuffle where the radio should be.
+    test('reads each collection row\'s own mix, not its shuffle', () {
+      final results = parseSearchResults(_fixture('search_daft_punk.json'));
+
+      final artists = results.results
+          .where((row) => row.kind == CollectionKind.artist)
+          .map((row) => row.collection!);
+      expect(artists, isNotEmpty);
+      for (final artist in artists) {
+        expect(artist.radioPlaylistId, startsWith('RDEM'));
+      }
+
+      for (final kind in [CollectionKind.album, CollectionKind.playlist]) {
+        final rows = results.results
+            .where((row) => row.kind == kind)
+            .map((row) => row.collection!);
+        expect(rows, isNotEmpty);
+        for (final row in rows) {
+          expect(row.radioPlaylistId, startsWith('RDAMPL'));
+        }
+      }
+    });
+
+    // A profile and a podcast ship no watch playlist endpoint at all, which is
+    // why the menu asks whether to offer a radio rather than assuming one.
+    test('leaves the rows with no mix without one', () {
+      final results = parseSearchResults(_fixture('search_daft_punk.json'));
+      final without = results.results.where((row) =>
+          row.kind == CollectionKind.profile ||
+          row.kind == CollectionKind.podcast);
+
+      expect(without, isNotEmpty);
+      expect(
+        without.every((row) => row.collection!.radioPlaylistId == null),
+        isTrue,
+      );
+    });
+
+    test('reads the top-result card\'s own buttons', () {
+      final results = parseSearchResults(_fixture('search_daft_punk.json'));
+      final card = results.results.first;
+
+      expect(card.top, isTrue);
+      // Two buttons came; only one of them plays anything. The other is
+      // "Guardar", a `modalEndpoint` asking an anonymous listener to sign in,
+      // and a button that cannot do what it says is worse than no button.
+      expect(card.buttons.length, 1);
+      expect(card.buttons.single.icon, 'PLAY_ARROW');
+      expect(card.buttons.single.videoId, '5NV6Rdv1a3I');
+      expect(card.buttons.single.label, isNotEmpty);
+    });
+
+    test('marks only the card as the top result', () {
+      final results = parseSearchResults(_fixture('search_daft_punk.json'));
+
+      expect(results.results.where((row) => row.top).length, 1);
+      expect(results.results.skip(1).every((row) => row.buttons.isEmpty), isTrue);
+    });
+
     test('returns nothing for a response with no result renderers', () {
       expect(parseSearchResults(const {'contents': {}}).isEmpty, isTrue);
     });
