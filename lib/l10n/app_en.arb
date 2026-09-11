@@ -170,6 +170,8 @@
   "exploreNew": "New",
   "exploreCharts": "Charts",
   "exploreMoods": "Moods",
+  "exploreTrending": "Trending",
+  "chartsCountry": "Country",
   "libraryDownloads": "Downloads",
   "libraryEmptyDownloads": "Nothing downloaded yet. Use a track's menu to keep it on this device.",
   "menuDownload": "Download",

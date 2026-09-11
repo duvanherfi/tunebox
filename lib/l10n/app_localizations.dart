@@ -986,6 +986,18 @@ abstract class AppLocalizations {
   /// **'Moods'**
   String get exploreMoods;
 
+  /// No description provided for @exploreTrending.
+  ///
+  /// In en, this message translates to:
+  /// **'Trending'**
+  String get exploreTrending;
+
+  /// No description provided for @chartsCountry.
+  ///
+  /// In en, this message translates to:
+  /// **'Country'**
+  String get chartsCountry;
+
   /// No description provided for @libraryDownloads.
   ///
   /// In en, this message translates to:

@@ -107,6 +107,28 @@ class Account {
   final String? photoUrl;
 }
 
+/// One of the countries the charts can be asked for.
+///
+/// The name arrives already translated by the request's own `hl`, and the code
+/// is the only part that goes back to YouTube, so nothing here is written out
+/// in the app: the list is whatever the charts response listed.
+class ChartCountry {
+  const ChartCountry({
+    required this.code,
+    required this.name,
+    this.selected = false,
+  });
+
+  /// ISO 3166 two-letter code, as `formData.selectedValues` wants it. `ZZ` is
+  /// YouTube's own entry for the worldwide chart.
+  final String code;
+
+  final String name;
+
+  /// Whether this is the country the response was already filtered by.
+  final bool selected;
+}
+
 /// A titled row of the home feed.
 ///
 /// A row holds collections or tracks, not both in practice: YouTube fills the
@@ -125,4 +147,16 @@ class Shelf {
   final List<Song> songs;
 
   bool get isEmpty => playlists.isEmpty && songs.isEmpty;
+}
+
+/// The charts page: its rows, and the countries it could be asked for instead.
+///
+/// The two travel together because they arrive together — the country menu is
+/// part of the same browse response as the rows it filters — and asking twice
+/// would be two round trips for one page.
+class ChartsPage {
+  const ChartsPage({this.shelves = const [], this.countries = const []});
+
+  final List<Shelf> shelves;
+  final List<ChartCountry> countries;
 }

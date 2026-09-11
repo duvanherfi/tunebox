@@ -707,4 +707,67 @@ void main() {
       expect(parseContinuationToken(_fixture('search_daft_punk.json')), isNull);
     });
   });
+
+  group('the charts country menu', () {
+    // Recorded anonymously on 11 September 2026 with `gl: CO`. The menu is the
+    // only place the country codes exist: the app writes none of them out.
+    test('reads every country the page offers', () {
+      final countries = parseChartCountries(_fixture('charts_page.json'));
+
+      expect(countries, hasLength(69));
+      expect(
+        countries.map((country) => country.code),
+        containsAll(<String>['CO', 'ES', 'US', 'ZZ']),
+      );
+    });
+
+    test('takes the code out of the entity key, not out of a browse token', () {
+      final countries = parseChartCountries(_fixture('charts_page.json'));
+      final worldwide =
+          countries.firstWhere((country) => country.code == 'ZZ');
+
+      // The name arrives translated by the request's own `hl`, which is what
+      // makes writing the list out here the wrong move.
+      expect(worldwide.name, 'Todo el mundo');
+    });
+
+    test('marks the country the page was already filtered by', () {
+      final countries = parseChartCountries(_fixture('charts_page.json'));
+      final selected = countries.where((country) => country.selected);
+
+      // Listed twice — pinned at the top and again in alphabetical order — and
+      // deduplicated by code, so exactly one survives.
+      expect(selected.map((country) => country.code), ['CO']);
+    });
+  });
+
+  group('the explore page', () {
+    // Measured on 11 September 2026: `FEmusic_explore` is never asked for by
+    // the app's other three explore calls, and one of its rows used to come
+    // back empty because its cards are navigation buttons rather than covers.
+    test('keeps the row of moods and genres instead of dropping it', () {
+      final shelves = parseShelves(_fixture('explore_page.json'));
+      final chips = shelves.where(
+        (shelf) => shelf.playlists.every(
+          (playlist) => playlist.browseId.startsWith(
+            'FEmusic_moods_and_genres_category',
+          ),
+        ),
+      );
+
+      expect(chips, isNotEmpty);
+      expect(chips.first.playlists, isNotEmpty);
+      // A label, not a record: these carry params and no cover.
+      expect(chips.first.playlists.first.params, isNotNull);
+      expect(chips.first.playlists.first.thumbnailUrl, isNull);
+    });
+
+    test('carries a shelf of tracks that no other browse id lists', () {
+      final tracks = parseShelves(_fixture('explore_page.json'))
+          .where((shelf) => shelf.songs.isNotEmpty);
+
+      expect(tracks, isNotEmpty);
+      expect(tracks.first.songs.first.videoId, isNotEmpty);
+    });
+  });
 }

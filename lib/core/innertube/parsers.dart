@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import '../../data/models/credits.dart';
 import '../../data/models/playlist.dart';
 import '../../data/models/search.dart';
@@ -906,7 +908,15 @@ List<Shelf> parseShelves(Map<String, dynamic> json) {
 
       final shelf = Shelf(
         title: _sectionTitle(section),
-        playlists: [...parsePlaylists(section), ...parseArtistRows(section)],
+        playlists: [
+          ...parsePlaylists(section),
+          ...parseArtistRows(section),
+          // A carousel of labels rather than covers: the explore page files
+          // its moods and genres this way, in the same renderer the moods
+          // page uses. Without this the whole row came back with nothing in
+          // it and was dropped as empty.
+          ...parseMoodChips(section),
+        ],
         songs: [...parseSongList(section), ...parseCardSongs(section)],
       );
       if (shelf.title.isNotEmpty && !shelf.isEmpty) shelves.add(shelf);
@@ -1046,6 +1056,56 @@ List<Playlist> parseMoodChips(Map<String, dynamic> json) {
 
   return chips;
 }
+
+/// The countries the charts can be asked for, as the charts page lists them.
+///
+/// The menu is 70 entries of about a kilobyte each, and none of them carries a
+/// browse `params`: every one points at a bare `FEmusic_charts`. What tells
+/// them apart is the `formItemEntityKey`, a base64 blob whose plain text ends
+/// in the country's two-letter code — `…country_menu_316766567CO`. Reading the
+/// code out of there is what makes the menu usable, because the code is
+/// exactly what `formData.selectedValues` wants back.
+///
+/// The country the response was already filtered by is the one YouTube leaves
+/// unclickable: it is listed twice — pinned at the top and again in
+/// alphabetical order — and neither copy carries a `selectedCommand`.
+List<ChartCountry> parseChartCountries(Map<String, dynamic> json) {
+  final countries = <ChartCountry>[];
+  final seen = <String>{};
+
+  for (final item in findAll(json, 'musicMultiSelectMenuItemRenderer')) {
+    final name = _readRuns(readPath(item, ['title']));
+    final code = _countryCode(readPath(item, ['formItemEntityKey']));
+    if (name.isEmpty || code == null || !seen.add(code)) continue;
+
+    countries.add(ChartCountry(
+      code: code,
+      name: name,
+      selected: readPath(item, ['selectedCommand']) == null,
+    ));
+  }
+
+  return countries;
+}
+
+/// The two-letter code hidden in a country entry's entity key, or null when the
+/// key is not one — a malformed or re-encoded blob is YouTube changing shape,
+/// not a reason to lose the rest of the menu.
+String? _countryCode(Object? entityKey) {
+  if (entityKey is! String) return null;
+  try {
+    final key = Uri.decodeComponent(entityKey);
+    final decoded = utf8.decode(
+      base64.decode(key.padRight((key.length + 3) ~/ 4 * 4, '=')),
+      allowMalformed: true,
+    );
+    return _countryKeyPattern.firstMatch(decoded)?.group(1);
+  } catch (_) {
+    return null;
+  }
+}
+
+final _countryKeyPattern = RegExp(r'country_menu_\d+([A-Z]{2})');
 
 /// Every audio-only stream a player response offers, best first.
 ///

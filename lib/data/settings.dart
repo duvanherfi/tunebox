@@ -40,6 +40,7 @@ class Settings extends ChangeNotifier {
   static const _nightstandBurnInKey = 'nightstand_burn_in';
   static const _nightstandIdleKey = 'nightstand_idle_seconds';
   static const _nightstandChargeKey = 'nightstand_on_charge';
+  static const _chartCountryKey = 'chart_country';
   static const _updateCheckKey = 'update_check';
   static const _updateCheckedAtKey = 'update_checked_at';
 
@@ -98,6 +99,11 @@ class Settings extends ChangeNotifier {
   /// Whether plugging the phone in, with music playing, brings it up.
   bool nightstandOnCharge = false;
 
+  /// Which country's charts to show, as a two-letter code, or null to let the
+  /// device's own locale decide. Not a locale setting: someone abroad, or
+  /// simply curious, wants a chart their `gl` would never give them.
+  String? chartCountry;
+
   /// Whether the app looks for a new release on its own.
   ///
   /// On by default, unlike the two nightstand switches above: there the
@@ -133,6 +139,7 @@ class Settings extends ChangeNotifier {
         prefs.getInt(_nightstandIdleKey) ?? nightstandIdleSeconds;
     nightstandOnCharge =
         prefs.getBool(_nightstandChargeKey) ?? nightstandOnCharge;
+    chartCountry = prefs.getString(_chartCountryKey) ?? chartCountry;
     updateCheck = prefs.getBool(_updateCheckKey) ?? updateCheck;
     updateCheckedAt = prefs.getInt(_updateCheckedAtKey) ?? updateCheckedAt;
     bandGains = prefs
@@ -228,6 +235,11 @@ class Settings extends ChangeNotifier {
   Future<void> setNightstandOnCharge(bool value) => _write(
         () => nightstandOnCharge = value,
         (p) => p.setBool(_nightstandChargeKey, value),
+      );
+
+  Future<void> setChartCountry(String value) => _write(
+        () => chartCountry = value,
+        (p) => p.setString(_chartCountryKey, value),
       );
 
   Future<void> setUpdateCheck(bool value) => _write(

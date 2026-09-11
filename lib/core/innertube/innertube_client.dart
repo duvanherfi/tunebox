@@ -567,9 +567,42 @@ class InnertubeClient {
   Future<List<Shelf>> newReleases() async =>
       parseShelves(await browse('FEmusic_new_releases'));
 
-  /// The charts: what is being played most, where the account says it is.
-  Future<List<Shelf>> charts() async =>
-      parseShelves(await browse('FEmusic_charts'));
+  /// The charts: what is being played most, and where that "most" is counted.
+  ///
+  /// [country] is a two-letter code out of the page's own menu
+  /// ([parseChartCountries]), and it travels in `formData` rather than in
+  /// `params`: the menu hands out no browse token at all, only a form the web
+  /// client mutates before re-browsing. Sending the code straight back is what
+  /// a stateless client can do instead, and it works — measured against `US`,
+  /// `ES` and `ZZ`, each of which came back with its own name on the selector.
+  ///
+  /// Null asks for nothing and lets `gl` decide, which is what the app does
+  /// until someone picks.
+  Future<ChartsPage> chartsPage({String? country}) async {
+    final json = await _post(_musicBase, 'browse', _webRemix, {
+      'browseId': 'FEmusic_charts',
+      if (country != null)
+        'formData': {
+          'selectedValues': [country],
+        },
+    });
+    return ChartsPage(
+      shelves: parseShelves(json),
+      countries: parseChartCountries(json),
+    );
+  }
+
+  /// What is trending, off YouTube's own explore page.
+  ///
+  /// `FEmusic_explore` is the landing page the other three calls here are the
+  /// destinations of — its own rows repeat new releases and the mood buttons,
+  /// which the app already browses directly — so only the shelves of tracks
+  /// are kept. That shelf is the one thing the page has that nothing else
+  /// does: twenty records, ranked, that no other browse id lists.
+  Future<List<Shelf>> trending() async {
+    final shelves = parseShelves(await browse('FEmusic_explore'));
+    return shelves.where((shelf) => shelf.songs.isNotEmpty).toList();
+  }
 
   /// The mood and genre buttons, each of which opens a page of its own.
   Future<List<Playlist>> moods() async =>

@@ -500,6 +500,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get exploreMoods => 'Ambientes';
 
   @override
+  String get exploreTrending => 'Tendencias';
+
+  @override
+  String get chartsCountry => 'País';
+
+  @override
   String get libraryDownloads => 'Descargas';
 
   @override

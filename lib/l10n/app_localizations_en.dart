@@ -496,6 +496,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exploreMoods => 'Moods';
 
   @override
+  String get exploreTrending => 'Trending';
+
+  @override
+  String get chartsCountry => 'Country';
+
+  @override
   String get libraryDownloads => 'Downloads';
 
   @override
