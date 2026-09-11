@@ -57,12 +57,44 @@ la búsqueda también, el 11 de septiembre de 2026.
     `MUSIC_VIDEO_TYPE_ATV`. Encontrar dónde sirve YouTube ese dato es un sondeo
     propio; los clientes móviles de música contestan **400** contra
     `music.youtube.com`, hay que ir a `youtubei.googleapis.com`.
+
+    Dos hipótesis más, medidas el 11 de septiembre de 2026, y las dos muertas.
+    La primera era la buena: **todas las llamadas a `next` mandan
+    `isAudioOnly: true`** —`innertube_client.dart`, las tres—, que es
+    literalmente el cliente diciendo "estoy en modo audio", y nadie había
+    variado ese campo. Se varió: nada. La segunda, mandar además
+    `enablePersistentPlaylistPanel` y `tunerSettingValue`, que es lo que manda
+    la web: nada tampoco. Nueve peticiones —tres pistas por tres formas—, cero
+    `counterpart` y cero `playlistPanelVideoWrapperRenderer` **en el árbol
+    entero**, no en una ruta fija. Y la tercera pista del sondeo,
+    `5NV6Rdv1a3I`, es `MUSIC_VIDEO_TYPE_OMV`: un vídeo musical oficial. O sea
+    que tampoco es que las pistas probadas no tengan versión en vídeo.
+
+    Lo que queda por probar es de otra clase: con sesión. Las nueve fueron
+    anónimas.
   - **Pintar la imagen.** Las filas que YouTube marca "Vídeo •" son vídeo de
     verdad y la app ya las reproduce, en audio, porque el reproductor es
     `just_audio` —que no pinta imagen— y el `StreamProxy` sirve el formato de
     audio. Enseñar el vídeo no es pedir otro endpoint: es meter un reproductor
     de vídeo en la app, y decidir qué hace con él la sesión de medios, el carro
     y la pantalla de bloqueo. Feature grande y aparte.
+
+    Medido el 11 de septiembre de 2026 sobre la respuesta que la app ya usa
+    (`test/fixtures/player_ios.json`), que es lo que dice de qué tamaño es:
+    la imagen **ya viene y es alcanzable**. `streamingData` trae 18 formatos de
+    vídeo, de 144p a 1080p, en mp4/webm/av1, y **todos con `url` en claro** —sin
+    `signatureCipher`, o sea sin descifrado de firma—. `parseAudioStreams` los
+    tira a propósito, con un `mimeType.startsWith('audio')`.
+
+    El problema no es el dato, es que **no hay formato mezclado**: `formats`
+    —los itag 18/22, vídeo y audio en un archivo— viene **vacío**, y los 18 son
+    pistas de vídeo *sin* audio. Así que enseñar el vídeo es reproducir dos
+    streams sincronizados, y eso descarta de entrada las dos opciones baratas:
+    `just_audio` no pinta, y `video_player` toma una sola URL. Lo que sí lo hace
+    es `media_kit` —libmpv—, que es la misma dependencia que haría falta para
+    Windows y Linux. Ése es el tamaño real: una dependencia nueva, un segundo
+    reproductor, y decidir qué publica en `playbackState`/`mediaItem` mientras
+    tanto.
 
 - **El log de reproducciones no distingue una canción escuchada de una
   saltada.** Salió al diseñar un modelo de recomendación sobre el historial
@@ -91,6 +123,30 @@ la búsqueda también, el 11 de septiembre de 2026.
   otro repo, pero **la instrumentación conviene adelantarla** para que el
   historial se vaya llenando mientras tanto.
 
+
+- **A Explorar le faltan cosas, y están medidas** (11 de septiembre de 2026).
+  Salió de mirarlo a raíz de una sospecha, y la sospecha era buena. Tres
+  huecos, por orden de lo que se ve:
+
+  - **Las listas por país no existen en la app.** La respuesta de
+    `FEmusic_charts` trae un `musicSortFilterButtonRenderer` de 84 KB con
+    **70 países** dentro (`musicMultiSelectMenuItemRenderer`, uno por país, con
+    su comando para volver a pedir la página), y la app no lee ninguno: enseña
+    la lista del país que diga `gl`, que hoy es `CO`, y no hay manera de cambiarlo.
+  - **`FEmusic_explore` no se pide nunca.** La pantalla hace tres peticiones
+    —`FEmusic_new_releases`, `FEmusic_charts`, `FEmusic_moods_and_genres`— y esa
+    cuarta, que es la que la web llama Explorar, no está. Trae una estantería
+    que no aparece en ningún otro sitio de la app: **Tendencias**, 20 pistas.
+  - **Una estantería se cae en el parseo.** En `FEmusic_explore`, el carrusel
+    "Ánimo y géneros" sale con cero de todo: sus tarjetas no son las que
+    `parsePlaylists` sabe leer. Es la misma lista que ya enseña la tercera
+    pestaña, así que el coste es bajo, pero es una sección perdida.
+
+  Dos cosas que **no** son fallos, comprobadas de paso: el `musicShelfRenderer`
+  de las listas viene sin `contents` y sin título —es sólo el envoltorio del
+  selector de países—, así que descartarlo está bien; y `parseShelves` contesta
+  cero para `FEmusic_moods_and_genres` porque esa pestaña usa `parseMoodChips`,
+  que es otra función.
 
 ## Suelto, sin diagnosticar
 
