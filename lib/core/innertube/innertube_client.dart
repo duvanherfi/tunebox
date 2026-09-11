@@ -849,6 +849,64 @@ class InnertubeClient {
     });
   }
 
+  /// Marks a podcast episode played, or played again.
+  ///
+  /// A plain feedback token like the pin, not the third one an episode carries:
+  /// beside the progress bar sits a `videoPlaybackPositionFeedbackToken`, which
+  /// is a different token for a different job. The two sides of the toggle are
+  /// read off the menu and the row says which one to send
+  /// ([SongActions.markPlayed], [SongActions.markUnplayed]).
+  Future<void> setEpisodePlayed(String token) => _feedback(token);
+
+  /// The list YouTube Music calls "Episodes for Later".
+  ///
+  /// Its id is the literal `SE`, which is why this takes no playlist: there is
+  /// one of these per account and the row's menu names it outright rather than
+  /// handing over a token. The two `params` are the ones the menu's own
+  /// commands carry, recorded against the real account on 11 September 2026 and
+  /// passed back as they arrived.
+  static const _queueForLaterParams = 'YAFwZA%3D%3D';
+  static const _unqueueForLaterParams = 'cGQ%3D';
+
+  /// Puts an episode on that list, or takes it off.
+  ///
+  /// Not [addToPlaylist] and not [removeFromPlaylist], though both are the same
+  /// endpoint: this list is kept in listening order rather than in the order
+  /// things were added, so YouTube's own command sweeps the played episodes out
+  /// on every edit and names the new one's place. Removing goes by video id,
+  /// which an ordinary playlist cannot do — it may hold the same track twice
+  /// and this one cannot.
+  Future<void> setQueuedForLater(String videoId, bool queued) async {
+    _requireSession();
+    await _post(_musicBase, 'browse/edit_playlist', _webRemix, {
+      'playlistId': 'SE',
+      'actions': queued
+          ? [
+              {
+                'action': 'ACTION_REMOVE_WATCHED_VIDEOS',
+                'suppressSuccessToast': true,
+              },
+              {
+                'action': 'ACTION_ADD_VIDEO',
+                'addedVideoId': videoId,
+                'dedupeOption': 'DEDUPE_OPTION_CHECK',
+                'addedVideoPositionIfManualSort': 0,
+              },
+            ]
+          : [
+              {
+                'action': 'ACTION_REMOVE_VIDEO_BY_VIDEO_ID',
+                'removedVideoId': videoId,
+              },
+              {
+                'action': 'ACTION_REMOVE_WATCHED_VIDEOS',
+                'suppressSuccessToast': true,
+              },
+            ],
+      'params': queued ? _queueForLaterParams : _unqueueForLaterParams,
+    });
+  }
+
   /// Adds a track to one of the account's playlists.
   Future<void> addToPlaylist(String playlistId, String videoId) =>
       addAllToPlaylist(playlistId, [videoId]);

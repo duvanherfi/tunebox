@@ -629,6 +629,30 @@ class AppLocalizationsEs extends AppLocalizations {
   String get menuUnpinned => 'Desfijada de Vuelve a escucharlo';
 
   @override
+  String get menuMarkPlayed => 'Marcar como reproducido';
+
+  @override
+  String get menuMarkUnplayed => 'Marcar como no reproducido';
+
+  @override
+  String get menuMarkedPlayed => 'Marcado como reproducido';
+
+  @override
+  String get menuMarkedUnplayed => 'Marcado como no reproducido';
+
+  @override
+  String get menuQueueForLater => 'Añadir a Episodios para más tarde';
+
+  @override
+  String get menuUnqueueForLater => 'Quitar de Episodios para más tarde';
+
+  @override
+  String get menuQueuedForLater => 'Añadido a Episodios para más tarde';
+
+  @override
+  String get menuUnqueuedForLater => 'Quitado de Episodios para más tarde';
+
+  @override
   String get menuRemoveFromPlaylist => 'Quitar de la lista';
 
   @override

@@ -1,0 +1,494 @@
+{
+ "contents": {
+  "twoColumnBrowseResultsRenderer": {
+   "secondaryContents": {
+    "sectionListRenderer": {
+     "contents": [
+      {
+       "musicShelfRenderer": {
+        "contents": [
+         {
+          "musicMultiRowListItemRenderer": {
+           "thumbnail": {
+            "musicThumbnailRenderer": {
+             "thumbnail": {
+              "thumbnails": [
+               {
+                "url": "https://i.ytimg.com/vi/GF-B5r4Myl0/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3nPlrd-GcN7RIA2O_Y-_9iiuEW76A",
+                "width": 400,
+                "height": 225
+               },
+               {
+                "url": "https://i.ytimg.com/vi/GF-B5r4Myl0/hq720.jpg?sqp=-oaymwEKCKAGEMIDIABIWg&rs=AMzJL3m9lnKmDYJmTgL5_wAfS78-kZ9Pog",
+                "width": 800,
+                "height": 450
+               },
+               {
+                "url": "https://i.ytimg.com/vi/GF-B5r4Myl0/hq720.jpg?sqp=-oaymwEKCNUGEN8DIABIWg&rs=AMzJL3nuD_CHa0_PRxU2QPNHjaYdpI-MJg",
+                "width": 853,
+                "height": 479
+               }
+              ]
+             },
+             "thumbnailCrop": "MUSIC_THUMBNAIL_CROP_UNSPECIFIED",
+             "thumbnailScale": "MUSIC_THUMBNAIL_SCALE_ASPECT_FIT"
+            }
+           },
+           "overlay": {
+            "musicItemThumbnailOverlayRenderer": {
+             "background": {
+              "verticalGradient": {
+               "gradientLayerColors": [
+                "3422552064",
+                "3422552064"
+               ]
+              }
+             },
+             "content": {
+              "musicPlayButtonRenderer": {
+               "playNavigationEndpoint": {
+                "watchEndpoint": {
+                 "videoId": "GF-B5r4Myl0",
+                 "params": "8gEDmAEI",
+                 "playerParams": "0gcJCQYB-iE-y48-",
+                 "watchEndpointMusicSupportedConfigs": {
+                  "watchEndpointMusicConfig": {
+                   "musicVideoType": "MUSIC_VIDEO_TYPE_PODCAST_EPISODE"
+                  }
+                 }
+                }
+               },
+               "playIcon": {
+                "iconType": "PLAY_ARROW"
+               },
+               "pauseIcon": {
+                "iconType": "PAUSE"
+               },
+               "iconColor": 4294967295,
+               "backgroundColor": 0,
+               "activeBackgroundColor": 0,
+               "loadingIndicatorColor": 14745645,
+               "playingIcon": {
+                "iconType": "VOLUME_UP"
+               },
+               "iconLoadingColor": 0,
+               "activeScaleFactor": 1,
+               "buttonSize": "MUSIC_PLAY_BUTTON_SIZE_SMALL",
+               "rippleTarget": "MUSIC_PLAY_BUTTON_RIPPLE_TARGET_SELF",
+               "accessibilityPlayData": {
+                "accessibilityData": {
+                 "label": "Play Lana Del Rey - Ultraviolence - Album Review - Get In The Garage - Get In The Garage - The Music Podcast "
+                }
+               },
+               "accessibilityPauseData": {
+                "accessibilityData": {
+                 "label": "Pause Lana Del Rey - Ultraviolence - Album Review - Get In The Garage - Get In The Garage - The Music Podcast "
+                }
+               }
+              }
+             },
+             "contentPosition": "MUSIC_ITEM_THUMBNAIL_OVERLAY_CONTENT_POSITION_CENTERED",
+             "displayStyle": "MUSIC_ITEM_THUMBNAIL_OVERLAY_DISPLAY_STYLE_PERSISTENT"
+            }
+           },
+           "onTap": {
+            "watchEndpoint": {
+             "videoId": "GF-B5r4Myl0",
+             "params": "8gEDmAEI",
+             "watchEndpointMusicSupportedConfigs": {
+              "watchEndpointMusicConfig": {
+               "musicVideoType": "MUSIC_VIDEO_TYPE_PODCAST_EPISODE"
+              }
+             }
+            }
+           },
+           "menu": {
+            "menuRenderer": {
+             "items": [
+              {
+               "toggleMenuServiceItemRenderer": {
+                "defaultText": {
+                 "runs": [
+                  {
+                   "text": "Queue to "
+                  },
+                  {
+                   "text": "Episodes for Later"
+                  }
+                 ]
+                },
+                "defaultIcon": {
+                 "iconType": "ADD_CIRCLE"
+                },
+                "defaultServiceEndpoint": {
+                 "commandExecutorCommand": {
+                  "commands": [
+                   {
+                    "feedbackEndpoint": {
+                     "feedbackToken": "AB9zfpLH7Ni-HXQG833oFjy3npysGyHDmEPNRTDfj0dupLudTqWTkDIlYqXoAVvV5vonJQCTZvFTMJdcLxGOGqXd5a9KgOjC4Q"
+                    }
+                   },
+                   {
+                    "playlistEditEndpoint": {
+                     "playlistId": "SE",
+                     "actions": [
+                      {
+                       "action": "ACTION_REMOVE_WATCHED_VIDEOS",
+                       "suppressSuccessToast": true
+                      },
+                      {
+                       "addedVideoId": "GF-B5r4Myl0",
+                       "action": "ACTION_ADD_VIDEO",
+                       "dedupeOption": "DEDUPE_OPTION_CHECK",
+                       "addedVideoPositionIfManualSort": 0
+                      }
+                     ],
+                     "params": "YAFwZA%3D%3D"
+                    }
+                   }
+                  ]
+                 }
+                },
+                "toggledText": {
+                 "runs": [
+                  {
+                   "text": "Remove from "
+                  },
+                  {
+                   "text": "Episodes for Later"
+                  }
+                 ]
+                },
+                "toggledIcon": {
+                 "iconType": "PLAYLIST_ADD_CHECK"
+                },
+                "toggledServiceEndpoint": {
+                 "playlistEditEndpoint": {
+                  "playlistId": "SE",
+                  "actions": [
+                   {
+                    "action": "ACTION_REMOVE_VIDEO_BY_VIDEO_ID",
+                    "removedVideoId": "GF-B5r4Myl0"
+                   },
+                   {
+                    "action": "ACTION_REMOVE_WATCHED_VIDEOS",
+                    "suppressSuccessToast": true
+                   }
+                  ],
+                  "params": "cGQ%3D"
+                 }
+                },
+                "isToggled": false
+               }
+              },
+              {
+               "toggleMenuServiceItemRenderer": {
+                "defaultText": {
+                 "runs": [
+                  {
+                   "text": "Mark as played"
+                  }
+                 ]
+                },
+                "defaultIcon": {
+                 "iconType": "CHECK"
+                },
+                "defaultServiceEndpoint": {
+                 "feedbackEndpoint": {
+                  "feedbackToken": "AB9zfpL6fkRJIupXE6tKdYklzR_qs8x7S2H_aoY-Sz-SrDNRMmdPwZ9YUANM4Ne90O0S9vW4LpSlxKnC-fnLoTvtFG5Z-3LvKw"
+                 }
+                },
+                "toggledText": {
+                 "runs": [
+                  {
+                   "text": "Mark as unplayed"
+                  }
+                 ]
+                },
+                "toggledIcon": {
+                 "iconType": "ARROW_UNDO"
+                },
+                "toggledServiceEndpoint": {
+                 "feedbackEndpoint": {
+                  "feedbackToken": "AB9zfpLH7Ni-HXQG833oFjy3npysGyHDmEPNRTDfj0dupLudTqWTkDIlYqXoAVvV5vonJQCTZvFTMJdcLxGOGqXd5a9KgOjC4Q"
+                 }
+                },
+                "isToggled": true
+               }
+              },
+              {
+               "menuServiceItemRenderer": {
+                "text": {
+                 "runs": [
+                  {
+                   "text": "Play next"
+                  }
+                 ]
+                },
+                "icon": {
+                 "iconType": "QUEUE_PLAY_NEXT"
+                },
+                "serviceEndpoint": {
+                 "queueAddEndpoint": {
+                  "queueTarget": {
+                   "videoId": "GF-B5r4Myl0",
+                   "onEmptyQueue": {
+                    "watchEndpoint": {
+                     "videoId": "GF-B5r4Myl0"
+                    }
+                   }
+                  },
+                  "queueInsertPosition": "INSERT_AFTER_CURRENT_VIDEO",
+                  "commands": [
+                   {
+                    "addToToastAction": {
+                     "item": {
+                      "notificationTextRenderer": {
+                       "successResponseText": {
+                        "runs": [
+                         {
+                          "text": "Episode will play next"
+                         }
+                        ]
+                       }
+                      }
+                     }
+                    }
+                   }
+                  ]
+                 }
+                }
+               }
+              },
+              {
+               "menuServiceItemRenderer": {
+                "text": {
+                 "runs": [
+                  {
+                   "text": "Add to queue"
+                  }
+                 ]
+                },
+                "icon": {
+                 "iconType": "ADD_TO_REMOTE_QUEUE"
+                },
+                "serviceEndpoint": {
+                 "queueAddEndpoint": {
+                  "queueTarget": {
+                   "videoId": "GF-B5r4Myl0",
+                   "onEmptyQueue": {
+                    "watchEndpoint": {
+                     "videoId": "GF-B5r4Myl0"
+                    }
+                   }
+                  },
+                  "queueInsertPosition": "INSERT_AT_END",
+                  "commands": [
+                   {
+                    "addToToastAction": {
+                     "item": {
+                      "notificationTextRenderer": {
+                       "successResponseText": {
+                        "runs": [
+                         {
+                          "text": "Episode added to queue"
+                         }
+                        ]
+                       }
+                      }
+                     }
+                    }
+                   }
+                  ]
+                 }
+                }
+               }
+              },
+              {
+               "menuServiceItemDownloadRenderer": {
+                "serviceEndpoint": {
+                 "offlineVideoEndpoint": {
+                  "videoId": "GF-B5r4Myl0",
+                  "onAddCommand": {
+                   "getDownloadActionCommand": {
+                    "videoId": "GF-B5r4Myl0",
+                    "params": "CAI%3D"
+                   }
+                  }
+                 }
+                }
+               }
+              },
+              {
+               "menuNavigationItemRenderer": {
+                "text": {
+                 "runs": [
+                  {
+                   "text": "Save to playlist"
+                  }
+                 ]
+                },
+                "icon": {
+                 "iconType": "ADD_TO_PLAYLIST"
+                },
+                "navigationEndpoint": {
+                 "addToPlaylistEndpoint": {
+                  "videoId": "GF-B5r4Myl0"
+                 }
+                }
+               }
+              },
+              {
+               "menuNavigationItemRenderer": {
+                "text": {
+                 "runs": [
+                  {
+                   "text": "Share"
+                  }
+                 ]
+                },
+                "icon": {
+                 "iconType": "SHARE"
+                },
+                "navigationEndpoint": {
+                 "shareEntityEndpoint": {
+                  "serializedShareEntity": "CgtHRi1CNXI0TXlsMA%3D%3D",
+                  "sharePanelType": "SHARE_PANEL_TYPE_UNIFIED_SHARE_PANEL"
+                 }
+                }
+               }
+              },
+              {
+               "toggleMenuServiceItemRenderer": {
+                "defaultText": {
+                 "runs": [
+                  {
+                   "text": "Pin to Listen again"
+                  }
+                 ]
+                },
+                "defaultIcon": {
+                 "iconType": "KEEP"
+                },
+                "defaultServiceEndpoint": {
+                 "feedbackEndpoint": {
+                  "feedbackToken": "AB9zfpI2SZSBd7LJQZtO7z8xpJ7KQfF4M7notGdGLWhzCl0JqzwXf4En4AwSFcZDIDfAcvjDYxHbLoFaLv_-12vyamSC7X5jwfju8BXcfhqaB4YjJ0vTOhg"
+                 }
+                },
+                "toggledText": {
+                 "runs": [
+                  {
+                   "text": "Unpin from Listen again"
+                  }
+                 ]
+                },
+                "toggledIcon": {
+                 "iconType": "KEEP_OFF"
+                },
+                "toggledServiceEndpoint": {
+                 "feedbackEndpoint": {
+                  "feedbackToken": "AB9zfpKqBI-NMy2lcIizkGAfiKdsqTGvq-sV3uxYzMVaM7wDbIOrgxEId9P9b0i6F1VHLvUjNqDmDQCn5VTFAgpEGJGznTQvj5-mHSiqdawCab9RrNkAWx4"
+                 }
+                }
+               }
+              }
+             ],
+             "accessibility": {
+              "accessibilityData": {
+               "label": "Action menu"
+              }
+             }
+            }
+           },
+           "subtitle": {
+            "runs": [
+             {
+              "text": "3.9K views"
+             },
+             {
+              "text": " • "
+             },
+             {
+              "text": "Jun 29, 2023"
+             }
+            ],
+            "accessibility": {
+             "accessibilityData": {
+              "label": "3.9 thousand views • Jun 29, 2023"
+             }
+            }
+           },
+           "playbackProgress": {
+            "musicPlaybackProgressRenderer": {
+             "playbackProgressPercentage": 100,
+             "playbackProgressText": {
+              "runs": [
+               {
+                "text": " • "
+               },
+               {
+                "text": "Played",
+                "textColor": 4294921797
+               }
+              ]
+             },
+             "videoPlaybackPositionFeedbackToken": "AB9zfpL6fkRJIupXE6tKdYklzR_qs8x7S2H_aoY-Sz-SrDNRMmdPwZ9YUANM4Ne90O0S9vW4LpSlxKnC-fnLoTvtFG5Z-3LvKw",
+             "durationText": {
+              "runs": [
+               {
+                "text": " • "
+               },
+               {
+                "text": "25 min"
+               }
+              ]
+             },
+             "playedText": {
+              "runs": [
+               {
+                "text": " • "
+               },
+               {
+                "text": "Played",
+                "textColor": 4294921797
+               }
+              ]
+             }
+            }
+           },
+           "title": {
+            "runs": [
+             {
+              "text": "Lana Del Rey - Ultraviolence - Album Review - Get In The Garage",
+              "navigationEndpoint": {
+               "browseEndpoint": {
+                "browseId": "MPEDGF-B5r4Myl0",
+                "browseEndpointContextSupportedConfigs": {
+                 "browseEndpointContextMusicConfig": {
+                  "pageType": "MUSIC_PAGE_TYPE_NON_MUSIC_AUDIO_TRACK_PAGE"
+                 }
+                }
+               }
+              }
+             }
+            ]
+           },
+           "description": {
+            "runs": [
+             {
+              "text": "Welcome to Get In The Garage, the music podcast FOR MUSIC LOVERS! Every week, we have the latest and greatest in Music News, Album Reviews, Music Culture, and much, much more!"
+             }
+            ]
+           },
+           "displayStyle": "MUSIC_MULTI_ROW_LIST_ITEM_DISPLAY_STYLE_DETAILED"
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  }
+ }
+}

@@ -625,6 +625,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get menuUnpinned => 'Unpinned from Speed dial';
 
   @override
+  String get menuMarkPlayed => 'Mark as played';
+
+  @override
+  String get menuMarkUnplayed => 'Mark as unplayed';
+
+  @override
+  String get menuMarkedPlayed => 'Marked as played';
+
+  @override
+  String get menuMarkedUnplayed => 'Marked as unplayed';
+
+  @override
+  String get menuQueueForLater => 'Queue to Episodes for Later';
+
+  @override
+  String get menuUnqueueForLater => 'Remove from Episodes for Later';
+
+  @override
+  String get menuQueuedForLater => 'Queued to Episodes for Later';
+
+  @override
+  String get menuUnqueuedForLater => 'Removed from Episodes for Later';
+
+  @override
   String get menuRemoveFromPlaylist => 'Remove from playlist';
 
   @override

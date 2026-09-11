@@ -241,6 +241,47 @@ class _SongMenu extends StatelessWidget {
                   retireFrom: RetiredIds.playlist(playlistId!),
                 ),
               ),
+            // Only a podcast episode carries these two, and only signed in:
+            // the same page anonymous ships a menu without them.
+            if (_playedToken(song) != null)
+              ListTile(
+                leading: Icon(
+                  song.actions.played
+                      ? Icons.replay_rounded
+                      : Icons.check_circle_outline_rounded,
+                ),
+                title: Text(song.actions.played
+                    ? l10n.menuMarkUnplayed
+                    : l10n.menuMarkPlayed),
+                onTap: () => _run(
+                  context,
+                  () => innertube.setEpisodePlayed(_playedToken(song)!),
+                  song.actions.played
+                      ? l10n.menuMarkedUnplayed
+                      : l10n.menuMarkedPlayed,
+                ),
+              ),
+            if (song.actions.queueForLater)
+              ListTile(
+                leading: Icon(
+                  song.actions.queuedForLater
+                      ? Icons.playlist_add_check_rounded
+                      : Icons.add_circle_outline_rounded,
+                ),
+                title: Text(song.actions.queuedForLater
+                    ? l10n.menuUnqueueForLater
+                    : l10n.menuQueueForLater),
+                onTap: () => _run(
+                  context,
+                  () => innertube.setQueuedForLater(
+                    song.videoId,
+                    !song.actions.queuedForLater,
+                  ),
+                  song.actions.queuedForLater
+                      ? l10n.menuUnqueuedForLater
+                      : l10n.menuQueuedForLater,
+                ),
+              ),
             if (_pinToken(song) != null)
               ListTile(
                 leading: Icon(
@@ -331,6 +372,11 @@ class _SongMenu extends StatelessWidget {
 String? _pinToken(Song song) => song.actions.pinnedToRecap
     ? song.actions.unpinFromRecap
     : song.actions.pinToRecap;
+
+/// The same, for the two sides of an episode's "Mark as played".
+String? _playedToken(Song song) => song.actions.played
+    ? song.actions.markUnplayed
+    : song.actions.markPlayed;
 
 /// Picks which playlist a track joins, or starts a new one.
 ///

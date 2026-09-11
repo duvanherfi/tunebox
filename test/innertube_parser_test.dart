@@ -16,6 +16,82 @@ Map<String, dynamic> _fixture(String name) =>
         as Map<String, dynamic>;
 
 void main() {
+  group('podcast episodes', () {
+    // The same page, anonymous and signed in. Measured on 11 September 2026:
+    // the account is what makes the two actions appear at all — anonymous, an
+    // episode's menu is five inert items and neither toggle is among them.
+    test('a signed-out episode offers neither action', () {
+      final episodes = parseSongList(_fixture('podcast_page.json'));
+
+      expect(episodes, isNotEmpty);
+      for (final episode in episodes) {
+        expect(episode.actions.markPlayed, isNull);
+        expect(episode.actions.queueForLater, isFalse);
+      }
+    });
+
+    test('a signed-in episode carries both sides of "mark as played"', () {
+      final episodes = parseSongList(_fixture('podcast_page_signed_in.json'));
+
+      expect(episodes, isNotEmpty);
+      for (final episode in episodes) {
+        // Both sides travel, and `played` says which one to send. The recorded
+        // page has nothing played, so the offer is to mark it.
+        expect(episode.actions.markPlayed, isNotNull);
+        expect(episode.actions.markUnplayed, isNotNull);
+        expect(episode.actions.markPlayed, isNot(episode.actions.markUnplayed));
+        expect(episode.actions.played, isFalse);
+      }
+    });
+
+    // The trap: an episode's menu carries three toggles and every one of them
+    // holds feedback tokens. Sending the pin's where the played one goes does
+    // not fail — it silently makes a different edit.
+    test('does not confuse the played toggle with the pin', () {
+      final episode =
+          parseSongList(_fixture('podcast_page_signed_in.json')).first;
+
+      expect(episode.actions.pinToRecap, isNotNull);
+      expect(episode.actions.pinToRecap, isNot(episode.actions.markPlayed));
+      expect(episode.actions.unpinFromRecap, isNot(episode.actions.markPlayed));
+      expect(episode.actions.pinToRecap, isNot(episode.actions.markUnplayed));
+    });
+
+    // The same episode after marking it played, recorded from the real account
+    // on 11 September 2026. This is what says the state is `isToggled` and not
+    // which side YouTube is offering: the icons are identical in both files.
+    test('reads a played episode as played', () {
+      final episode =
+          parseSongList(_fixture('podcast_episode_played.json')).single;
+
+      expect(episode.actions.played, isTrue);
+      expect(episode.actions.markUnplayed, isNotNull);
+    });
+
+    test('the played row offers the same two tokens, on the same sides', () {
+      final unplayed =
+          parseSongList(_fixture('podcast_page_signed_in.json')).first;
+      final played =
+          parseSongList(_fixture('podcast_episode_played.json')).single;
+
+      // Same row, same episode, one marked and one not. The tokens are the
+      // row's own so they differ; which side each lives on does not.
+      expect(unplayed.videoId, played.videoId);
+      expect(unplayed.actions.played, isFalse);
+      expect(played.actions.played, isTrue);
+      expect(played.actions.markPlayed, isNotNull);
+    });
+
+    test('reads whether the row offers "Episodes for Later"', () {
+      final episodes = parseSongList(_fixture('podcast_page_signed_in.json'));
+
+      for (final episode in episodes) {
+        expect(episode.actions.queueForLater, isTrue);
+        expect(episode.actions.queuedForLater, isFalse);
+      }
+    });
+  });
+
   group('parseSearchResults', () {
     test('extracts playable tracks from a search response', () {
       final songs = parseSearchResults(_fixture('search_daft_punk.json')).songs;

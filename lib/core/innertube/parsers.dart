@@ -469,6 +469,11 @@ Song? _episodeRow(Object? item, Set<String> seen) {
     title: title,
     subtitle: _readRuns(readPath(item, ['subtitle'])),
     thumbnailUrl: thumbnailUrl,
+    // An episode's menu is where "Mark as played" and "Episodes for Later"
+    // live, and it is signed in that they appear at all: measured on 11
+    // September 2026, the same page anonymous offers five inert items and the
+    // same page with the account offers eight.
+    actions: _actionsOf(item),
   );
 }
 
@@ -490,6 +495,11 @@ SongActions _actionsOf(Object? item) {
   String? pinToRecap;
   String? unpinFromRecap;
   var pinnedToRecap = false;
+  String? markPlayed;
+  String? markUnplayed;
+  var played = false;
+  var queueForLater = false;
+  var queuedForLater = false;
 
   for (final toggle in findAll(item, 'toggleMenuServiceItemRenderer')) {
     // `isToggled` is what says the track is in the library at all. Without it a
@@ -519,6 +529,34 @@ SongActions _actionsOf(Object? item) {
         pinIsDefault ? 'toggledServiceEndpoint' : 'defaultServiceEndpoint',
       );
       pinnedToRecap = !pinIsDefault;
+    }
+
+    // "Mark as played", which only a podcast episode carries.
+    //
+    // It looks like the pin and is not read like it. The pin swaps its sides —
+    // YouTube puts the action it is currently offering on `default` — and these
+    // two never do: measured by marking an episode played against the real
+    // account on 11 September 2026 and asking for the page again, `defaultIcon`
+    // stayed `CHECK` and `isToggled` went from false to true, with the progress
+    // going 0 → 100 on that row and nothing moving on the other ten. So the
+    // sides are fixed and `isToggled` is the state, which is how the library's
+    // own toggle reads a few lines up.
+    if (byDefault == 'CHECK') {
+      markPlayed = _feedbackToken(toggle, 'defaultServiceEndpoint');
+      markUnplayed = _feedbackToken(toggle, 'toggledServiceEndpoint');
+      played = readPath(toggle, ['isToggled']) == true;
+    }
+
+    // "Episodes for Later", the same shape again. No token to keep: both sides
+    // spell the edit out as a `playlistEditEndpoint` on the list YouTube calls
+    // `SE`, so all that is read here is that the row offered it and whether the
+    // episode is already on it. The add side arrives wrapped in a
+    // `commandExecutorCommand` and the remove side bare, which is only
+    // wrapping: underneath, both are the same playlist edit the client already
+    // makes.
+    if (byDefault == 'ADD_CIRCLE') {
+      queueForLater = true;
+      queuedForLater = readPath(toggle, ['isToggled']) == true;
     }
   }
 
@@ -558,6 +596,11 @@ SongActions _actionsOf(Object? item) {
   return SongActions(
     removeFromLibrary: removeFromLibrary,
     removeFromHistory: removeFromHistory,
+    markPlayed: markPlayed,
+    markUnplayed: markUnplayed,
+    played: played,
+    queueForLater: queueForLater,
+    queuedForLater: queuedForLater,
     pinToRecap: pinToRecap,
     unpinFromRecap: unpinFromRecap,
     pinnedToRecap: pinnedToRecap,

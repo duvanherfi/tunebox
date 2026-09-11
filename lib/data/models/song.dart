@@ -17,6 +17,11 @@ class SongActions {
     this.pinToRecap,
     this.unpinFromRecap,
     this.pinnedToRecap = false,
+    this.markPlayed,
+    this.markUnplayed,
+    this.played = false,
+    this.queueForLater = false,
+    this.queuedForLater = false,
     this.playlistSetVideoId,
     this.hasCredits = false,
   });
@@ -40,6 +45,29 @@ class SongActions {
   final String? pinToRecap;
   final String? unpinFromRecap;
   final bool pinnedToRecap;
+
+  /// The two sides of "Mark as played", which only a podcast episode carries.
+  ///
+  /// The same endpoint as the pin and not the same shape: the pin swaps its
+  /// sides and this one does not, so [played] is read off the toggle's own
+  /// `isToggled` rather than from which action is being offered. [markPlayed]
+  /// is always the default side and [markUnplayed] always the other.
+  ///
+  /// Measured against the real account on 11 September 2026, page before and
+  /// page after: the token beside the progress bar
+  /// (`videoPlaybackPositionFeedbackToken`) is a third, different one that does
+  /// something else, which is why these are read off the menu.
+  final String? markPlayed;
+  final String? markUnplayed;
+  final bool played;
+
+  /// Whether this row offers "Episodes for Later", and whether the episode is
+  /// already on it. Unlike every other action here there is no token: the row's
+  /// own menu spells the edit out as a `playlistEditEndpoint` on the list
+  /// YouTube calls `SE`, so what travels is only whether the row offered it —
+  /// the edit itself is the one the client already makes to any playlist.
+  final bool queueForLater;
+  final bool queuedForLater;
 
   /// Which copy of the track this row is, inside the playlist that listed it.
   ///

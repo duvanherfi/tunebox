@@ -1220,6 +1220,54 @@ abstract class AppLocalizations {
   /// **'Unpinned from Speed dial'**
   String get menuUnpinned;
 
+  /// No description provided for @menuMarkPlayed.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as played'**
+  String get menuMarkPlayed;
+
+  /// No description provided for @menuMarkUnplayed.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as unplayed'**
+  String get menuMarkUnplayed;
+
+  /// No description provided for @menuMarkedPlayed.
+  ///
+  /// In en, this message translates to:
+  /// **'Marked as played'**
+  String get menuMarkedPlayed;
+
+  /// No description provided for @menuMarkedUnplayed.
+  ///
+  /// In en, this message translates to:
+  /// **'Marked as unplayed'**
+  String get menuMarkedUnplayed;
+
+  /// No description provided for @menuQueueForLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Queue to Episodes for Later'**
+  String get menuQueueForLater;
+
+  /// No description provided for @menuUnqueueForLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from Episodes for Later'**
+  String get menuUnqueueForLater;
+
+  /// No description provided for @menuQueuedForLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Queued to Episodes for Later'**
+  String get menuQueuedForLater;
+
+  /// No description provided for @menuUnqueuedForLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed from Episodes for Later'**
+  String get menuUnqueuedForLater;
+
   /// No description provided for @menuRemoveFromPlaylist.
   ///
   /// In en, this message translates to:

@@ -134,4 +134,76 @@ void main() {
       expect(bodyOf(captured.single)['playlistId'], 'PL123');
     });
   });
+
+  group('setEpisodePlayed', () {
+    test("posts the episode's own token, not the pin's", () async {
+      final (innertube, captured) = await client();
+
+      await innertube.setEpisodePlayed('AB9zfpPLAYED');
+
+      expect(captured.single.url.path, endsWith('/feedback'));
+      expect(bodyOf(captured.single)['feedbackTokens'], ['AB9zfpPLAYED']);
+    });
+  });
+
+  group('setQueuedForLater', () {
+    // The list is `SE` and the edit is spelled out rather than tokenised, so
+    // this is the one write in the app whose body is built here instead of
+    // passed through. It is the body YouTube's own menu carries, recorded
+    // against the real account on 11 September 2026.
+    test('adds to the list YouTube keeps in listening order', () async {
+      final (innertube, captured) = await client();
+
+      await innertube.setQueuedForLater('GF-B5r4Myl0', true);
+
+      final body = bodyOf(captured.single);
+      expect(captured.single.url.path, endsWith('/browse/edit_playlist'));
+      expect(body['playlistId'], 'SE');
+      expect(body['params'], 'YAFwZA%3D%3D');
+      expect(body['actions'], [
+        {'action': 'ACTION_REMOVE_WATCHED_VIDEOS', 'suppressSuccessToast': true},
+        {
+          'action': 'ACTION_ADD_VIDEO',
+          'addedVideoId': 'GF-B5r4Myl0',
+          'dedupeOption': 'DEDUPE_OPTION_CHECK',
+          'addedVideoPositionIfManualSort': 0,
+        },
+      ]);
+    });
+
+    // By video id, which an ordinary playlist cannot do: that one may hold the
+    // same track twice and names the row instead.
+    test('removes by video id, with no setVideoId', () async {
+      final (innertube, captured) = await client();
+
+      await innertube.setQueuedForLater('GF-B5r4Myl0', false);
+
+      final body = bodyOf(captured.single);
+      expect(body['playlistId'], 'SE');
+      expect(body['params'], 'cGQ%3D');
+      expect(body['actions'], [
+        {
+          'action': 'ACTION_REMOVE_VIDEO_BY_VIDEO_ID',
+          'removedVideoId': 'GF-B5r4Myl0',
+        },
+        {'action': 'ACTION_REMOVE_WATCHED_VIDEOS', 'suppressSuccessToast': true},
+      ]);
+    });
+
+    test('refuses without a session rather than writing anonymously', () async {
+      var posted = false;
+      final innertube = InnertubeClient(
+        httpClient: MockClient((request) async {
+          posted = true;
+          return http.Response('{}', 200);
+        }),
+      );
+
+      await expectLater(
+        innertube.setQueuedForLater('GF-B5r4Myl0', true),
+        throwsA(isA<InnertubeException>()),
+      );
+      expect(posted, isFalse);
+    });
+  });
 }

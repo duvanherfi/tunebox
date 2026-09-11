@@ -47,13 +47,6 @@ la búsqueda también, el 11 de septiembre de 2026.
   Sin diagnosticar; la sospecha es que son pistas ya no disponibles o de otro
   tipo. Mientras tanto esos 33 salen con el corazón vacío.
 
-- **De pódcast: marcar como reproducido y "Episodios para más tarde".** Lo que
-  quedó fuera al hacer el resto de acciones del menú (22 de agosto de 2026), y
-  con motivo medido: son 2 filas de 200 en el historial, las dos episodios, y
-  "Episodios para más tarde" ni siquiera es un `feedbackEndpoint` sino un
-  `commandExecutorCommand` —otro mecanismo—. La app no tiene superficie de
-  pódcast donde eso signifique algo.
-
 - **Ver el vídeo de una canción, como YouTube Music.** Pedido el 21 de agosto
   de 2026. Son dos cosas distintas y conviene no confundirlas:
   - **El interruptor Canción ↔ Vídeo** necesita un `counterpart` en la
@@ -273,6 +266,53 @@ versión.
   repintado, ya contesta null. Si vuelve a salir, ahí es donde hay que mirar.
 
 ## Hecho
+
+- **De pódcast: marcar como reproducido y "Episodios para más tarde", hechas**
+  (11 de septiembre de 2026).
+
+  El motivo por el que estaban aparcadas se cayó solo: la app ya tiene
+  superficie de pódcast desde que la búsqueda encamina un programa, y los dos
+  bloqueos anotados eran de la **fixture anónima**, no de la API. Esto se vio
+  volcando la respuesta del emulador, que sí tiene la cuenta: la misma página
+  que sin sesión trae cinco entradas de menú inertes, con sesión trae ocho, y
+  las dos que faltaban son exactamente estas.
+
+  Ninguna de las dos es un mecanismo nuevo:
+
+  - **"Marcar como reproducido"** es un `feedbackEndpoint` corriente, dos
+    tokens en un interruptor, el mismo camino que el pin. El
+    `videoPlaybackPositionFeedbackToken` que cuelga de la barra de progreso es
+    un **tercer** token distinto que hace otra cosa; mandarlo habría sido
+    adivinar, y por eso los dos se leen del menú.
+  - **"Episodios para más tarde"** es la lista `SE` por `browse/edit_playlist`,
+    que es el endpoint que el cliente ya habla. El `commandExecutorCommand` que
+    lo hacía parecer otro mecanismo es sólo envoltura: debajo hay un
+    `playlistEditEndpoint`. Se quita por id de vídeo
+    (`ACTION_REMOVE_VIDEO_BY_VIDEO_ID`), que una playlist normal no puede hacer
+    —puede tener dos veces la misma pista y ésta no—, y cada edición barre
+    de paso los episodios ya oídos, que es cómo YouTube la mantiene en orden de
+    escucha. Los dos `params` van como vinieron.
+
+  **La trampa, y la encontró el aparato y no las pruebas.** Los dos
+  interruptores se parecen al pin y no se leen como él: el pin **cambia de
+  lado** —pone en `default` la acción que ofrece— y estos dos no. Medido
+  marcando un episodio y volviendo a pedir la página: `defaultIcon` se quedó en
+  `CHECK` y lo que cambió fue `isToggled`, de false a true, con el progreso
+  pasando de 0 a 100 en esa fila y las otras diez sin moverse. Leído como el
+  pin, la app marcaba bien y luego seguía ofreciendo "Marcar como reproducido"
+  sobre algo ya reproducido. El estado es `isToggled`, igual que en el
+  interruptor de la biblioteca.
+
+  Comprobado contra la cuenta real, ida y vuelta en los dos: reproducido →
+  `isToggled` true y progreso 100; no reproducido → vuelta a false y 0; añadir
+  a la lista → true; quitar → false. La cuenta quedó como estaba. Fixtures
+  nuevas recortadas de la respuesta con sesión: `podcast_page_signed_in.json` y
+  `podcast_episode_played.json` —la misma fila antes y después, que es lo que
+  demuestra que los iconos no se mueven—. Pruebas nuevas: seis en
+  `innertube_parser_test` y cuatro en `row_actions_test`, éstas últimas sobre el
+  cuerpo que se manda, que es el único de la app que se construye aquí en vez de
+  reenviarse.
+
 
 - **Las dos cosas que quedaron fuera de la búsqueda, hechas** (11 de septiembre
   de 2026).
