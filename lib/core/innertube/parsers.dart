@@ -1195,6 +1195,174 @@ AudioStream? parseBestAudioStream(
 }) =>
     parseAudioStreams(json, preferMp4: preferMp4).firstOrNull;
 
+/// Every video-only stream a player response offers, largest first.
+///
+/// The companion to [parseAudioStreams], and deliberately a separate walk:
+/// `adaptiveFormats` holds both kinds side by side and the audio one filters
+/// video out, so reading the same list twice is what keeps either caller from
+/// having to know about the other.
+///
+/// Like the audio walk, only formats carrying a ready `url` are considered —
+/// anything behind a `signatureCipher` would need a JavaScript interpreter,
+/// which is the whole reason the iOS client is asked in the first place.
+///
+/// [maxHeight] drops anything taller. A phone screen cannot show 1080p and a
+/// car dashboard has no business downloading it, so the cap is the caller's
+/// to set rather than a constant here.
+List<VideoStream> parseVideoStreams(
+  Map<String, dynamic> json, {
+  int? maxHeight,
+}) {
+  final formats = readPath(json, ['streamingData', 'adaptiveFormats']);
+  if (formats is! List) return const [];
+
+  final streams = <VideoStream>[];
+  for (final format in formats) {
+    final mimeType = readPath(format, ['mimeType']);
+    final url = readPath(format, ['url']);
+    if (mimeType is! String || !mimeType.startsWith('video') || url is! String) {
+      continue;
+    }
+    final height = (readPath(format, ['height']) as num?)?.toInt() ?? 0;
+    final width = (readPath(format, ['width']) as num?)?.toInt() ?? 0;
+    // A format that states no size is not one anything can lay out.
+    if (height <= 0 || width <= 0) continue;
+    if (maxHeight != null && height > maxHeight) continue;
+    final bitrate = (readPath(format, ['bitrate']) as num?)?.toInt() ?? 0;
+    if (bitrate <= 0) continue;
+    streams.add(VideoStream(
+      url: url,
+      bitrate: bitrate,
+      mimeType: mimeType,
+      width: width,
+      height: height,
+      qualityLabel: readPath(format, ['qualityLabel']) as String? ?? '',
+      fps: (readPath(format, ['fps']) as num?)?.toInt() ?? 0,
+    ));
+  }
+
+  streams.sort((a, b) {
+    final bySize = b.height.compareTo(a.height);
+    if (bySize != 0) return bySize;
+    final byCodec = _videoCodecRank(b.mimeType).compareTo(_videoCodecRank(a.mimeType));
+    if (byCodec != 0) return byCodec;
+    // Same size and same family: the smaller file is the better deal, since
+    // the pixels are identical and the bytes are not.
+    return a.bitrate.compareTo(b.bitrate);
+  });
+  return streams;
+}
+
+/// Breaks a size tie towards the codec most likely to decode in hardware.
+///
+/// H.264 first on purpose: it is the one every phone, and every car screen,
+/// decodes without touching the CPU. AV1 and VP9 are smaller on the wire and
+/// far more expensive where there is no hardware path for them — which, on the
+/// devices this app runs on, is most of them.
+int _videoCodecRank(String mimeType) {
+  final lower = mimeType.toLowerCase();
+  if (lower.contains('avc1')) return 3;
+  if (lower.contains('vp9') || lower.contains('vp09')) return 2;
+  return 1;
+}
+
+/// Ranks search results by how likely each is to be [wanted] in video form.
+///
+/// Needed because YouTube does not answer the question directly. The field the
+/// web player uses for its Song/Video switch is `counterpart`, and it does not
+/// arrive: measured across three tracks, five client identities, five client
+/// versions and both values of `isAudioOnly`, signed in and signed out — see
+/// `docs/pendientes.md`. So the video is *found* rather than asked for, and the
+/// match is a guess with reasons rather than an identity.
+///
+/// The wanted track itself is dropped: it is what is already playing.
+///
+/// Scoring, in the order it matters:
+/// * the title, which is the only thing both rows are sure to share;
+/// * the artist, which separates a cover from the real thing more reliably
+///   than any word in a title;
+/// * the length, because a video of the same recording runs the same time,
+///   and one that does not is a different edit;
+/// * and a penalty for the words that name a *different* performance — but
+///   only when the wanted track does not carry them too, since "Instant Crush
+///   (Remix)" should match a remix.
+List<Song> rankVideoMatches(Song wanted, Iterable<Song> candidates) {
+  final title = _normalise(wanted.title);
+  final artist = _normalise(wanted.artist ?? wanted.subtitle);
+
+  final scored = <(int, Song)>[];
+  for (final candidate in candidates) {
+    if (candidate.videoId == wanted.videoId) continue;
+
+    final theirTitle = _normalise(candidate.title);
+    final theirArtist = _normalise('${candidate.artist ?? ''} ${candidate.subtitle}');
+
+    var score = 0;
+    if (theirTitle == title) {
+      score += 4;
+    } else if (theirTitle.contains(title) || title.contains(theirTitle)) {
+      score += 2;
+    } else {
+      // Nothing of the name in common: whatever this is, it is not the same
+      // song in another container.
+      continue;
+    }
+
+    if (artist.isNotEmpty && theirArtist.contains(artist)) score += 3;
+
+    final wantedLength = wanted.duration;
+    final theirLength = candidate.duration;
+    if (wantedLength != null && theirLength != null) {
+      final apart = (wantedLength - theirLength).inSeconds.abs();
+      if (apart <= 5) {
+        score += 3;
+      } else if (apart <= 15) {
+        score += 1;
+      } else if (apart > 60) {
+        score -= 2;
+      }
+    }
+
+    for (final word in _otherPerformance) {
+      if (theirTitle.contains(word) && !title.contains(word)) score -= 3;
+    }
+
+    scored.add((score, candidate));
+  }
+
+  scored.sort((a, b) => b.$1.compareTo(a.$1));
+  // A negative score is a row that looks more unlike the track than like it.
+  return [for (final (score, song) in scored) if (score > 0) song];
+}
+
+/// Words that name a different performance rather than another view of the
+/// same one. English on purpose: these appear in titles, which YouTube does
+/// not translate, whatever `hl` asks for.
+const _otherPerformance = [
+  'cover',
+  'karaoke',
+  'instrumental',
+  'remix',
+  'live',
+  'reaction',
+  'sped up',
+  'slowed',
+  'nightcore',
+  '8d',
+];
+
+/// Strips a title down to what two rows about the same recording would share.
+///
+/// Parentheticals go first: "(Official Music Video)", "(Audio)" and "[HD]" are
+/// exactly the difference between the two rows being matched, so leaving them
+/// in would make every real match look like a mismatch.
+String _normalise(String value) => value
+    .toLowerCase()
+    .replaceAll(RegExp(r'[\(\[].*?[\)\]]'), ' ')
+    .replaceAll(RegExp(r'[^a-z0-9\u00e0-\u00ff ]'), ' ')
+    .replaceAll(RegExp(r'\s+'), ' ')
+    .trim();
+
 /// Turns the credits page into the roles behind a track.
 ///
 /// The response arrives wrapped in a `dismissableDialogRenderer`, which is how

@@ -19,6 +19,17 @@ import 'temp_directory.dart';
 
 /// Answers with two formats for every track, as a real response does.
 class _TwoFormatInnertube extends InnertubeClient {
+  // The service asks for both halves of a track at once. These fakes have no
+  // picture to offer, so the video side is empty and the audio side is what
+  // they already answer.
+  @override
+  Future<({List<AudioStream> audio, List<VideoStream> video})> resolveTracks(
+    String videoId, {
+    int passes = 2,
+    int? maxHeight,
+  }) async =>
+      (audio: await resolveStreams(videoId), video: const <VideoStream>[]);
+
   @override
   Future<List<AudioStream>> resolveStreams(
     String videoId, {
@@ -60,6 +71,17 @@ class _DeclaredDurationInnertube extends InnertubeClient {
   _DeclaredDurationInnertube(this._duration);
 
   final Duration? _duration;
+
+  // The service asks for both halves of a track at once. These fakes have no
+  // picture to offer, so the video side is empty and the audio side is what
+  // they already answer.
+  @override
+  Future<({List<AudioStream> audio, List<VideoStream> video})> resolveTracks(
+    String videoId, {
+    int passes = 2,
+    int? maxHeight,
+  }) async =>
+      (audio: await resolveStreams(videoId), video: const <VideoStream>[]);
 
   @override
   Future<List<AudioStream>> resolveStreams(

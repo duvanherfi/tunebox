@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 0.1.9+10
+version: 0.1.10+11
 
 environment:
   sdk: ^3.11.4
@@ -61,6 +61,16 @@ dependencies:
   # The installed build number, which is what Android compares when it
   # decides whether an APK may be installed over another.
   package_info_plus:
+  # The picture half of playback. libmpv, reached through media_kit, is the
+  # only engine here that plays a video track and an audio track as one:
+  # YouTube serves no muxed format for music any more, so showing a video means
+  # opening two streams and letting something synchronise them. just_audio
+  # draws nothing and video_player takes a single URL — see
+  # docs/streaming-findings.md.
+  media_kit:
+  media_kit_video:
+  media_kit_libs_video:
+
   # The folder picker. Desktop only: it is how someone reaches music that
   # lives outside the folders a platform hands over by default, and on a
   # sandboxed Mac it is the only way to reach one at all.

@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../l10n/app_localizations.dart';
@@ -42,6 +43,29 @@ class _FullPlayerState extends State<FullPlayer> {
   /// Whether the words have taken the cover's place. In place rather than over
   /// it: reading along and reaching for pause are the same moment.
   bool _showLyrics = false;
+
+  /// Swaps the cover for the video, or back, keeping the second the track had
+  /// reached. Asked of the service rather than tracked here: which engine is
+  /// sounding is playback's business, and the screen only reflects it.
+  Future<void> _toggleVideo() async {
+    if (playerService.showingVideo) {
+      await playerService.hideVideo();
+      if (mounted) setState(() {});
+      return;
+    }
+
+    final shown = await playerService.showVideo();
+    if (!mounted) return;
+    setState(() {});
+    // Said out loud rather than left as a button that did nothing: most songs
+    // are art tracks and have no video anywhere, and a search that came back
+    // empty looks exactly like one that never ran.
+    if (!shown) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context)!.videoNone)),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -119,6 +143,19 @@ class _FullPlayerState extends State<FullPlayer> {
   /// The cover, or the words in its place. Sized from what it is given rather
   /// than from the screen, so the same widget fits both layouts.
   Widget _stage(String? art) {
+    if (playerService.showingVideo) {
+      final controller = playerService.video.controller;
+      if (controller != null) {
+        return AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          child: _VideoStage(
+            key: const ValueKey('video'),
+            controller: controller,
+          ),
+        );
+      }
+    }
+
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 300),
       child: _showLyrics
@@ -158,6 +195,7 @@ class _FullPlayerState extends State<FullPlayer> {
     _QuickActions(
       showingLyrics: _showLyrics,
       onToggleLyrics: () => setState(() => _showLyrics = !_showLyrics),
+      onToggleVideo: _toggleVideo,
     ),
     const SizedBox(height: 8),
     _ProgressBar(total: widget.item.duration ?? Duration.zero),
@@ -295,10 +333,12 @@ class _QuickActions extends StatelessWidget {
   const _QuickActions({
     required this.showingLyrics,
     required this.onToggleLyrics,
+    required this.onToggleVideo,
   });
 
   final bool showingLyrics;
   final VoidCallback onToggleLyrics;
+  final Future<void> Function() onToggleVideo;
 
   @override
   Widget build(BuildContext context) {
@@ -319,6 +359,25 @@ class _QuickActions extends StatelessWidget {
           selected: showingLyrics,
           onPressed: onToggleLyrics,
         ),
+        // Offered on every track, not only the ones served with a picture:
+        // when this track carries none, the switch goes looking for the video
+        // version by name. That search is a few round trips, so the button
+        // spins while it runs.
+        if (song != null)
+          ValueListenableBuilder<bool>(
+            valueListenable: playerService.searchingVideo,
+            builder: (context, searching, _) => _RoundAction(
+              icon: playerService.showingVideo
+                  ? Icons.music_note_rounded
+                  : Icons.smart_display_outlined,
+              tooltip: playerService.showingVideo
+                  ? l10n.videoShowSong
+                  : l10n.videoShowVideo,
+              selected: playerService.showingVideo,
+              busy: searching,
+              onPressed: searching ? null : onToggleVideo,
+            ),
+          ),
         ListenableBuilder(
           listenable: downloads,
           builder: (context, _) {
@@ -615,4 +674,34 @@ class _QueueHandle extends StatelessWidget {
       },
     );
   }
+}
+
+/// The video in the cover's place.
+///
+/// Black behind it on purpose: a video is letterboxed more often than not, and
+/// the blurred artwork showing through the bars reads as a rendering fault
+/// rather than as a frame.
+class _VideoStage extends StatelessWidget {
+  const _VideoStage({super.key, required this.controller});
+
+  final VideoController controller;
+
+  @override
+  Widget build(BuildContext context) => ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Video(
+          controller: controller,
+          // The app draws its own transport underneath; a second set of
+          // controls over the picture would be two of everything.
+          controls: NoVideoControls,
+          // Music, not a film: the sound has to carry on when the screen goes
+          // away. Left at its default the picture pauses on backgrounding and
+          // takes the song with it, which is the one thing a music player may
+          // never do.
+          pauseUponEnteringBackgroundMode: false,
+          // The app already decides when the screen stays awake — see the
+          // nightstand's idle watcher. Two owners of that decision fight.
+          wakelock: false,
+        ),
+      );
 }

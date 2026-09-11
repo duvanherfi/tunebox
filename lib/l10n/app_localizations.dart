@@ -710,6 +710,24 @@ abstract class AppLocalizations {
   /// **'No lyrics found for this track.'**
   String get lyricsNone;
 
+  /// No description provided for @videoShowVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Video'**
+  String get videoShowVideo;
+
+  /// No description provided for @videoShowSong.
+  ///
+  /// In en, this message translates to:
+  /// **'Song'**
+  String get videoShowSong;
+
+  /// No description provided for @videoNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No video for this track.'**
+  String get videoNone;
+
   /// No description provided for @settingsTitle.
   ///
   /// In en, this message translates to:

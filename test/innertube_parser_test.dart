@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tunebox/core/innertube/parsers.dart';
 import 'package:tunebox/data/models/search.dart';
+import 'package:tunebox/data/models/song.dart';
 
 /// These run against real responses recorded from InnerTube.
 ///
@@ -590,6 +591,205 @@ void main() {
       ]));
 
       expect(streams.map((s) => s.url), ['https://example.invalid/good']);
+    });
+  });
+
+  // Showing a video means opening a video-only stream alongside an audio one:
+  // YouTube serves no muxed format for music any more, and `formats` comes
+  // back empty. See docs/streaming-findings.md.
+  group('parseVideoStreams', () {
+    Map<String, dynamic> withFormats(List<Map<String, Object?>> formats) => {
+          'streamingData': {'adaptiveFormats': formats},
+        };
+
+    test('ranks by size, then towards the codec phones decode in hardware', () {
+      final streams = parseVideoStreams(withFormats([
+        {
+          'mimeType': 'video/webm; codecs="vp09.00.40.08"',
+          'url': 'https://example.invalid/vp9-720',
+          'bitrate': 208472,
+          'width': 1280,
+          'height': 720,
+        },
+        {
+          'mimeType': 'video/mp4; codecs="avc1.640028"',
+          'url': 'https://example.invalid/h264-720',
+          'bitrate': 85717,
+          'width': 1280,
+          'height': 720,
+        },
+        {
+          'mimeType': 'video/mp4; codecs="avc1.640028"',
+          'url': 'https://example.invalid/h264-1080',
+          'bitrate': 308228,
+          'width': 1920,
+          'height': 1080,
+        },
+      ]));
+
+      expect(streams.map((s) => s.url), [
+        'https://example.invalid/h264-1080',
+        'https://example.invalid/h264-720',
+        'https://example.invalid/vp9-720',
+      ]);
+    });
+
+    test('drops anything taller than the caller will show', () {
+      final streams = parseVideoStreams(
+        withFormats([
+          {
+            'mimeType': 'video/mp4; codecs="avc1"',
+            'url': 'https://example.invalid/1080',
+            'bitrate': 308228,
+            'width': 1920,
+            'height': 1080,
+          },
+          {
+            'mimeType': 'video/mp4; codecs="avc1"',
+            'url': 'https://example.invalid/720',
+            'bitrate': 85717,
+            'width': 1280,
+            'height': 720,
+          },
+        ]),
+        maxHeight: 720,
+      );
+
+      expect(streams.map((s) => s.url), ['https://example.invalid/720']);
+    });
+
+    test('drops what could never be shown: no url, no size, not video', () {
+      final streams = parseVideoStreams(withFormats([
+        {
+          'mimeType': 'video/mp4; codecs="avc1"',
+          'signatureCipher': 'locked',
+          'bitrate': 308228,
+          'width': 1920,
+          'height': 1080,
+        },
+        {
+          'mimeType': 'video/mp4; codecs="avc1"',
+          'url': 'https://example.invalid/sizeless',
+          'bitrate': 308228,
+        },
+        {
+          'mimeType': 'audio/mp4; codecs="mp4a.40.2"',
+          'url': 'https://example.invalid/audio',
+          'bitrate': 128000,
+        },
+        {
+          'mimeType': 'video/mp4; codecs="avc1"',
+          'url': 'https://example.invalid/good',
+          'bitrate': 85717,
+          'width': 1280,
+          'height': 720,
+        },
+      ]));
+
+      expect(streams.map((s) => s.url), ['https://example.invalid/good']);
+    });
+
+    test('reads the real response: 18 sizes, every one with a ready url', () {
+      final streams = parseVideoStreams(_fixture('player_ios.json'));
+
+      expect(streams, hasLength(18));
+      expect(streams.every((s) => s.url.isNotEmpty), isTrue);
+      expect(streams.first.height, 1080);
+      expect(streams.first.qualityLabel, '1080p');
+      // The whole point: not one of them carries sound of its own.
+      expect(streams.every((s) => !s.mimeType.startsWith('audio')), isTrue);
+    });
+
+    test('a response with no video at all is an ordinary answer', () {
+      expect(parseVideoStreams(const {}), isEmpty);
+      expect(parseVideoStreams(withFormats(const [])), isEmpty);
+    });
+  });
+
+  // The switch the web player has is driven by a `counterpart` field that never
+  // arrives for any client this app can be — so the video version is found by
+  // searching, and the match is a guess with reasons.
+  group('rankVideoMatches', () {
+    Song song(
+      String id,
+      String title, {
+      String artist = 'Daft Punk',
+      Duration? length,
+    }) =>
+        Song(
+          videoId: id,
+          title: title,
+          subtitle: artist,
+          artist: artist,
+          duration: length,
+        );
+
+    final wanted = song(
+      'audio1',
+      'Instant Crush (feat. Julian Casablancas)',
+      length: const Duration(minutes: 5, seconds: 37),
+    );
+
+    test('puts the same song by the same artist at the top', () {
+      final ranked = rankVideoMatches(wanted, [
+        song('x1', 'Instant Crush', artist: 'Cage The Elephant'),
+        song(
+          'x2',
+          'Daft Punk - Instant Crush (Official Video)',
+          length: const Duration(minutes: 5, seconds: 39),
+        ),
+      ]);
+
+      expect(ranked.first.videoId, 'x2');
+    });
+
+    test('never offers the track that is already playing', () {
+      final ranked = rankVideoMatches(wanted, [wanted]);
+      expect(ranked, isEmpty);
+    });
+
+    test('drops rows with nothing of the name in common', () {
+      final ranked = rankVideoMatches(wanted, [
+        song('x1', 'Get Lucky'),
+        song('x2', 'Something Else Entirely'),
+      ]);
+      expect(ranked, isEmpty);
+    });
+
+    test('ranks a cover below the real thing', () {
+      final ranked = rankVideoMatches(wanted, [
+        song('x1', 'Instant Crush (cover)', artist: 'Somebody Else'),
+        song('x2', 'Instant Crush'),
+      ]);
+      expect(ranked.first.videoId, 'x2');
+    });
+
+    test('keeps a remix when a remix is what was asked for', () {
+      final remixWanted = song('audio2', 'Instant Crush (DGTO Remix)');
+      final ranked = rankVideoMatches(remixWanted, [
+        song('x1', 'Instant Crush (DGTO Remix)'),
+      ]);
+      expect(ranked.map((s) => s.videoId), ['x1']);
+    });
+
+    test('a length far from the original counts against a match', () {
+      final ranked = rankVideoMatches(wanted, [
+        song('short', 'Instant Crush', length: const Duration(seconds: 45)),
+        song(
+          'right',
+          'Instant Crush',
+          length: const Duration(minutes: 5, seconds: 38),
+        ),
+      ]);
+      expect(ranked.first.videoId, 'right');
+    });
+
+    test('reads through the decoration both rows carry', () {
+      final ranked = rankVideoMatches(
+        song('audio3', 'Around the World [Audio]'),
+        [song('x1', 'Around the World (Official Music Video) [HD]')],
+      );
+      expect(ranked.map((s) => s.videoId), ['x1']);
     });
   });
 

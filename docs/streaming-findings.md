@@ -270,3 +270,42 @@ sesión y no depende de que nada de lo anterior siga siendo cierto.
 después — los pings, el registro local — se ejecutaba al acabar la canción, y
 `setQueue` no devolvía el control a la interfaz hasta entonces. Sin instrumentar
 no se ve: la música suena igual.
+
+## El vídeo sí se puede reproducir: dos pistas y un motor que las sincroniza
+
+Medido el 11 de septiembre de 2026, después de dar por muertas las hipótesis del
+`counterpart` (ver `docs/pendientes.md`). La pregunta que quedaba no era de qué
+endpoint sale el dato, sino si la imagen es **reproducible** con lo que la app ya
+recibe. Lo es.
+
+**Lo que sirve el endpoint.** `streamingData.formats` —los itag 18/22, vídeo y
+audio en un solo archivo— viene **vacío**, y ya no vuelve: YouTube dejó de
+servir formatos mezclados. Lo que sí viene son 12–18 entradas de vídeo en
+`adaptiveFormats`, de 144p a 1080p, en mp4/webm/av1, **todas con `url` en claro
+y ninguna con `signatureCipher`** — la misma propiedad por la que se pide el
+cliente de iOS para el audio vale también para la imagen. Ninguna lleva audio.
+
+Así que enseñar el vídeo es reproducir **dos streams sincronizados**, y eso
+descarta de entrada las dos opciones baratas: `just_audio` no pinta imagen y
+`video_player` toma una sola URL.
+
+**Lo que sí lo hace: libmpv.** `media_kit` expone `AudioTrack.uri(url)`, que en
+nativo se traduce al comando `audio-add <url> select` de mpv — o sea, abrir la
+pista de vídeo como medio y engancharle la de audio como pista externa. Medido
+con mpv (el mismo motor) sobre URLs reales de `resolveTracks`, con `5NV6Rdv1a3I`:
+
+- Las dos pistas abren. mpv las lista como `Video --vid=1 (h264 1920x1080 24
+  fps)` y `Audio --aid=1 (aac 2ch 44100 Hz 128 kbps) [external]`.
+- **`A-V: 0.000` sostenido**, 25 segundos seguidos desde el principio.
+- **Y también después de buscar**: arrancando en 2:30 con `--start=150`, las dos
+  pistas siguen en cero. Ése era el caso que rompe estos montajes, y no rompe.
+
+**El `StreamProxy` no hace falta en este camino.** mpv fue directo a googlevideo
+y no le contestaron con el corte del que se defiende el proxy, porque mpv pide
+rangos por su cuenta —no es ExoPlayer, que omite el `Range` en la primera
+petición—. El proxy sirve igual sin tocarlo si se quiere (`wrap` es apátrida y
+va por URL, así que dos streams a la vez no le cuestan nada), pero no es un
+requisito de la imagen.
+
+La forma de repetir la medida está en `test/video_probe.dart`, que no lleva
+sufijo `_test` a propósito: habla con YouTube y no debe entrar en la suite.

@@ -4,6 +4,7 @@ import 'dart:ui' show PlatformDispatcher;
 
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
+import 'package:media_kit/media_kit.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import 'core/audio/player_service.dart';
@@ -74,6 +75,11 @@ final LyricsClient lyricsClient = LyricsClient();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Registers media_kit's platform hooks. Cheap and does not load libmpv: the
+  // decoder is only built when a video is actually opened, which most sessions
+  // never do.
+  MediaKit.ensureInitialized();
 
   // Restored before the first frame so the library tab knows whether it is
   // signed in without flashing the login prompt.

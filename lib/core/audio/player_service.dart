@@ -17,6 +17,7 @@ import '../../data/settings.dart';
 import '../innertube/innertube_client.dart';
 import '../scrobble/scrobbler.dart';
 import 'stream_proxy.dart';
+import 'video_playback.dart';
 
 /// Bridges the queue of [Song]s to the platform's native player and media
 /// notification.
@@ -112,6 +113,47 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     ),
   );
   final _proxy = StreamProxy();
+  final _video = VideoPlayback();
+
+  /// The picture engine, for the widget that draws it. Only ever open while
+  /// [showingVideo]; the rest of the time it holds no decoder at all.
+  VideoPlayback get video => _video;
+
+  /// The video formats the current track came with, best first, and the audio
+  /// stream they belong beside. Both from one answer: the URLs are minted for
+  /// one client and expire together, so pairing them across two resolutions
+  /// would be pairing two different identities.
+  List<VideoStream> _videoStreams = const [];
+
+  /// The sound that belongs beside [_videoStreams].
+  ///
+  /// Usually the same stream that is already playing, since both halves came
+  /// from one answer. Not so when the picture was *found* rather than served:
+  /// a counterpart is a different upload with its own audio, and pairing this
+  /// track's sound with that track's picture would be two different edits
+  /// pretending to be one.
+  AudioStream? _videoAudio;
+
+  /// Whether the listener asked for the picture, as opposed to whether one is
+  /// on screen right now. Kept across tracks so skipping to the next song does
+  /// not silently drop back to audio, and consulted again on every track
+  /// because most of them have nothing to show.
+  bool _videoWanted = false;
+
+  /// Whether a picture is ready to show for the track playing right now.
+  bool get hasVideo => _videoStreams.isNotEmpty && _videoAudio != null;
+
+  /// Whether a counterpart is being looked for. The button spins on this: the
+  /// search is a handful of round trips and happens with someone waiting.
+  final searchingVideo = ValueNotifier<bool>(false);
+
+  /// Whether the picture is what is sounding right now. This is the flag that
+  /// decides which engine the media session is describing.
+  bool get showingVideo => _video.isOpen;
+
+  /// Nothing taller is worth fetching: no phone screen resolves it, a car
+  /// dashboard resolves less, and the bytes are paid for either way.
+  static const _maxVideoHeight = 720;
 
   /// Null where the platform has no equalizer; the settings screen offers the
   /// bands only where there is something behind them.
@@ -276,19 +318,59 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   /// Only while there is a length to go with it. The two labels either side of
   /// the bar answer the same question, so a remembered position beside a length
   /// nobody knows reads as 1:13 of 0:00 — two answers, one of them wrong.
-  Stream<Duration> get shownPosition =>
-      _player.positionStream.map((position) {
+  /// One tick per movement of whichever engine is playing.
+  ///
+  /// Merged here rather than at each listener because the interface should not
+  /// have to know there are two engines: it asks for the position and gets the
+  /// position, whether the sound is coming from `just_audio` or from libmpv.
+  final _ticks = StreamController<Duration>.broadcast();
+
+  Stream<Duration> get shownPosition => _ticks.stream.map((position) {
         if (_loaded) return position;
         if (shownDuration == null) return Duration.zero;
         return _pending ?? Duration.zero;
       });
 
   /// Likewise for the length: known from the listing before the stream opens.
-  Duration? get shownDuration => _player.duration ?? currentSong?.duration;
+  Duration? get shownDuration =>
+      (showingVideo ? _video.duration : _player.duration) ??
+      currentSong?.duration;
+
+  /// Where the sound is coming from right now.
+  ///
+  /// Two engines, one at a time: `just_audio` for the ordinary case, libmpv
+  /// while a video is on screen. Everything the media session publishes reads
+  /// through these rather than off a player directly, so the notification, the
+  /// lock screen and the car keep describing whichever one is actually making
+  /// noise.
+  Duration get _enginePosition =>
+      showingVideo ? _video.position : _player.position;
+  bool get _enginePlaying => showingVideo ? _video.playing : _player.playing;
 
   void _wirePlayerStreams() {
+    _player.positionStream.listen((position) {
+      if (!showingVideo && !_ticks.isClosed) _ticks.add(position);
+    });
+    _video.stateChanges.listen((_) {
+      if (!_ticks.isClosed) _ticks.add(_enginePosition);
+      // libmpv has no `playbackEventStream` of its own to drive the session, so
+      // every move it makes is republished here by hand.
+      if (showingVideo) _publishState();
+    });
+
+    // The picture running out is the same event as the audio running out: the
+    // queue lives here and decides what follows.
+    _video.completions.listen((_) {
+      if (!showingVideo) return;
+      if (_repeat == AudioServiceRepeatMode.one) {
+        unawaited(_playIndex(_index));
+      } else {
+        unawaited(_advance());
+      }
+    });
+
     _player.playbackEventStream.listen(
-      (event) => playbackState.add(_transformState(event)),
+      (event) => playbackState.add(_transformState()),
       onError: (Object error, StackTrace stack) =>
           playbackState.add(playbackState.value.copyWith(
         processingState: AudioProcessingState.error,
@@ -324,14 +406,14 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     });
   }
 
-  PlaybackState _transformState(PlaybackEvent event) {
+  PlaybackState _transformState() {
     final song = currentSong;
     final liked = song != null && _likes.isLiked(song.videoId);
 
     return PlaybackState(
       controls: [
         MediaControl.skipToPrevious,
-        if (_player.playing) MediaControl.pause else MediaControl.play,
+        if (_enginePlaying) MediaControl.pause else MediaControl.play,
         MediaControl.skipToNext,
         // Liking from the shade, where half of it happens. No stop button: the
         // system already offers a way out of a media notification, and the one
@@ -369,16 +451,29 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
       ],
       systemActions: const {MediaAction.seek},
       androidCompactActionIndices: const [0, 1, 2],
-      processingState: switch (_player.processingState) {
-        ProcessingState.idle => AudioProcessingState.idle,
-        ProcessingState.loading => AudioProcessingState.loading,
-        ProcessingState.buffering => AudioProcessingState.buffering,
-        ProcessingState.ready => AudioProcessingState.ready,
-        ProcessingState.completed => AudioProcessingState.completed,
-      },
-      playing: _player.playing,
-      updatePosition: _player.position,
-      bufferedPosition: _player.bufferedPosition,
+      processingState: showingVideo
+          ? (_video.buffering
+              ? AudioProcessingState.buffering
+              : AudioProcessingState.ready)
+          : switch (_player.processingState) {
+              ProcessingState.idle => AudioProcessingState.idle,
+              ProcessingState.loading => AudioProcessingState.loading,
+              ProcessingState.buffering => AudioProcessingState.buffering,
+              ProcessingState.ready => AudioProcessingState.ready,
+              ProcessingState.completed => AudioProcessingState.completed,
+            },
+      playing: _enginePlaying,
+      updatePosition: _enginePosition,
+      // Never behind the playhead. libmpv's cache figure is whatever its
+      // demuxer last reported and it comes back smaller than the position
+      // often enough — measured at 0:25 against a playhead at 1:28 — that
+      // taken literally it draws a buffer bar trailing the music, which reads
+      // as a stall that is not happening.
+      bufferedPosition: showingVideo
+          ? (_video.buffered > _video.position
+              ? _video.buffered
+              : _video.position)
+          : _player.bufferedPosition,
       speed: _player.speed,
       queueIndex: _index,
       repeatMode: _repeat,
@@ -613,8 +708,7 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   /// For the moments the player itself has no event to offer — a like taken
   /// elsewhere, a track that never loaded — where the media session would
   /// otherwise keep describing the situation before it.
-  void _publishState() =>
-      playbackState.add(_transformState(_player.playbackEvent));
+  void _publishState() => playbackState.add(_transformState());
 
   /// Writes the measured length back onto the track everywhere it is held.
   ///
@@ -675,6 +769,31 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
 
     _loaded = true;
     _pending = null;
+    // Both halves of the same answer, so this track's own picture pairs with
+    // this track's own sound.
+    _videoAudio = _videoStreams.isEmpty ? null : stream;
+
+    // The picture, when one was asked for and this track has one. Opened
+    // instead of the audio engine rather than beside it: two engines sounding
+    // at once is two copies of the same song.
+    if (_videoWanted && hasVideo) {
+      await _player.pause();
+      await _video.open(
+        video: _videoStreams.first,
+        audio: _videoAudio!,
+        from: from ?? Duration.zero,
+      );
+      _publishState();
+      unawaited(_history.record(song));
+      unawaited(_saveResumePoint());
+      unawaited(_scrobbler.nowPlaying(song));
+      _startWatchtime(song, stream);
+      return true;
+    }
+
+    // A picture left over from the previous track: this one plays as audio.
+    if (_video.isOpen) await _video.close();
+
     if (from != null && from > Duration.zero) await _player.seek(from);
 
     // The player knows the real duration once the stream is open; the search
@@ -700,10 +819,25 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     unawaited(_saveResumePoint());
     unawaited(_scrobbler.nowPlaying(song));
 
-    // Half the track, or two minutes, whichever comes first — the rule the
-    // scrobbling services ask for, and a fair definition of "listened to".
+    _startWatchtime(song, stream);
+
+    if (stream case final playing?) {
+      unawaited(_innertube.reportPlayback(playing));
+    }
+    return true;
+  }
+
+  /// Arms the timer that decides a track was actually listened to.
+  ///
+  /// Half the track, or two minutes, whichever comes first — the rule the
+  /// scrobbling services ask for, and a fair definition of "listened to".
+  ///
+  /// Its own method because both engines need it and neither should own it:
+  /// what counts as a listen is a property of the listening, not of whichever
+  /// decoder happened to be playing.
+  void _startWatchtime(Song song, AudioStream? stream) {
     final startedAt = DateTime.now();
-    final duration = _player.duration ?? song.duration;
+    final duration = shownDuration;
     final counts = duration == null
         ? const Duration(seconds: 30)
         : Duration(
@@ -716,14 +850,9 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     _watchtime = Timer(counts, () {
       unawaited(_scrobbler.scrobble(song, startedAt));
       if (stream case final playing?) {
-        unawaited(_innertube.reportWatchtime(playing, _player.position));
+        unawaited(_innertube.reportWatchtime(playing, _enginePosition));
       }
     });
-
-    if (stream case final playing?) {
-      unawaited(_innertube.reportPlayback(playing));
-    }
-    return true;
   }
 
   /// Points the player at [song]'s audio, returning the stream it opened — or
@@ -732,6 +861,12 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   /// Throws when YouTube will not serve the track, which is the one failure
   /// [_playIndex] has to survive.
   Future<AudioStream?> _resolve(Song song) async {
+    // Cleared up front rather than per branch: a track off this phone has no
+    // picture to offer, and leaving the last one's formats standing would
+    // offer the previous song's video for this one.
+    _videoStreams = const [];
+    _videoAudio = null;
+
     // A downloaded track never touches the network — not to resolve it, not to
     // report it. That is the whole promise of a download.
     if (DeviceSongs.isLocal(song.videoId)) {
@@ -745,7 +880,15 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
       // platform, not of the answer, and losing a track because the best
       // stream happens to be one this device cannot decode is a bug the queue
       // used to hide as a skip.
-      final candidates = await _innertube.resolveStreams(song.videoId);
+      // Both halves from one answer: see [InnertubeClient.resolveTracks]. The
+      // video list is usually empty, which is the ordinary case — an art track
+      // is a still image and has nothing worth showing.
+      final tracks = await _innertube.resolveTracks(
+        song.videoId,
+        maxHeight: _maxVideoHeight,
+      );
+      final candidates = tracks.audio;
+      _videoStreams = tracks.video;
       await _proxy.start();
 
       Object? refusal;
@@ -1045,14 +1188,77 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
       if (!await _playIndex(_index, from: _pending)) await _advance();
       return;
     }
+    if (showingVideo) return _video.play();
     await _player.play();
   }
 
   @override
-  Future<void> pause() => _player.pause();
+  Future<void> pause() => showingVideo ? _video.pause() : _player.pause();
 
   @override
-  Future<void> seek(Duration position) => _player.seek(position);
+  Future<void> seek(Duration position) =>
+      showingVideo ? _video.seek(position) : _player.seek(position);
+
+  /// Shows the picture for the track playing now, keeping its place.
+  ///
+  /// The swap is what makes this feel like one player rather than two: the
+  /// audio engine is paused where it stands and libmpv opens at that same
+  /// second, so the music carries on across the change instead of restarting.
+  ///
+  /// Answers false when there is nothing to show, which is most tracks: an art
+  /// track is a still image and YouTube offers no video formats for it.
+  Future<bool> showVideo() async {
+    _videoWanted = true;
+    if (showingVideo) return true;
+
+    // Nothing served with this track: go and look for it. Most songs are art
+    // tracks — a still image with a soundtrack — and their video, when it
+    // exists at all, is a separate upload that has to be matched by name.
+    if (!hasVideo) {
+      final song = currentSong;
+      if (song == null) return false;
+      searchingVideo.value = true;
+      try {
+        final found = await _innertube.findVideoCounterpart(
+          song,
+          maxHeight: _maxVideoHeight,
+        );
+        if (found == null) return false;
+        _videoStreams = found.video;
+        _videoAudio = found.audio.first;
+      } catch (_) {
+        return false;
+      } finally {
+        searchingVideo.value = false;
+      }
+    }
+
+    final at = _player.position;
+    final wasPlaying = _player.playing;
+    await _player.pause();
+    await _video.open(
+      video: _videoStreams.first,
+      audio: _videoAudio!,
+      from: at,
+      play: wasPlaying,
+    );
+    _publishState();
+    return true;
+  }
+
+  /// Puts the picture away and hands the track back to the audio engine at the
+  /// second the video reached.
+  Future<void> hideVideo() async {
+    _videoWanted = false;
+    if (!showingVideo) return;
+
+    final at = _video.position;
+    final wasPlaying = _video.playing;
+    await _video.close();
+    await _player.seek(at);
+    if (wasPlaying) unawaited(_player.play());
+    _publishState();
+  }
 
   @override
   Future<void> skipToNext() => _advance();
@@ -1229,6 +1435,7 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   Future<void> stop() async {
     _watchtime?.cancel();
     sleepAfter(null);
+    await _video.close();
     await _player.stop();
     playbackState.add(playbackState.value.copyWith(
       processingState: AudioProcessingState.idle,

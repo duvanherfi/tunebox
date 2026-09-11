@@ -247,3 +247,38 @@ class AudioStream {
   /// face that resolved them.
   final String userAgent;
 }
+
+/// One video-only stream from the player endpoint.
+///
+/// Separate from [AudioStream] because the two are never interchangeable here:
+/// YouTube serves no muxed format for music any more — `streamingData.formats`
+/// comes back empty and every entry in `adaptiveFormats` carries one kind of
+/// track — so showing a video means opening one of these *alongside* an
+/// [AudioStream] and letting the player synchronise them.
+class VideoStream {
+  const VideoStream({
+    required this.url,
+    required this.bitrate,
+    required this.mimeType,
+    required this.width,
+    required this.height,
+    this.qualityLabel = '',
+    this.fps = 0,
+    this.userAgent = '',
+  });
+
+  final String url;
+  final int bitrate;
+  final String mimeType;
+  final int width;
+  final int height;
+
+  /// YouTube's own name for the size — "1080p". Kept as served rather than
+  /// rebuilt from [height] because it is what a quality menu should show, and
+  /// YouTube distinguishes labels that the pixel count does not ("1080p60").
+  final String qualityLabel;
+  final int fps;
+
+  /// Identity of the client this URL was issued to — see [AudioStream.userAgent].
+  final String userAgent;
+}

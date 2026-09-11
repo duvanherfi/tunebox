@@ -13,9 +13,10 @@ Las tres entradas diagnosticadas el 10 de septiembre de 2026 —la búsqueda, el
 radio tras buscar y el home— están hechas, y las dos cosas que quedaron fuera de
 la búsqueda también, el 11 de septiembre de 2026. Lo de Explorar, ese mismo día.
 
-De lo de abajo, el punto del vídeo ya no tiene nada que sondear: las cinco
-hipótesis del interruptor están muertas y lo que queda de ese punto es la
-función grande, que es un hilo suyo y una decisión antes.
+Lo del vídeo está hecho el 11 de septiembre de 2026, las dos mitades: el
+reproductor que pinta la imagen y la búsqueda que encuentra el vídeo de una
+canción que no lo es. Lo que queda de ese punto son tres cosas de comprobar y
+decidir, no de programar, y están arriba del todo.
 
 - **Firmar y repartir la de iOS.** Compila y corre, pero un `.ipa` no se
   instala tocándolo: iOS sólo ejecuta lo firmado con un certificado que
@@ -41,6 +42,12 @@ función grande, que es un hilo suyo y una decisión antes.
   grande y aparte. Hasta entonces la pestaña del dispositivo ahí **lista
   canciones que no suenan**, que es justo la fila contra la que avisa el
   comentario de `extensionsFor`.
+  Algo cambió el 11 de septiembre de 2026: al meter el vídeo, **`media_kit` ya
+  está en el proyecto**, y con él libmpv registrado también en Windows y Linux
+  (`generated_plugin_registrant` de los dos). Eso no hace sonar nada por sí
+  solo —`just_audio` sigue sin implementación ahí— pero la mitad cara de
+  `just_audio_media_kit`, que es traerse libmpv, ya está pagada.
+
   En Linux hay un segundo hueco: `flutter_inappwebview` tampoco tiene
   implementación, y es el navegador del inicio de sesión — o sea que ahí ni
   siquiera se puede entrar a la cuenta. `screen_brightness` tampoco está, así
@@ -51,73 +58,37 @@ función grande, que es un hilo suyo y una decisión antes.
   Sin diagnosticar; la sospecha es que son pistas ya no disponibles o de otro
   tipo. Mientras tanto esos 33 salen con el corazón vacío.
 
-- **Ver el vídeo de una canción, como YouTube Music.** Pedido el 21 de agosto
-  de 2026. Son dos cosas distintas y conviene no confundirlas:
-  - **El interruptor Canción ↔ Vídeo** necesita un `counterpart` en la
-    respuesta de `next`, y **no llega**: medido con `c417rIku6Iw` y
-    `J7p4bzqLvCw`, con `WEB_REMIX` contra `music.youtube.com` y con
-    `ANDROID_MUSIC` contra `youtubei.googleapis.com`, con y sin
-    `playlistId: RDAMVM…` — cero `counterpart` en los cuatro, siempre
-    `MUSIC_VIDEO_TYPE_ATV`. Encontrar dónde sirve YouTube ese dato es un sondeo
-    propio; los clientes móviles de música contestan **400** contra
-    `music.youtube.com`, hay que ir a `youtubei.googleapis.com`.
+- **El vídeo: falta verlo en un teléfono de verdad.** Hecho el 11 de
+  septiembre de 2026 (ver abajo) y funcionando de punta a punta salvo una cosa,
+  que el emulador no puede contestar: **la imagen sale negra**. No es la app.
+  El log lo dice — `media_kit: Emulator detected. Enforcing S/W rendering.`,
+  la superficie se crea a 1280×720, y lo que falla es
+  `GFXSTREAM: egl.cpp error 0x3004 (EGL_BAD_ATTRIBUTE)`, que es la capa de GPU
+  emulada. Forzar `enableHardwareAcceleration: false` no cambia nada, porque
+  media_kit ya baja a software él solo al detectar el emulador.
+  Todo lo demás sí está comprobado ahí: el audio sale del mezclador
+  (−8 a −20 dB continuos), sigue sonando con la app en segundo plano, la sesión
+  de medios publica `PLAYING` con la posición corriendo y sus cuatro acciones
+  propias, y el cambio canción↔vídeo conserva el segundo en los dos sentidos
+  (0:21 → vídeo → 1:02 de vuelta, sin corte).
+  Falta enchufar el Samsung y mirar la imagen. Si ahí también sale negra,
+  entonces sí es la app.
 
-    Dos hipótesis más, medidas el 11 de septiembre de 2026, y las dos muertas.
-    La primera era la buena: **todas las llamadas a `next` mandan
-    `isAudioOnly: true`** —`innertube_client.dart`, las tres—, que es
-    literalmente el cliente diciendo "estoy en modo audio", y nadie había
-    variado ese campo. Se varió: nada. La segunda, mandar además
-    `enablePersistentPlaylistPanel` y `tunerSettingValue`, que es lo que manda
-    la web: nada tampoco. Nueve peticiones —tres pistas por tres formas—, cero
-    `counterpart` y cero `playlistPanelVideoWrapperRenderer` **en el árbol
-    entero**, no en una ruta fija. Y la tercera pista del sondeo,
-    `5NV6Rdv1a3I`, es `MUSIC_VIDEO_TYPE_OMV`: un vídeo musical oficial. O sea
-    que tampoco es que las pistas probadas no tengan versión en vídeo.
+- **Y decidir si los 13 MB valen la pena.** `media_kit` trae libmpv, y eso se
+  paga en el APK. Medido el 11 de septiembre de 2026, release con
+  `--split-per-abi`, antes y después del cambio: arm64-v8a **22,4 → 35,6 MB**
+  (+13,2), armeabi-v7a 20,3 → 32,8 (+12,5), x86_64 23,9 → 40,5 (+16,6). Es la
+  misma dependencia que desbloquearía Windows y Linux, así que el coste se
+  cobra dos veces si se hace aquello; si el vídeo acaba descartándose, quitarla
+  devuelve esos megas.
 
-    Y la tercera clase de hipótesis, medida el 11 de septiembre de 2026 desde
-    dentro de la app —que es donde vive la cuenta— también está muerta:
-    **con sesión tampoco llega**. Doce peticiones autenticadas (las tres pistas
-    por cuatro formas: `isAudioOnly` en los dos valores, la forma completa de
-    la web, y `ANDROID_MUSIC` contra `youtubei.googleapis.com`), con las cuatro
-    cabeceras de sesión puestas y con cola de verdad en la respuesta —50 filas
-    la web, 25 el cliente de Android—, y cero `counterpart` y cero
-    `playlistPanelVideoWrapperRenderer` en el árbol entero.
-
-    De paso se movió la única variable que nadie había tocado, **la versión del
-    cliente**: `1.20240403` es de abril de 2024, y una función que el
-    reproductor web ganara después sólo se serviría a un cliente que dijera
-    tenerla. Cuatro versiones de `WEB_REMIX`, de esa a `1.20250903.03.00`, más
-    `IOS_MUSIC`: cinco peticiones más, cero. Diecisiete en total en esa sesión.
-
-    Lo que queda no es otra petición: es que el dato probablemente no se sirva
-    por `next` a ningún cliente que no sea el reproductor web con su propio
-    estado. El camino barato que no se ha probado es **no pedirlo**: buscar el
-    vídeo por título y artista con el filtro de vídeos, que es una llamada que
-    la app ya hace, y aceptar que el emparejamiento sea heurístico en vez de
-    exacto.
-  - **Pintar la imagen.** Las filas que YouTube marca "Vídeo •" son vídeo de
-    verdad y la app ya las reproduce, en audio, porque el reproductor es
-    `just_audio` —que no pinta imagen— y el `StreamProxy` sirve el formato de
-    audio. Enseñar el vídeo no es pedir otro endpoint: es meter un reproductor
-    de vídeo en la app, y decidir qué hace con él la sesión de medios, el carro
-    y la pantalla de bloqueo. Feature grande y aparte.
-
-    Medido el 11 de septiembre de 2026 sobre la respuesta que la app ya usa
-    (`test/fixtures/player_ios.json`), que es lo que dice de qué tamaño es:
-    la imagen **ya viene y es alcanzable**. `streamingData` trae 18 formatos de
-    vídeo, de 144p a 1080p, en mp4/webm/av1, y **todos con `url` en claro** —sin
-    `signatureCipher`, o sea sin descifrado de firma—. `parseAudioStreams` los
-    tira a propósito, con un `mimeType.startsWith('audio')`.
-
-    El problema no es el dato, es que **no hay formato mezclado**: `formats`
-    —los itag 18/22, vídeo y audio en un archivo— viene **vacío**, y los 18 son
-    pistas de vídeo *sin* audio. Así que enseñar el vídeo es reproducir dos
-    streams sincronizados, y eso descarta de entrada las dos opciones baratas:
-    `just_audio` no pinta, y `video_player` toma una sola URL. Lo que sí lo hace
-    es `media_kit` —libmpv—, que es la misma dependencia que haría falta para
-    Windows y Linux. Ése es el tamaño real: una dependencia nueva, un segundo
-    reproductor, y decidir qué publica en `playbackState`/`mediaItem` mientras
-    tanto.
+- **La release con el vídeo dentro no se ha instalado.** El emulador lleva la
+  de depuración y la firma no deja poner una encima de la otra sin desinstalar
+  —y desinstalar se lleva el llavero, o sea la sesión—. No se hizo por eso. El
+  riesgo conocido es el de siempre, el encogedor de recursos contra los
+  drawables que se nombran desde Dart, y este cambio no añadió ninguno;
+  `android_icon_resources_test` sigue en verde. Conviene comprobarlo igual
+  antes de publicar.
 
 - **El log de reproducciones no distingue una canción escuchada de una
   saltada.** Salió al diseñar un modelo de recomendación sobre el historial
@@ -331,6 +302,52 @@ versión.
   repintado, ya contesta null. Si vuelve a salir, ahí es donde hay que mirar.
 
 ## Hecho
+
+- **El vídeo de una canción, hecho** (11 de septiembre de 2026). Las dos
+  mitades del punto que se pidió el 21 de agosto, en un hilo.
+
+  **Lo que desbloqueó todo fue dejar de preguntar por el `counterpart`.** Las
+  cinco hipótesis de ese campo estaban muertas y el punto llevaba ahí desde
+  agosto; la pregunta que sí tenía respuesta era otra: *¿es reproducible la
+  imagen con lo que la app ya recibe?* Lo es. Medido sobre la respuesta real:
+  `formats` viene vacío —no hay formato mezclado y no vuelve— pero
+  `adaptiveFormats` trae 12–18 pistas de vídeo, de 144p a 1080p, **todas con
+  `url` en claro y ninguna con `signatureCipher`**, la misma propiedad que hace
+  servible el audio del cliente de iOS. Ninguna lleva sonido, así que enseñar
+  el vídeo es reproducir dos streams sincronizados.
+
+  **Quién los sincroniza: libmpv.** `media_kit` expone `AudioTrack.uri(url)`,
+  que en nativo es el comando `audio-add <url> select` de mpv. Comprobado con
+  mpv sobre URLs reales antes de escribir una línea de app: las dos pistas
+  abren, mpv marca la de audio `[external]`, y `A-V: 0.000` se mantiene 25
+  segundos **y también después de buscar** a 2:30, que era el caso que rompe
+  estos montajes. De paso: **el `StreamProxy` no hace falta aquí**, porque mpv
+  pide rangos por su cuenta. Todo eso está en `docs/streaming-findings.md`, y
+  `test/video_probe.dart` repite la medida (sin sufijo `_test`: habla con
+  YouTube y no entra en la suite).
+
+  **La costura resultó pequeña.** `_transformState` ignoraba su argumento y
+  leía todo de `_player`, así que bastó con que leyera de un par de getters que
+  eligen motor. `just_audio` sigue siendo el motor de audio —con su
+  ecualizador, su caché y sus fundidos, que libmpv no tiene— y sólo uno de los
+  dos suena a la vez. El cambio conserva el segundo en los dos sentidos.
+
+  **La segunda mitad: el vídeo de una canción que no es vídeo.** Como el dato
+  no llega, se busca: `rankVideoMatches` puntúa las filas por título, artista y
+  duración, con penalización para las palabras que nombran *otra*
+  interpretación (cover, karaoke, remix, live…) salvo que la canción pedida las
+  lleve también; y luego `findVideoCounterpart` resuelve las candidatas en ese
+  orden hasta que una resulte traer formatos de vídeo de verdad. Ese último
+  paso es lo que hace segura la adivinanza: una fila que parecía buena pero era
+  otra art track simplemente no tiene imagen y se pasa a la siguiente. Tope de
+  tres llamadas, porque corre con alguien esperando. Medido en el emulador
+  sobre la canción de Daft Punk: encontró el vídeo y cambió en 3 segundos.
+
+  El botón se ofrece en todas las pistas, no sólo en las que YouTube sirve con
+  imagen, y gira mientras busca; cuando no encuentra nada lo dice, que es mejor
+  que un botón que no hizo nada.
+
+  Doce pruebas nuevas (365 en verde). Lo que falta comprobar está arriba.
 
 - **Lo que le faltaba a Explorar, hecho** (11 de septiembre de 2026). Los tres
   huecos medidos el mismo día, cerrados en un commit.

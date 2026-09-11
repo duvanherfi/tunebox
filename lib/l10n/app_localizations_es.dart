@@ -337,6 +337,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get lyricsNone => 'No encontramos la letra de esta canción.';
 
   @override
+  String get videoShowVideo => 'Vídeo';
+
+  @override
+  String get videoShowSong => 'Canción';
+
+  @override
+  String get videoNone => 'No hay vídeo para esta canción.';
+
+  @override
   String get settingsTitle => 'Ajustes';
 
   @override

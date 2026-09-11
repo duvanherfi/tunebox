@@ -1117,6 +1117,23 @@ class InnertubeClient {
   Future<List<AudioStream>> resolveStreams(
     String videoId, {
     int passes = 2,
+  }) async =>
+      (await resolveTracks(videoId, passes: passes)).audio;
+
+  /// Both halves of a track, from one answer.
+  ///
+  /// Video is read here rather than by a second call because the two have to
+  /// come from the same response to play together: the URLs are minted for one
+  /// client, carry one nonce, and expire together. Resolving the picture
+  /// separately would mean a second set of URLs, a second identity, and two
+  /// clocks to keep in step.
+  ///
+  /// The video list is empty for most tracks, and that is an ordinary answer:
+  /// an art track is a still image and has nothing worth showing.
+  Future<({List<AudioStream> audio, List<VideoStream> video})> resolveTracks(
+    String videoId, {
+    int passes = 2,
+    int? maxHeight,
   }) async {
     String? lastReason;
     final visitor = await visitorData();
@@ -1194,10 +1211,26 @@ class InnertubeClient {
             ),
         ];
 
+        final pictures = [
+          for (final stream in parseVideoStreams(json, maxHeight: maxHeight))
+            VideoStream(
+              url: '${stream.url}&cpn=$cpn',
+              bitrate: stream.bitrate,
+              mimeType: stream.mimeType,
+              width: stream.width,
+              height: stream.height,
+              qualityLabel: stream.qualityLabel,
+              fps: stream.fps,
+              userAgent: client.userAgent,
+            ),
+        ];
+
         // Probed on the head alone. They come from one client and one URL host,
         // so a client that truncates truncates all of them, and probing each
         // would triple the requests before the first note.
-        if (await _servesWholeTrack(candidates.first)) return candidates;
+        if (await _servesWholeTrack(candidates.first)) {
+          return (audio: candidates, video: pictures);
+        }
       }
     }
 
@@ -1206,6 +1239,63 @@ class InnertubeClient {
     );
   }
 
+
+  /// The video version of a track YouTube served as sound only, found by
+  /// searching for it.
+  ///
+  /// Searched rather than asked for because there is nothing to ask: the
+  /// `counterpart` the web player switches on never arrives — measured across
+  /// three tracks, five client identities, five client versions, both values of
+  /// `isAudioOnly`, signed in and signed out, walking the whole response tree
+  /// rather than a fixed path. See `docs/pendientes.md`.
+  ///
+  /// So the match is a guess, and an honest one: [rankVideoMatches] scores the
+  /// rows by title, artist and length, and the candidates are then resolved in
+  /// that order until one turns out to actually carry video formats. That last
+  /// step is what makes the guess safe — a row that looks right but is another
+  /// art track simply has no picture, and the walk moves on.
+  ///
+  /// Null when nothing matched, which is an ordinary answer: most songs have no
+  /// video at all.
+  ///
+  /// Bounded to [candidates] player calls. Each one is a round trip, and this
+  /// runs while someone is waiting with their finger still on the button.
+  Future<({String videoId, List<AudioStream> audio, List<VideoStream> video})?>
+      findVideoCounterpart(
+    Song song, {
+    int? maxHeight,
+    int candidates = 3,
+  }) async {
+    final query = [song.title, song.artist ?? '']
+        .where((part) => part.trim().isNotEmpty)
+        .join(' ');
+    if (query.isEmpty) return null;
+
+    final SearchResults results;
+    try {
+      results = await search(query);
+    } catch (_) {
+      return null;
+    }
+
+    final rows = [for (final result in results.results) ?result.song];
+
+    for (final match in rankVideoMatches(song, rows).take(candidates)) {
+      final ({List<AudioStream> audio, List<VideoStream> video}) tracks;
+      try {
+        tracks = await resolveTracks(match.videoId, maxHeight: maxHeight);
+      } catch (_) {
+        continue; // A track no client will serve is not the one to show.
+      }
+      if (tracks.video.isEmpty || tracks.audio.isEmpty) continue;
+      return (
+        videoId: match.videoId,
+        audio: tracks.audio,
+        video: tracks.video,
+      );
+    }
+    return null;
+  }
 
   /// The playback beacon as YouTube Music's own web client is given it.
   ///

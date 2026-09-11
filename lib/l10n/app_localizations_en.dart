@@ -335,6 +335,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get lyricsNone => 'No lyrics found for this track.';
 
   @override
+  String get videoShowVideo => 'Video';
+
+  @override
+  String get videoShowSong => 'Song';
+
+  @override
+  String get videoNone => 'No video for this track.';
+
+  @override
   String get settingsTitle => 'Settings';
 
   @override

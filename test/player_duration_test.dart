@@ -21,6 +21,17 @@ import 'temp_directory.dart';
 /// Serves any track, so these tests reach the moment the stream opens without
 /// touching the network.
 class _PlainInnertube extends InnertubeClient {
+  // The service asks for both halves of a track at once. These fakes have no
+  // picture to offer, so the video side is empty and the audio side is what
+  // they already answer.
+  @override
+  Future<({List<AudioStream> audio, List<VideoStream> video})> resolveTracks(
+    String videoId, {
+    int passes = 2,
+    int? maxHeight,
+  }) async =>
+      (audio: await resolveStreams(videoId), video: const <VideoStream>[]);
+
   @override
   Future<List<AudioStream>> resolveStreams(
     String videoId, {
