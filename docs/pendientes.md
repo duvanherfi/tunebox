@@ -11,7 +11,11 @@ de abajo.
 
 Las tres entradas diagnosticadas el 10 de septiembre de 2026 —la búsqueda, el
 radio tras buscar y el home— están hechas, y las dos cosas que quedaron fuera de
-la búsqueda también, el 11 de septiembre de 2026.
+la búsqueda también, el 11 de septiembre de 2026. Lo de Explorar, ese mismo día.
+
+De lo de abajo, el punto del vídeo ya no tiene nada que sondear: las cinco
+hipótesis del interruptor están muertas y lo que queda de ese punto es la
+función grande, que es un hilo suyo y una decisión antes.
 
 - **Firmar y repartir la de iOS.** Compila y corre, pero un `.ipa` no se
   instala tocándolo: iOS sólo ejecuta lo firmado con un certificado que
@@ -70,8 +74,27 @@ la búsqueda también, el 11 de septiembre de 2026.
     `5NV6Rdv1a3I`, es `MUSIC_VIDEO_TYPE_OMV`: un vídeo musical oficial. O sea
     que tampoco es que las pistas probadas no tengan versión en vídeo.
 
-    Lo que queda por probar es de otra clase: con sesión. Las nueve fueron
-    anónimas.
+    Y la tercera clase de hipótesis, medida el 11 de septiembre de 2026 desde
+    dentro de la app —que es donde vive la cuenta— también está muerta:
+    **con sesión tampoco llega**. Doce peticiones autenticadas (las tres pistas
+    por cuatro formas: `isAudioOnly` en los dos valores, la forma completa de
+    la web, y `ANDROID_MUSIC` contra `youtubei.googleapis.com`), con las cuatro
+    cabeceras de sesión puestas y con cola de verdad en la respuesta —50 filas
+    la web, 25 el cliente de Android—, y cero `counterpart` y cero
+    `playlistPanelVideoWrapperRenderer` en el árbol entero.
+
+    De paso se movió la única variable que nadie había tocado, **la versión del
+    cliente**: `1.20240403` es de abril de 2024, y una función que el
+    reproductor web ganara después sólo se serviría a un cliente que dijera
+    tenerla. Cuatro versiones de `WEB_REMIX`, de esa a `1.20250903.03.00`, más
+    `IOS_MUSIC`: cinco peticiones más, cero. Diecisiete en total en esa sesión.
+
+    Lo que queda no es otra petición: es que el dato probablemente no se sirva
+    por `next` a ningún cliente que no sea el reproductor web con su propio
+    estado. El camino barato que no se ha probado es **no pedirlo**: buscar el
+    vídeo por título y artista con el filtro de vídeos, que es una llamada que
+    la app ya hace, y aceptar que el emparejamiento sea heurístico en vez de
+    exacto.
   - **Pintar la imagen.** Las filas que YouTube marca "Vídeo •" son vídeo de
     verdad y la app ya las reproduce, en audio, porque el reproductor es
     `just_audio` —que no pinta imagen— y el `StreamProxy` sirve el formato de
@@ -123,30 +146,6 @@ la búsqueda también, el 11 de septiembre de 2026.
   otro repo, pero **la instrumentación conviene adelantarla** para que el
   historial se vaya llenando mientras tanto.
 
-
-- **A Explorar le faltan cosas, y están medidas** (11 de septiembre de 2026).
-  Salió de mirarlo a raíz de una sospecha, y la sospecha era buena. Tres
-  huecos, por orden de lo que se ve:
-
-  - **Las listas por país no existen en la app.** La respuesta de
-    `FEmusic_charts` trae un `musicSortFilterButtonRenderer` de 84 KB con
-    **70 países** dentro (`musicMultiSelectMenuItemRenderer`, uno por país, con
-    su comando para volver a pedir la página), y la app no lee ninguno: enseña
-    la lista del país que diga `gl`, que hoy es `CO`, y no hay manera de cambiarlo.
-  - **`FEmusic_explore` no se pide nunca.** La pantalla hace tres peticiones
-    —`FEmusic_new_releases`, `FEmusic_charts`, `FEmusic_moods_and_genres`— y esa
-    cuarta, que es la que la web llama Explorar, no está. Trae una estantería
-    que no aparece en ningún otro sitio de la app: **Tendencias**, 20 pistas.
-  - **Una estantería se cae en el parseo.** En `FEmusic_explore`, el carrusel
-    "Ánimo y géneros" sale con cero de todo: sus tarjetas no son las que
-    `parsePlaylists` sabe leer. Es la misma lista que ya enseña la tercera
-    pestaña, así que el coste es bajo, pero es una sección perdida.
-
-  Dos cosas que **no** son fallos, comprobadas de paso: el `musicShelfRenderer`
-  de las listas viene sin `contents` y sin título —es sólo el envoltorio del
-  selector de países—, así que descartarlo está bien; y `parseShelves` contesta
-  cero para `FEmusic_moods_and_genres` porque esa pestaña usa `parseMoodChips`,
-  que es otra función.
 
 ## Suelto, sin diagnosticar
 
@@ -332,6 +331,41 @@ versión.
   repintado, ya contesta null. Si vuelve a salir, ahí es donde hay que mirar.
 
 ## Hecho
+
+- **Lo que le faltaba a Explorar, hecho** (11 de septiembre de 2026). Los tres
+  huecos medidos el mismo día, cerrados en un commit.
+
+  - **El país de las listas.** El selector trae 70 países y ninguno lleva
+    `params`: todos apuntan a un `FEmusic_charts` pelado. Lo que los distingue
+    es el `formItemEntityKey`, un base64 cuyo texto plano termina en el código
+    de dos letras (`…country_menu_316766567CO`), y ése es justo el valor que
+    quiere `formData.selectedValues`. Medido contra `US`, `ES` y `ZZ`: cada uno
+    volvió con su propio nombre en el selector. El país es un ajuste
+    (`chart_country`) y no un toque que se olvida, y se comprobó en el
+    emulador: elegido Brasil, sobrevive a reinstalar y relanzar.
+
+    Dos detalles del menú que no estaban a la vista: el país seleccionado es el
+    único **sin** `selectedCommand` —y aparece dos veces, fijado arriba y otra
+    vez en orden alfabético, de ahí que la lista se deduplique por código—, y
+    los nombres llegan traducidos por el `hl` de la propia petición, así que no
+    hay ninguna lista de países escrita en el repo.
+
+  - **`FEmusic_explore`, pedido por fin.** Tres de sus cuatro estanterías
+    repiten lo que las otras pestañas ya piden por su cuenta —de hecho los tres
+    botones de su rejilla *son* esas tres pestañas—, así que la pestaña nueva
+    se queda sólo con la cuarta: Tendencias, 20 pistas en orden, que ningún
+    otro browse id lista. Se dibuja como lista numerada y no como carrusel,
+    porque una clasificación se lee hacia abajo.
+
+  - **La estantería que se caía.** Sus tarjetas son
+    `musicNavigationButtonRenderer` y `parseShelves` no leía ninguna, así que
+    la fila salía vacía y se descartaba como sección sin contenido. Ahora pasa
+    también por `parseMoodChips`, que es el mismo renderer que la pestaña de
+    ambientes ya sabía leer.
+
+  Fixtures nuevas, recortadas de la respuesta real anónima con `gl: CO`:
+  `charts_page.json` y `explore_page.json`. Cinco pruebas nuevas; 353 en verde.
+
 
 - **De pódcast: marcar como reproducido y "Episodios para más tarde", hechas**
   (11 de septiembre de 2026).
