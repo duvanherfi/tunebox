@@ -296,6 +296,16 @@ versión.
   carpeta a carpeta y en el isolate principal. Si tarda, la pestaña se queda en
   su esqueleto sin decir cuánto falta.
 
+- **El flake sigue ahí, y esquiva al reportero que lo nombraría** (11 de
+  septiembre de 2026). Salió dos veces en la misma sesión —una con 3 rojas y
+  otra con 1— sobre un total de 348, y las dos veces las corridas siguientes
+  dieron las 348 en verde, tres seguidas. Lo que se aprendió es un dato para la
+  próxima: **con `--reporter expanded` no se reproduce**. Cinco intentos, cinco
+  verdes. O sea que depende de la carga o del ritmo, y justo el reportero que
+  imprime el nombre es el que lo hace desaparecer —lo que deja sin nombre otra
+  vez las dos entradas de abajo—. Probar a la próxima con `--concurrency` alto
+  y el reportero expandido a la vez, que es la combinación que falta.
+
 - **Una prueba falló una vez de nueve y no se supo cuál** (21 de agosto de
   2026). Una pasada dio `+218 -1` y las ocho siguientes, seguidas, dieron las
   219 en verde. El resumen no nombra la que falla, así que quedó sin
