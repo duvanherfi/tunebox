@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../data/models/song.dart' show thumbnailAt;
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../nightstand/idle_watcher.dart';
@@ -208,6 +209,12 @@ class _FullPlayerState extends State<FullPlayer> {
 class _Backdrop extends StatelessWidget {
   const _Backdrop({required this.url});
 
+  /// A backdrop is a wash of colour, not a picture: it is scaled across the
+  /// whole screen and then blurred past any detail it ever had. Decoding it at
+  /// the size it arrived at would cost megabytes to produce something a
+  /// postage stamp produces just as well.
+  static const _backdropPixels = 128;
+
   final String url;
 
   @override
@@ -220,8 +227,9 @@ class _Backdrop extends StatelessWidget {
         ImageFiltered(
           imageFilter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
           child: Image.network(
-            url,
+            thumbnailAt(url, _backdropPixels),
             fit: BoxFit.cover,
+            cacheWidth: _backdropPixels,
             errorBuilder: (_, _, _) => ColoredBox(color: colors.surface),
           ),
         ),

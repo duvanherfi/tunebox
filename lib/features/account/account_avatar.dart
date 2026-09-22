@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../data/models/song.dart' show thumbnailAt;
+
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import 'account_sheet.dart';
@@ -35,7 +37,12 @@ class AccountAvatar extends StatelessWidget {
               child: CircleAvatar(
                 radius: radius,
                 backgroundColor: colors.surfaceContainerHighest,
-                foregroundImage: photo == null ? null : NetworkImage(photo),
+                // A portrait arrives at whatever size the account keeps it,
+                // which is a thousand pixels square; this draws it at a couple
+                // of dozen.
+                foregroundImage: photo == null
+                    ? null
+                    : NetworkImage(thumbnailAt(photo, (radius * 2 * 3).round())),
                 child: Icon(
                   session.isSignedIn
                       ? Icons.person_rounded

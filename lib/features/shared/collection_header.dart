@@ -36,6 +36,12 @@ class CollectionHeader extends StatelessWidget {
     this.onDelete,
   });
 
+  /// A backdrop is a wash of colour, not a picture: it is scaled across the
+  /// whole screen and then blurred past any detail it ever had. Decoding it at
+  /// the size it arrived at would cost megabytes to produce something a
+  /// postage stamp produces just as well.
+  static const _backdropPixels = 128;
+
   final String title;
   final String subtitle;
   final String? thumbnailUrl;
@@ -84,8 +90,9 @@ class CollectionHeader extends StatelessWidget {
               child: ImageFiltered(
                 imageFilter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
                 child: Image.network(
-                  thumbnailUrl!,
+                  thumbnailAt(thumbnailUrl!, _backdropPixels),
                   fit: BoxFit.cover,
+                  cacheWidth: _backdropPixels,
                   errorBuilder: (_, _, _) => const SizedBox.shrink(),
                 ),
               ),

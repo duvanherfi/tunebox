@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../data/models/song.dart' show thumbnailAt;
+
 import '../../core/theme/app_theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
@@ -146,7 +148,7 @@ class _AccountCard extends StatelessWidget {
                 backgroundColor: theme.colorScheme.surfaceContainerHighest,
                 foregroundImage: info?.photoUrl == null
                     ? null
-                    : NetworkImage(info!.photoUrl!),
+                    : NetworkImage(thumbnailAt(info!.photoUrl!, 144)),
                 child: const Icon(Icons.person_rounded),
               ),
               const SizedBox(width: 14),

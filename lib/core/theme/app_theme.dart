@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../data/models/song.dart' show thumbnailAt, thumbnailBucket;
+
 /// The app's visual language: Material 3, generated from a single seed.
 ///
 /// One seed rather than hand-picked colours, because Material 3 derives the
@@ -195,15 +197,35 @@ class Artwork extends StatelessWidget {
       ),
     );
 
+    // What the cover is actually painted across, in device pixels. [width] and
+    // [height] below only scale the result: on their own the engine still keeps
+    // the bitmap at whatever size it arrived at, and the parsers ask for the
+    // largest one YouTube offers. Left unbounded that is four megabytes of
+    // decoded portrait behind a 48dp circle — measured on a real account,
+    // scrolling a library that way walks the process past a gigabyte and
+    // Android kills it.
+    //
+    // Asked for small and decoded small, so neither the network nor the bitmap
+    // pays for pixels nobody sees. [cacheWidth] is still set for the URLs that
+    // carry no size to rewrite.
+    //
+    // Bucketed, because some covers change size every frame — the player's
+    // grows and shrinks with the panel — and an exact size would be a new URL
+    // and a new download and decode per frame.
+    final pixels = thumbnailBucket(
+      size * MediaQuery.devicePixelRatioOf(context),
+    );
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(radius),
       child: url == null
           ? placeholder
           : Image.network(
-              url!,
+              thumbnailAt(url!, pixels),
               width: size,
               height: size,
               fit: BoxFit.cover,
+              cacheWidth: pixels,
               errorBuilder: (_, _, _) => placeholder,
             ),
     );

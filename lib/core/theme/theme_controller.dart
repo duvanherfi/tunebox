@@ -210,7 +210,9 @@ class ThemeController extends ChangeNotifier {
     _artworkSource = url;
 
     try {
-      final image = NetworkImage(url);
+      // Quantised down to a handful of buckets either way, so the full cover
+      // buys nothing and costs a decode twice over — once per brightness.
+      final image = ResizeImage(NetworkImage(url), width: 64, height: 64);
       final light = await ColorScheme.fromImageProvider(
         provider: image,
         brightness: Brightness.light,

@@ -206,10 +206,14 @@ class _Card extends StatelessWidget {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: Image.network(
-                    song.thumbnailUrl!,
+                    // The card is rendered to a bitmap and shared, so this is
+                    // the one thumbnail whose size is fixed rather than
+                    // measured: it is 44 logical pixels at three times that.
+                    thumbnailAt(song.thumbnailUrl!, 132),
                     width: 44,
                     height: 44,
                     fit: BoxFit.cover,
+                    cacheWidth: 132,
                     errorBuilder: (_, _, _) => const SizedBox.shrink(),
                   ),
                 ),

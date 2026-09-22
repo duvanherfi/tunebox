@@ -282,3 +282,34 @@ class VideoStream {
   /// Identity of the client this URL was issued to — see [AudioStream.userAgent].
   final String userAgent;
 }
+
+/// The same cover, asked for at [pixels] on a side.
+///
+/// YouTube encodes the size in the URL itself, in one of two shapes — a track's
+/// artwork carries `w544-h544` and a channel's portrait carries `=s1200` — so
+/// asking for a smaller one is a string substitution rather than another round
+/// trip. A URL with neither shape is left alone; the caller still bounds the
+/// decode.
+///
+/// This exists because the parsers take `thumbnails.last`, which is the largest
+/// size YouTube offers. Measured against the real account: a portrait arrives
+/// as a 1000x1000 JPEG and costs four megabytes once decoded, to be painted
+/// across a 48dp circle.
+String thumbnailAt(String url, int pixels) {
+  final byBox = url.replaceFirst(RegExp(r'w\d+-h\d+'), 'w$pixels-h$pixels');
+  if (byBox != url) return byBox;
+  return url.replaceFirst(RegExp(r'=s\d+'), '=s$pixels');
+}
+
+/// The size to ask [thumbnailAt] for when a cover is painted across [pixels].
+///
+/// Rounded up to a power of two, so a cover that is animating asks for a
+/// handful of sizes rather than a new one each frame — every distinct size is
+/// its own download and its own decoded bitmap.
+int thumbnailBucket(double pixels) {
+  var bucket = 64;
+  while (bucket < pixels && bucket < 2048) {
+    bucket *= 2;
+  }
+  return bucket;
+}
