@@ -82,9 +82,11 @@ decidir, no de programar, y están arriba del todo.
   cobra dos veces si se hace aquello; si el vídeo acaba descartándose, quitarla
   devuelve esos megas.
 
-- **La 0.1.10 está publicada y hay que probarla en el teléfono.** Cortada el 11
-  de septiembre de 2026 con el vídeo dentro. Dos cosas se comprueban de una vez
-  al instalarla, y las dos sólo se pueden ver ahí:
+- **La 0.1.11 está publicada y hay que probarla en el teléfono.** Cortada el
+  22 de septiembre de 2026 con los arreglos del atrás y de la memoria; la 0.1.10
+  (11 de septiembre, la del vídeo) se caía con el atrás y queda sustituida. Dos
+  cosas se comprueban de una vez al instalarla, y las dos sólo se pueden ver
+  ahí:
 
   - **Si la imagen se dibuja.** En el emulador sale negra por
     `GFXSTREAM: EGL_BAD_ATTRIBUTE`, que es su capa de GPU. Si en el teléfono
@@ -309,6 +311,58 @@ versión.
   repintado, ya contesta null. Si vuelve a salir, ahí es donde hay que mirar.
 
 ## Hecho
+
+- **El botón atrás ya no tumba la app** (22 de septiembre de 2026). Estaba en
+  la 0.1.10 publicada: cualquier atrás sin una página que desapilar —en la
+  raíz, o con el reproductor abierto— cerraba la app con un crash en un par de
+  segundos. Dos `PopScope` en la misma ruta: el de home (`canPop: false`)
+  llamaba a `maybePop` del navegador raíz, que volvía a invocar ese mismo
+  manejador, y así sin fin; el bucle de microtareas no soltaba el hilo
+  principal (en este Flutter Dart comparte hilo con Android), y cada vuelta
+  mandaba un mensaje a Java (`collapse()` → `WakelockPlus.disable()`) hasta
+  llenar sus 256 MB de heap: `OutOfMemoryError` dentro de
+  `DartMessenger.dispatchMessageToQueue` y aborto nativo en
+  `CheckException`. Ahora hay un solo manejador, en `home_screen.dart`, que
+  decide en orden: cierra el reproductor, desapila la pestaña, o sale con
+  `SystemNavigator.pop()`.
+  Al quitarle el `PopScope` al reproductor salieron otras dos cosas que ese
+  `PopScope` tapaba: (1) el `Navigator` de las pestañas publica
+  `NavigationNotification(canHandlePop: false)` en su raíz y pisaba el "sí" del
+  shell, así que Android cerraba la app sin preguntar; ahora sus
+  notificaciones no suben. (2) `AudioServiceActivity` comparte motor con el
+  servicio: salir con atrás acaba la actividad pero no el árbol de widgets, y
+  la actividad nueva no sabe que Flutter gestiona el atrás; home lo vuelve a
+  decir con `setFrameworkHandlesBack(true)` en cada `resumed`.
+  Verificado en el Xiaomi con release arm64, en frío y volviendo sobre el
+  mismo proceso: playlist → reproductor → atrás cierra el reproductor, atrás
+  vuelve a la biblioteca, atrás sale; cero crashes. Sin prueba automática:
+  `HomeScreen` lee los globales de `main.dart` y no hay arnés de widget para
+  el shell.
+  De paso: `Artwork` redondea el tamaño pedido a potencias de dos
+  (`thumbnailBucket`), porque la carátula del reproductor cambia de tamaño en
+  cada fotograma de la animación y con `thumbnailAt` eso era una URL y una
+  decodificación nuevas por fotograma. No era la causa del crash —se
+  comprobó compilando sin los cambios de miniaturas— pero sí un derroche.
+  Publicado en la 0.1.11, el mismo día.
+
+- **Recorrer la biblioteca ya no mata la app por memoria** (22 de septiembre
+  de 2026). Los parsers se quedan con `thumbnails.last`, que es la mayor que
+  ofrece YouTube (un retrato llega a 1000×1000, 4 MB decodificado), y eso se
+  pintaba en círculos de 48 dp: en el Xiaomi, con la cuenta real, el proceso
+  pasaba del giga y Android lo mataba. Ahora `thumbnailAt` (`song.dart`)
+  reescribe el tamaño dentro de la URL (`w544-h544` o `=s1200`) al de los
+  píxeles reales, y `cacheWidth` acota la decodificación de las que no lo
+  llevan. Aplicado en `Artwork`, los dos fondos difuminados (128 px), el avatar,
+  la tarjeta de la letra y el `ColorScheme.fromImageProvider` del tema (64 px).
+  Cinco pruebas en `test/thumbnail_size_test.dart`; 370 en verde.
+  Medido en el Xiaomi con una release arm64 instalada encima de la 0.1.10:
+  arranque 230–250 MB de PSS; las siete pestañas de la biblioteca recorridas a
+  fondo, pico de 404 MB; tres pasadas completas de ida y vuelta por Me gusta
+  (399 canciones), plano en 383–392 MB. Mismo proceso de principio a fin. Las
+  carátulas se ven nítidas.
+  Ojo al medir en ese teléfono: gira solo, y un toque con coordenadas de la
+  otra orientación no da error — cae fuera y la medición no vale. Mirar la
+  captura antes de creerse un número.
 
 - **El vídeo de una canción, hecho** (11 de septiembre de 2026). Las dos
   mitades del punto que se pidió el 21 de agosto, en un hilo.
