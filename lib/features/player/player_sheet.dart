@@ -65,7 +65,9 @@ class PlayerSheetState extends State<PlayerSheet>
     super.dispose();
   }
 
-  bool get _isExpanded => _controller.value > 0.5;
+  /// Whether the panel is open, or on its way there. Back is answered by the
+  /// shell, which asks this before deciding what back means.
+  bool get isExpanded => _controller.value > 0.5;
 
   void expand() {
     _controller.animateTo(1, curve: Curves.easeOutCubic);
@@ -146,66 +148,55 @@ class PlayerSheetState extends State<PlayerSheet>
               right: capped,
               bottom: bottom,
               height: height,
-              child: PopScope(
-                // Back collapses the panel instead of leaving the screen,
-                // because at this point the panel *is* where the user is.
-                canPop: !_isExpanded,
-                onPopInvokedWithResult: (didPop, _) {
-                  if (!didPop) collapse();
-                },
-                child: GestureDetector(
-                  onTap: _isExpanded ? null : expand,
-                  onVerticalDragUpdate: _onDrag,
-                  onVerticalDragEnd: _onDragEnd,
-                  onVerticalDragCancel: _settle,
-                  child: BarSurface(
-                    // Blurred only while it is still a bar: by the time it is a
-                    // screen it is opaque, and a filter under an opaque fill is
-                    // a cost with nothing to show for it.
-                    background: opacity < 1
-                        ? themeController.barBackground
-                        : BarBackground.solid,
-                    radius: radius,
-                    child: Material(
-                      color: colors.surfaceContainerHigh.withValues(
-                        alpha: opacity,
-                      ),
-                      // Rounded on all four corners while it is a floating bar,
-                      // squaring off as it grows into the screen.
-                      borderRadius: BorderRadius.circular(radius),
-                      elevation: opacity == 1 ? lerpDouble(3, 0, t)! : 0,
-                      shadowColor: Colors.black.withValues(alpha: 0.3),
-                      surfaceTintColor: Colors.transparent,
-                      clipBehavior: Clip.antiAlias,
-                      child: Stack(
-                        children: [
-                          if (panelOpacity > 0)
-                            Opacity(
-                              opacity: panelOpacity,
-                              child: FullPlayer(
-                                item: item,
-                                onCollapse: collapse,
+              child: GestureDetector(
+                onTap: isExpanded ? null : expand,
+                onVerticalDragUpdate: _onDrag,
+                onVerticalDragEnd: _onDragEnd,
+                onVerticalDragCancel: _settle,
+                child: BarSurface(
+                  // Blurred only while it is still a bar: by the time it is a
+                  // screen it is opaque, and a filter under an opaque fill is
+                  // a cost with nothing to show for it.
+                  background: opacity < 1
+                      ? themeController.barBackground
+                      : BarBackground.solid,
+                  radius: radius,
+                  child: Material(
+                    color: colors.surfaceContainerHigh.withValues(
+                      alpha: opacity,
+                    ),
+                    // Rounded on all four corners while it is a floating bar,
+                    // squaring off as it grows into the screen.
+                    borderRadius: BorderRadius.circular(radius),
+                    elevation: opacity == 1 ? lerpDouble(3, 0, t)! : 0,
+                    shadowColor: Colors.black.withValues(alpha: 0.3),
+                    surfaceTintColor: Colors.transparent,
+                    clipBehavior: Clip.antiAlias,
+                    child: Stack(
+                      children: [
+                        if (panelOpacity > 0)
+                          Opacity(
+                            opacity: panelOpacity,
+                            child: FullPlayer(item: item, onCollapse: collapse),
+                          ),
+                        if (barOpacity > 0)
+                          Opacity(
+                            opacity: barOpacity,
+                            child: SizedBox(
+                              height: collapsedHeight,
+                              // Swiping the bar changes track, the same way
+                              // swiping the cover does. This is the surface
+                              // that is on screen all day, so it is the one
+                              // the gesture is really for.
+                              child: SwipeToChangeTrack(
+                                key: ValueKey(item.id),
+                                travel: MediaQuery.sizeOf(context).width,
+                                fade: false,
+                                child: MiniPlayerBar(item: item),
                               ),
                             ),
-                          if (barOpacity > 0)
-                            Opacity(
-                              opacity: barOpacity,
-                              child: SizedBox(
-                                height: collapsedHeight,
-                                // Swiping the bar changes track, the same way
-                                // swiping the cover does. This is the surface
-                                // that is on screen all day, so it is the one
-                                // the gesture is really for.
-                                child: SwipeToChangeTrack(
-                                  key: ValueKey(item.id),
-                                  travel: MediaQuery.sizeOf(context).width,
-                                  fade: false,
-                                  child: MiniPlayerBar(item: item),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
+                          ),
+                      ],
                     ),
                   ),
                 ),

@@ -1,5 +1,6 @@
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
@@ -24,7 +25,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   /// Space between the floating bar and the screen's bottom edge.
   static const _navGap = 10.0;
 
@@ -43,15 +44,35 @@ class _HomeScreenState extends State<HomeScreen> {
   /// you open the list you are playing from.
   final _tabs = GlobalKey<NavigatorState>();
 
+  /// The player, asked first whenever back is pressed.
+  final _player = GlobalKey<PlayerSheetState>();
+
   @override
   void initState() {
     super.initState();
     session.addListener(_onSessionChanged);
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  /// Tells Android again, on every return, that back is ours to answer.
+  ///
+  /// Flutter only reports that when navigation changes, and Android forgets it
+  /// with the activity. Leaving by back finishes the activity but not the
+  /// engine — audio_service keeps it running for playback — so coming back
+  /// builds a new activity on the same widget tree, nothing navigates, and
+  /// until something did, back skipped the shell entirely and closed the app
+  /// even with the player open.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      SystemNavigator.setFrameworkHandlesBack(true);
+    }
   }
 
   @override
   void dispose() {
     session.removeListener(_onSessionChanged);
+    WidgetsBinding.instance.removeObserver(this);
     _index.dispose();
     super.dispose();
   }
@@ -77,15 +98,29 @@ class _HomeScreenState extends State<HomeScreen> {
     // can rise over it: a full-screen now-playing view with the app's title
     // still showing above it would look like a dialog, not a screen.
     return PopScope(
-      // Back unwinds what the tabs opened before it ever leaves the app.
+      // The only answer to back in the shell, and in this order: an open
+      // player closes, then the tabs unwind what they opened, and only then
+      // does the app leave.
+      //
+      // One handler rather than one per surface, because every PopScope on a
+      // route hears the same back press — with the player keeping its own, a
+      // single press closed the panel and unwound a tab at once. And leaving
+      // is SystemNavigator.pop, not the root navigator's maybePop: this route
+      // refuses to pop, so maybePop called straight back into this handler,
+      // which called maybePop again. The loop never yielded — each round a
+      // Future, each one a platform message — and on a device it held the main
+      // thread until the Java heap filled and Android killed the app.
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
+        final player = _player.currentState;
         final navigator = _tabs.currentState;
-        if (navigator != null && navigator.canPop()) {
+        if (player != null && player.isExpanded) {
+          player.collapse();
+        } else if (navigator != null && navigator.canPop()) {
           navigator.pop();
         } else {
-          Navigator.of(context, rootNavigator: true).maybePop();
+          SystemNavigator.pop();
         }
       },
       child: Scaffold(
@@ -116,35 +151,45 @@ class _HomeScreenState extends State<HomeScreen> {
                       bottom: media.padding.bottom + _navHeight + playerHeight,
                     ),
                   ),
-                  child: Navigator(
-                    key: _tabs,
-                    onGenerateRoute: (_) => MaterialPageRoute(
-                      builder: (_) => Column(
-                        children: [
-                          AppBar(
-                            title: const Text('Tunebox'),
-                            actions: const [
-                              Padding(
-                                padding: EdgeInsets.only(right: 12),
-                                child: AccountAvatar(),
-                              ),
-                            ],
-                          ),
-                          Expanded(
-                            child: ValueListenableBuilder<int>(
-                              valueListenable: _index,
-                              builder: (context, index, _) => IndexedStack(
-                                index: index,
-                                children: const [
-                                  HomeFeedScreen(),
-                                  ExploreScreen(),
-                                  SearchScreen(),
-                                  LibraryScreen(),
-                                ],
+                  // Kept from reaching the app. Every navigator reports up
+                  // whether it can take a back press, and the app hands the
+                  // last report to Android; this one reports "no" whenever a
+                  // tab is at its root, which overrode the shell's "yes" and
+                  // let Android close the app on back — player open or not.
+                  // The shell answers back in every state, so it is the only
+                  // report that should land.
+                  child: NotificationListener<NavigationNotification>(
+                    onNotification: (_) => true,
+                    child: Navigator(
+                      key: _tabs,
+                      onGenerateRoute: (_) => MaterialPageRoute(
+                        builder: (_) => Column(
+                          children: [
+                            AppBar(
+                              title: const Text('Tunebox'),
+                              actions: const [
+                                Padding(
+                                  padding: EdgeInsets.only(right: 12),
+                                  child: AccountAvatar(),
+                                ),
+                              ],
+                            ),
+                            Expanded(
+                              child: ValueListenableBuilder<int>(
+                                valueListenable: _index,
+                                builder: (context, index, _) => IndexedStack(
+                                  index: index,
+                                  children: const [
+                                    HomeFeedScreen(),
+                                    ExploreScreen(),
+                                    SearchScreen(),
+                                    LibraryScreen(),
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -194,7 +239,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-            PlayerSheet(bottomInset: _navHeight),
+            PlayerSheet(key: _player, bottomInset: _navHeight),
           ],
         ),
       ),
