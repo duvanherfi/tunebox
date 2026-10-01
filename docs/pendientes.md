@@ -82,8 +82,9 @@ decidir, no de programar, y están arriba del todo.
   cobra dos veces si se hace aquello; si el vídeo acaba descartándose, quitarla
   devuelve esos megas.
 
-- **La 0.1.11 está publicada y hay que probarla en el teléfono.** Cortada el
-  22 de septiembre de 2026 con los arreglos del atrás y de la memoria; la 0.1.10
+- **La 0.1.12 está publicada y hay que probarla en el teléfono.** Cortada el
+  1 de octubre de 2026 con el menú en la búsqueda y en la cola, encima de la
+  0.1.11 (22 de septiembre, arreglos del atrás y de la memoria); la 0.1.10
   (11 de septiembre, la del vídeo) se caía con el atrás y queda sustituida. Dos
   cosas se comprueban de una vez al instalarla, y las dos sólo se pueden ver
   ahí:
@@ -311,6 +312,16 @@ versión.
   repintado, ya contesta null. Si vuelve a salir, ahí es donde hay que mirar.
 
 ## Hecho
+
+- **Menú de canción en el resultado principal de la búsqueda y en la cola**
+  (1 de octubre de 2026). La tarjeta de arriba de la búsqueda no tenía menú, y
+  como el parser quita su repetición de la lista de abajo, esa canción —la que
+  más se busca— era la única sin tres puntos. Ahora la tarjeta tiene los tres
+  puntos y responde a mantener presionado (canción o colección). En la cola,
+  cada fila tiene tres puntos y mantener presionado abre el menú; para eso hubo
+  que apagar `buildDefaultDragHandles`, que en el teléfono convertía el
+  mantener presionado en arrastrar. Se reordena con el asa, como antes.
+  Comprobado en el emulador. Publicado en la 0.1.12, el mismo día.
 
 - **El botón atrás ya no tumba la app** (22 de septiembre de 2026). Estaba en
   la 0.1.10 publicada: cualquier atrás sin una página que desapilar —en la
