@@ -5,6 +5,7 @@ import '../../core/theme/app_theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart';
 import '../shared/sheet_body.dart';
+import '../shared/song_menu.dart';
 
 /// What is going to play, and in what order.
 ///
@@ -79,6 +80,10 @@ class _QueueSheet extends StatelessWidget {
               Flexible(
                 child: ReorderableListView.builder(
                   padding: const EdgeInsets.only(bottom: 24),
+                  // On a phone the default wraps every row in a long press that
+                  // starts a drag, which would swallow the row's menu. The
+                  // handle each row draws is the way to reorder.
+                  buildDefaultDragHandles: false,
                   itemCount: items.length,
                   onReorder: (from, to) {
                     // ReorderableListView reports the destination as if the row
@@ -112,6 +117,17 @@ class _QueueRow extends StatelessWidget {
   final MediaItem item;
   final int index;
   final bool playing;
+
+  /// The track menu for this row. The queue publishes [MediaItem]s, but the
+  /// menu needs the [Song] behind it — the one the player already holds — so
+  /// it is looked up by id rather than rebuilt without its actions.
+  void _menu(BuildContext context) {
+    final songs = playerService.songs;
+    final song = index < songs.length && songs[index].videoId == item.id
+        ? songs[index]
+        : songs.where((song) => song.videoId == item.id).firstOrNull;
+    if (song != null) showSongMenu(context, song);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -148,6 +164,7 @@ class _QueueRow extends StatelessWidget {
       },
       child: ListTile(
         onTap: () => playerService.skipToQueueItem(index),
+        onLongPress: () => _menu(context),
         leading: Artwork(url: item.artUri?.toString(), size: 44, radius: 8),
         title: Text(
           item.title,
@@ -164,14 +181,24 @@ class _QueueRow extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: theme.textTheme.bodySmall,
         ),
-        // The drag handle is explicit rather than a long press: a long press on
-        // a queue row will mean the track menu soon enough.
-        trailing: ReorderableDragStartListener(
-          index: index,
-          child: Tooltip(
-            message: l10n.tipReorder,
-            child: const Icon(Icons.drag_handle_rounded),
-          ),
+        // The drag handle is explicit rather than a long press, because the
+        // long press is the track menu, as it is on every other row.
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              tooltip: l10n.tipMore,
+              icon: const Icon(Icons.more_vert_rounded),
+              onPressed: () => _menu(context),
+            ),
+            ReorderableDragStartListener(
+              index: index,
+              child: Tooltip(
+                message: l10n.tipReorder,
+                child: const Icon(Icons.drag_handle_rounded),
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -14,6 +14,7 @@ import '../shared/collection_menu.dart';
 import '../shared/shelf_row.dart';
 import '../shared/skeleton.dart';
 import '../shared/song_list_view.dart';
+import '../shared/song_menu.dart';
 
 /// Search over the whole YouTube Music catalogue. Works signed out; the session
 /// only changes whether results are personalised.
@@ -274,6 +275,18 @@ class _TopResultCard extends StatelessWidget {
     playerService.startRadio(result.song!);
   }
 
+  /// The same menu the row would have had. The card is the only place a top
+  /// result appears — the parser drops its repeat from the list below — so
+  /// without this the best match is the one result with no menu at all.
+  void _menu(BuildContext context) {
+    final collection = result.collection;
+    if (collection != null) {
+      _showCollectionMenu(context, collection, result.kind!);
+    } else {
+      showSongMenu(context, result.song!);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -295,6 +308,7 @@ class _TopResultCard extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () => _open(context),
+          onLongPress: () => _menu(context),
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Column(
@@ -329,6 +343,11 @@ class _TopResultCard extends StatelessWidget {
                           ),
                         ],
                       ),
+                    ),
+                    IconButton(
+                      tooltip: AppLocalizations.of(context)!.tipMore,
+                      icon: const Icon(Icons.more_vert_rounded),
+                      onPressed: () => _menu(context),
                     ),
                   ],
                 ),
@@ -441,14 +460,7 @@ class _CollectionRow extends StatelessWidget {
       // The same two ways in a track's row offers, doing the collection-level
       // version of the same thing. The track list it acts on is not in a search
       // row, so it is fetched while the sheet is already open.
-      onLongPress: () => showCollectionMenu(
-        context,
-        collection: collection,
-        pending: collectionSongs(collection, kind),
-        artist: kind == CollectionKind.artist,
-        radio: kind != CollectionKind.profile && kind != CollectionKind.podcast,
-        radioId: collection.radioPlaylistId,
-      ),
+      onLongPress: () => _showCollectionMenu(context, collection, kind),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Row(
@@ -617,4 +629,21 @@ class _Empty extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The collection menu for a search result. The track list it acts on is not in
+/// a search row, so it is fetched while the sheet is already open.
+void _showCollectionMenu(
+  BuildContext context,
+  Playlist collection,
+  CollectionKind kind,
+) {
+  showCollectionMenu(
+    context,
+    collection: collection,
+    pending: collectionSongs(collection, kind),
+    artist: kind == CollectionKind.artist,
+    radio: kind != CollectionKind.profile && kind != CollectionKind.podcast,
+    radioId: collection.radioPlaylistId,
+  );
 }
