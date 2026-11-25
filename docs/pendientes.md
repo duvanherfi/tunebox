@@ -57,7 +57,21 @@ decidir, no de programar, y están arriba del todo.
     del móvil (carátula difuminada de fondo, título, barra con la paleta del
     tema que manda el teléfono en `customData.tuneboxScreen`, pastilla de
     pausa y "A continuación"). **Falta verlo en la TV:** el receiver se
-    despliega al hacer push a `main` (GitHub Pages) y no se ha empujado.
+    despliega al hacer push a `main` (GitHub Pages); ya está publicado y
+    sonando en la TV de Sala.
+  - **Panel de prueba de teclas del control: publicado en el receiver**
+    (`b734b5c`, 25 de noviembre de 2026). Arriba a la derecha lista cada
+    `keydown`/`keyup` y cada `REQUEST_*` de Cast con su emisor. **Falta**
+    anotar qué botones del control de la TV de Sala llegan y cómo, diseñar los
+    controles con eso y **quitar el panel** (lo ve cualquiera que transmita).
+    "Siguiente/anterior" necesitarían un canal propio TV→app, porque la cola
+    vive en el teléfono.
+  - La carga lenta del primer intento en la TV (más de 20 s) no se repitió: al
+    medirla sin interferencias sonó a los ~5 s. Seguramente el toque de play
+    llegó antes de que la sesión estuviera conectada.
+  - **Release 0.1.13** (`0.1.13+14`): tag `v0.1.13` empujado el 25 de
+    noviembre de 2026; el workflow de release espera la aprobación para
+    firmar y publicar.
   - **App para Android TV / Google TV (propuesta, hilo propio):** el usuario
     pidió un enlace en la TV para descargar la app y que se sincronice al
     hacer Cast. Hoy la app no se instala como app de TV (sin
