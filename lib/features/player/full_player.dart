@@ -62,9 +62,16 @@ class _FullPlayerState extends State<FullPlayer> {
     // Said out loud rather than left as a button that did nothing: most songs
     // are art tracks and have no video anywhere, and a search that came back
     // empty looks exactly like one that never ran.
+    // While casting the refusal is the session's, not the track's: saying the
+    // song has no video would be wrong about a song that does.
     if (!shown) {
+      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.videoNone)),
+        SnackBar(
+          content: Text(
+            playerService.casting ? l10n.videoNotWhileCasting : l10n.videoNone,
+          ),
+        ),
       );
     }
   }

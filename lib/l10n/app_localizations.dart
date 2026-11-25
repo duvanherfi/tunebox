@@ -728,6 +728,12 @@ abstract class AppLocalizations {
   /// **'No video for this track.'**
   String get videoNone;
 
+  /// No description provided for @videoNotWhileCasting.
+  ///
+  /// In en, this message translates to:
+  /// **'While casting only the sound is sent; video isn\'t cast yet.'**
+  String get videoNotWhileCasting;
+
   /// No description provided for @settingsTitle.
   ///
   /// In en, this message translates to:

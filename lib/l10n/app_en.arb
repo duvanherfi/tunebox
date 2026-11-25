@@ -123,6 +123,7 @@
   "videoShowVideo": "Video",
   "videoShowSong": "Song",
   "videoNone": "No video for this track.",
+  "videoNotWhileCasting": "While casting only the sound is sent; video isn't cast yet.",
   "settingsTitle": "Settings",
   "settingsSound": "Playback and sound",
   "settingsSoundBody": "Autoplay, speed, fade, equalizer",

@@ -14,7 +14,28 @@
       <video id="video-player" class="castMediaElement" playsinline></video>
       <audio id="audio-player"></audio>
       <audio id="sync-audio" preload="auto"></audio>
-      <output id="sync-status" aria-live="polite">Starting receiver…</output>
+
+      <!-- What a screen shows while the sound plays: the receiver used to
+           leave it black with a status line, which read as broken. -->
+      <div id="backdrop" aria-hidden="true"></div>
+      <section id="idle">
+        <p class="wordmark">Tunebox</p>
+      </section>
+      <section id="now" hidden>
+        <img id="art" alt="">
+        <div class="meta">
+          <h1 id="title"></h1>
+          <p id="artist"></p>
+          <div class="progress"><div id="bar"></div></div>
+          <div class="times">
+            <span id="elapsed">0:00</span>
+            <span id="state"></span>
+            <span id="total"></span>
+          </div>
+        </div>
+      </section>
+
+      <output id="sync-status" aria-live="polite" hidden>Starting receiver…</output>
     </main>
   </body>
 </html>

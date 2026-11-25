@@ -346,6 +346,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoNone => 'No hay vídeo para esta canción.';
 
   @override
+  String get videoNotWhileCasting =>
+      'Mientras transmites solo se envía el sonido; el vídeo aún no se transmite.';
+
+  @override
   String get settingsTitle => 'Ajustes';
 
   @override

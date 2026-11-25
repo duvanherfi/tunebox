@@ -5,9 +5,9 @@ main {
   height: 100%;
   margin: 0;
   overflow: hidden;
-  background: #000;
-  color: #fff;
-  font-family: sans-serif;
+  background: #0f1413;
+  color: #f2f5f4;
+  font-family: 'Google Sans', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
 #video-player,
@@ -24,6 +24,129 @@ main {
 #audio-player,
 #sync-audio {
   display: none;
+}
+
+/* Only the experimental A/V mode has a video to show; the rest of the time
+   the element would cover the now-playing screen with black. */
+main:not(.video) #video-player {
+  display: none;
+}
+
+main.video #backdrop,
+main.video #now,
+main.video #idle {
+  display: none;
+}
+
+/* The cover, blurred and darkened, as the room's colour. Drawn once per
+   track and never animated: a Chromecast's GPU is a phone's from years ago. */
+#backdrop {
+  position: fixed;
+  inset: -10%;
+  background: center / cover no-repeat;
+  filter: blur(80px) brightness(0.4) saturate(1.3);
+  opacity: 0;
+  transition: opacity 1.2s ease;
+}
+
+#backdrop.shown {
+  opacity: 1;
+}
+
+#idle,
+#now {
+  position: fixed;
+  inset: 0;
+  /* TVs overscan; 5% keeps everything inside what any set actually shows. */
+  padding: 5vh 5vw;
+  box-sizing: border-box;
+}
+
+#idle {
+  display: grid;
+  place-items: center;
+}
+
+.wordmark {
+  margin: 0;
+  font-size: 7vh;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #80d8c8;
+}
+
+#now {
+  display: flex;
+  align-items: center;
+  gap: 5vw;
+}
+
+#now[hidden],
+#idle[hidden] {
+  display: none;
+}
+
+#art {
+  flex: none;
+  width: 60vh;
+  height: 60vh;
+  object-fit: cover;
+  border-radius: 2.5vh;
+  background: #26302e;
+  box-shadow: 0 3vh 8vh rgb(0 0 0 / 45%);
+}
+
+.meta {
+  flex: 1;
+  min-width: 0;
+}
+
+#title {
+  margin: 0;
+  font-size: 7vh;
+  line-height: 1.1;
+  font-weight: 700;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+#artist {
+  margin: 1.5vh 0 0;
+  font-size: 3.6vh;
+  color: rgb(242 245 244 / 72%);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.progress {
+  margin-top: 7vh;
+  height: 0.8vh;
+  border-radius: 0.4vh;
+  background: rgb(255 255 255 / 18%);
+  overflow: hidden;
+}
+
+#bar {
+  height: 100%;
+  background: #80d8c8;
+  transform-origin: left;
+  transform: scaleX(0);
+}
+
+.times {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1.5vh;
+  font-size: 2.6vh;
+  font-variant-numeric: tabular-nums;
+  color: rgb(242 245 244 / 72%);
+}
+
+#state {
+  color: #80d8c8;
 }
 
 #sync-status {

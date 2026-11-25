@@ -344,6 +344,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoNone => 'No video for this track.';
 
   @override
+  String get videoNotWhileCasting =>
+      'While casting only the sound is sent; video isn\'t cast yet.';
+
+  @override
   String get settingsTitle => 'Settings';
 
   @override

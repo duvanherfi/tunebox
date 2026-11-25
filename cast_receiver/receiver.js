@@ -13,10 +13,94 @@
   let maxObservedDrift = 0;
   let lastSyncReport = 0;
 
+  const main = document.querySelector('main');
+  const ui = {
+    backdrop: document.getElementById('backdrop'),
+    idle: document.getElementById('idle'),
+    now: document.getElementById('now'),
+    art: document.getElementById('art'),
+    title: document.getElementById('title'),
+    artist: document.getElementById('artist'),
+    bar: document.getElementById('bar'),
+    elapsed: document.getElementById('elapsed'),
+    state: document.getElementById('state'),
+    total: document.getElementById('total'),
+  };
+  const spanish = (navigator.language || '').toLowerCase().startsWith('es');
+  const words = spanish
+    ? { paused: 'En pausa', buffering: 'Cargando…' }
+    : { paused: 'Paused', buffering: 'Loading…' };
+
+  // The status line is a measuring tool for the A/V experiment; on an
+  // ordinary track it was the only thing on screen and read as an error.
   function report(message) {
     statusElement.textContent = message;
+    statusElement.hidden = !hasSyncAudio;
     context.setApplicationState(message);
     console.info(`[tunebox-cast] ${message}`);
+  }
+
+  function clock(seconds) {
+    if (!Number.isFinite(seconds) || seconds < 0) {
+      return '';
+    }
+    const whole = Math.floor(seconds);
+    const hours = Math.floor(whole / 3600);
+    const minutes = Math.floor((whole % 3600) / 60);
+    const rest = String(whole % 60).padStart(2, '0');
+    return hours > 0
+      ? `${hours}:${String(minutes).padStart(2, '0')}:${rest}`
+      : `${minutes}:${rest}`;
+  }
+
+  let shownArt = null;
+
+  // Text goes in through textContent only: titles come from YouTube.
+  function showTrack() {
+    const media = playerManager.getMediaInformation();
+    const metadata = media?.metadata;
+    if (!metadata) {
+      return;
+    }
+    ui.title.textContent = metadata.title || '';
+    ui.artist.textContent = metadata.artist || metadata.subtitle || '';
+    const art = mediaUrl(metadata.images?.[0]?.url);
+    if (art !== shownArt) {
+      shownArt = art;
+      ui.backdrop.classList.remove('shown');
+      if (art) {
+        ui.art.src = art;
+        ui.backdrop.style.backgroundImage = `url("${art}")`;
+        ui.backdrop.classList.add('shown');
+      } else {
+        ui.art.removeAttribute('src');
+        ui.backdrop.style.backgroundImage = '';
+      }
+    }
+  }
+
+  function tick() {
+    const state = playerManager.getPlayerState();
+    const loaded = state !== cast.framework.messages.PlayerState.IDLE &&
+      playerManager.getMediaInformation() != null;
+    ui.idle.hidden = loaded;
+    ui.now.hidden = !loaded;
+    if (!loaded) {
+      return;
+    }
+
+    const position = playerManager.getCurrentTimeSec();
+    const length = playerManager.getDurationSec();
+    ui.elapsed.textContent = clock(position) || '0:00';
+    ui.total.textContent = clock(length);
+    const share = length > 0 ? Math.min(1, Math.max(0, position / length)) : 0;
+    ui.bar.style.transform = `scaleX(${share})`;
+    ui.state.textContent =
+      state === cast.framework.messages.PlayerState.PAUSED
+        ? words.paused
+        : state === cast.framework.messages.PlayerState.BUFFERING
+          ? words.buffering
+          : '';
   }
 
   function clearSyncAudio() {
@@ -165,7 +249,9 @@
       }
 
       if (customData == null) {
-        if (media.contentType.startsWith('audio/')) {
+        const audio = media.contentType.startsWith('audio/');
+        main.classList.toggle('video', !audio);
+        if (audio) {
           playerManager.setMediaElement(audioPlayer);
         } else {
           playerManager.setMediaElement(videoPlayer);
@@ -186,6 +272,7 @@
         return loadError(cast.framework.messages.ErrorReason.INVALID_PARAM);
       }
 
+      main.classList.add('video');
       playerManager.setMediaElement(videoPlayer);
       if (!(await waitForAudio(audioUrl))) {
         return loadError(cast.framework.messages.ErrorReason.INVALID_REQUEST);
@@ -198,7 +285,12 @@
     },
   );
 
+  playerManager.addEventListener(
+    cast.framework.events.EventType.PLAYER_LOAD_COMPLETE,
+    showTrack,
+  );
   setInterval(synchronize, 250);
+  setInterval(tick, 500);
   context.start();
   report('Receiver ready');
 })();

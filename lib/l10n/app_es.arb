@@ -123,6 +123,7 @@
   "videoShowVideo": "Vídeo",
   "videoShowSong": "Canción",
   "videoNone": "No hay vídeo para esta canción.",
+  "videoNotWhileCasting": "Mientras transmites solo se envía el sonido; el vídeo aún no se transmite.",
   "settingsTitle": "Ajustes",
   "settingsSound": "Reproducción y sonido",
   "settingsSoundBody": "Continuar solo, velocidad, fundido, ecualizador",
