@@ -116,7 +116,10 @@ class Downloads extends ChangeNotifier {
   /// googlevideo refuses an unbounded request and only the proxy knows how to
   /// ask for a track in pieces.
   Future<void> add(Song song, Uri url, {required String userAgent}) async {
-    if (has(song.videoId) || isDownloading(song.videoId)) return;
+    // Only a transfer already writing counts here: the queue marks a track as
+    // current before its fetch calls this, so `isDownloading` would refuse
+    // every download the queue starts.
+    if (has(song.videoId) || _progress.containsKey(song.videoId)) return;
 
     _progress[song.videoId] = 0;
     notifyListeners();

@@ -67,6 +67,30 @@ void main() {
     expect(calls, 1);
   });
 
+  // The queue marks a track as current before fetching it, and `add` refuses
+  // a track that is already downloading: for three months every download
+  // from the app ended there, silently, with nothing written.
+  test('a queued track is actually saved when its fetch calls add', () async {
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    server.listen((request) {
+      request.response
+        ..add(List.filled(64, 7))
+        ..close();
+    });
+    addTearDown(server.close);
+    final url = Uri.parse('http://127.0.0.1:${server.port}/a');
+
+    final downloads = store();
+    downloads.enqueue(
+      _song('a'),
+      (song) => downloads.add(song, url, userAgent: 'test'),
+    );
+
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    expect(downloads.has('a'), isTrue);
+    expect(downloads.fileFor('a').lengthSync(), 64);
+  });
+
   test('cancelling drops it before its turn comes', () async {
     final downloads = store();
     final done = <String>[];

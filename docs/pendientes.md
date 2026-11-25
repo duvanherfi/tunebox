@@ -20,10 +20,29 @@ decidir, no de programar, y están arriba del todo.
 
 - **Google Cast: lo que falta tras la integración de audio** (25 de noviembre
   de 2026). Lo hecho está abajo, en Hecho. Queda:
-  - Probar **descargas y canciones del teléfono** por Cast (el código las sirve
-    por el mismo servidor LAN; sólo se probó el stream de YouTube).
-  - Probar **una canción entera con la pantalla apagada**: los locks de CPU y
-    Wi-Fi (`CastLocks.kt`) están para eso, pero no se midió.
+  - **Canción del teléfono por Cast: probada** el 25 de noviembre de 2026 en
+    el Samsung contra el Nest: una m4a de 4:26 sonó entera con la pantalla
+    apagada (`Dozing`, wake lock `tunebox:cast` tomado), la cola avanzó sola a
+    las siguientes y la tecla de pausa llegó al receiver. Se midió leyendo el
+    estado del Nest desde el Mac con `pychromecast` (conectar por la IPv6
+    link-local: el multicast de Python no ve el Nest); conectarse así no tira
+    la sesión.
+  - **Descarga por Cast: probada** ese mismo día (el Nest la recibe como
+    `audio/webm`, el archivo; el stream va como AAC/mp4). Al intentarlo salió
+    que **descargar no funcionaba desde el 15 de agosto** (`d54c466`, la cola):
+    la cola marca la pista como actual y `Downloads.add` la rechazaba por "ya
+    descargando", en silencio. Arreglado y con test en
+    `downloads_queue_test.dart`.
+  - Observación: con la sesión de Cast en pausa la app republica
+    `playbackState` cada 500 ms (se ve en `MediaSessionService` del logcat).
+    No rompe nada, pero es trabajo inútil con el wake lock tomado.
+  - **Stream de YouTube con la pantalla apagada: probado** ese mismo día. Una
+    canción de 3:45 sonó entera en `Dozing` y la siguiente se resolvió y
+    arrancó sola sin despertar la pantalla.
+  - Observación: el wake lock `tunebox:cast` se queda tomado mientras la
+    sesión está abierta aunque esté en pausa (se vio con 14 min en pausa).
+    Decidir si soltarlo en pausa larga: con la pausa el receiver no pide nada
+    al teléfono, pero un `play` desde el Nest sí lo necesitaría despierto.
   - Receiver `D2CA181C` **publicado** el 25 de noviembre de 2026 (sin listado
     en la tienda, sender Android `com.tunebox.tunebox`, categoría Music &
     Audio). Falta comprobar que arranca en un Cast que **no** sea el Nest
