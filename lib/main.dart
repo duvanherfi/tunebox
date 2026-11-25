@@ -214,6 +214,24 @@ Future<void> main() async {
   // Cast needs Google Play services; a phone without them simply has no
   // button, rather than no app.
   if (CastEngine.supported) {
+    // A TV showing the track should look like the phone's player: the same
+    // palette as the theme, sent as hex because the receiver is a web page.
+    playerService.castLook = (artwork) async {
+      final scheme = await themeController.castScheme(artwork);
+      String hex(Color color) =>
+          '#${(color.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
+      return {
+        'colors': {
+          'surface': hex(scheme.surface),
+          'onSurface': hex(scheme.onSurface),
+          'onSurfaceVariant': hex(scheme.onSurfaceVariant),
+          'primary': hex(scheme.primary),
+          'onPrimary': hex(scheme.onPrimary),
+          'track': hex(scheme.surfaceContainerHighest),
+        },
+        'upNext': l10n.queueTitle,
+      };
+    };
     try {
       await CastEngine.instance.init();
     } catch (error) {

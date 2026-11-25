@@ -14,22 +14,52 @@
   let lastSyncReport = 0;
 
   const main = document.querySelector('main');
+  const root = document.documentElement;
   const ui = {
-    backdrop: document.getElementById('backdrop'),
+    backdropArt: document.getElementById('backdrop-art'),
     idle: document.getElementById('idle'),
+    idleHint: document.getElementById('idle-hint'),
     now: document.getElementById('now'),
     art: document.getElementById('art'),
     title: document.getElementById('title'),
     artist: document.getElementById('artist'),
     bar: document.getElementById('bar'),
+    thumb: document.getElementById('thumb'),
     elapsed: document.getElementById('elapsed'),
-    state: document.getElementById('state'),
     total: document.getElementById('total'),
+    state: document.getElementById('state'),
+    stateIcon: document.getElementById('state-icon'),
+    stateText: document.getElementById('state-text'),
+    next: document.getElementById('next'),
   };
   const spanish = (navigator.language || '').toLowerCase().startsWith('es');
   const words = spanish
-    ? { paused: 'En pausa', buffering: 'Cargando…' }
-    : { paused: 'Paused', buffering: 'Loading…' };
+    ? {
+        paused: 'En pausa',
+        buffering: 'Cargando…',
+        upNext: 'A continuación',
+        idle: 'Elige una canción en Tunebox y transmítela a esta pantalla.',
+      }
+    : {
+        paused: 'Paused',
+        buffering: 'Loading…',
+        upNext: 'Up next',
+        idle: 'Pick a song in Tunebox and cast it to this screen.',
+      };
+  // Material icons' paths, so the shapes match the phone's buttons.
+  const icons = {
+    pause: 'M6 19h4V5H6v14zm8-14v14h4V5h-4z',
+    hourglass: 'M6 2v6h.01L6 8.01 10 12l-4 4 .01.01H6V22h12v-5.99h-.01L18 16l-4-4 4-3.99-.01-.01H18V2H6z',
+  };
+  const colourKeys = {
+    surface: '--surface',
+    onSurface: '--on-surface',
+    onSurfaceVariant: '--on-surface-variant',
+    primary: '--primary',
+    onPrimary: '--on-primary',
+    track: '--track',
+  };
+  ui.idleHint.textContent = words.idle;
 
   // The status line is a measuring tool for the A/V experiment; on an
   // ordinary track it was the only thing on screen and read as an error.
@@ -53,6 +83,28 @@
       : `${minutes}:${rest}`;
   }
 
+  // The phone sends its theme with every track. Anything that is not a plain
+  // #rrggbb is ignored rather than handed to the style sheet.
+  function applyColours(colours) {
+    if (!colours || typeof colours !== 'object') {
+      return;
+    }
+    for (const [key, property] of Object.entries(colourKeys)) {
+      const value = colours[key];
+      if (typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value)) {
+        root.style.setProperty(property, value);
+        if (key === 'surface') {
+          const rgb = [1, 3, 5].map((i) => parseInt(value.slice(i, i + 2), 16));
+          root.style.setProperty('--surface-rgb', rgb.join(' '));
+        }
+      }
+    }
+  }
+
+  function text(value) {
+    return typeof value === 'string' ? value : '';
+  }
+
   let shownArt = null;
 
   // Text goes in through textContent only: titles come from YouTube.
@@ -62,20 +114,45 @@
     if (!metadata) {
       return;
     }
-    ui.title.textContent = metadata.title || '';
-    ui.artist.textContent = metadata.artist || metadata.subtitle || '';
+    const screen = media.customData?.tuneboxScreen ?? {};
+    applyColours(screen.colors);
+
+    ui.title.textContent = text(metadata.title);
+    ui.artist.textContent = text(metadata.artist) || text(metadata.subtitle);
+    const next = text(screen.next);
+    ui.next.hidden = !next;
+    ui.next.textContent = `${text(screen.upNext) || words.upNext}: ${next}`;
+
     const art = mediaUrl(metadata.images?.[0]?.url);
     if (art !== shownArt) {
       shownArt = art;
-      ui.backdrop.classList.remove('shown');
+      ui.backdropArt.classList.remove('shown');
       if (art) {
         ui.art.src = art;
-        ui.backdrop.style.backgroundImage = `url("${art}")`;
-        ui.backdrop.classList.add('shown');
+        ui.backdropArt.style.backgroundImage = `url("${art}")`;
+        ui.backdropArt.classList.add('shown');
       } else {
         ui.art.removeAttribute('src');
-        ui.backdrop.style.backgroundImage = '';
+        ui.backdropArt.style.backgroundImage = '';
       }
+    }
+  }
+
+  let shownState = null;
+
+  function showState(state) {
+    if (state === shownState) {
+      return;
+    }
+    shownState = state;
+    const { PAUSED, BUFFERING } = cast.framework.messages.PlayerState;
+    const icon = state === PAUSED ? icons.pause
+      : state === BUFFERING ? icons.hourglass
+        : null;
+    ui.state.hidden = icon == null;
+    if (icon) {
+      ui.stateIcon.innerHTML = `<path d="${icon}"/>`;
+      ui.stateText.textContent = state === PAUSED ? words.paused : words.buffering;
     }
   }
 
@@ -95,12 +172,8 @@
     ui.total.textContent = clock(length);
     const share = length > 0 ? Math.min(1, Math.max(0, position / length)) : 0;
     ui.bar.style.transform = `scaleX(${share})`;
-    ui.state.textContent =
-      state === cast.framework.messages.PlayerState.PAUSED
-        ? words.paused
-        : state === cast.framework.messages.PlayerState.BUFFERING
-          ? words.buffering
-          : '';
+    ui.thumb.style.left = `${share * 100}%`;
+    showState(state);
   }
 
   function clearSyncAudio() {
@@ -289,6 +362,7 @@
     cast.framework.events.EventType.PLAYER_LOAD_COMPLETE,
     showTrack,
   );
+
   setInterval(synchronize, 250);
   setInterval(tick, 500);
   context.start();

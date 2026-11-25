@@ -50,8 +50,26 @@ decidir, no de programar, y están arriba del todo.
       reanudar desde el Nest toma el lock activo.
   - Lo de la app `531A4F84` en el Nest: casi seguro que se pulsó el grupo "B"
     (el orden de la lista cambia). El grupo no se ha probado a propósito.
-  - **Cast que no es el de desarrollo:** en la red hay una "TV de Sala"
-    (R10G). Falta probar el receiver publicado ahí.
+  - **Cast que no es el de desarrollo: probado** el 25 de noviembre de 2026 en
+    la "TV de Sala" (R10G, 192.168.1.38): el receiver publicado `D2CA181C`
+    arranca y "drop dead" sonó como `audio/mp4`. La TV sólo enseñaba una
+    pantalla negra con "Receiver ready"; ahora pinta el reproductor como el
+    del móvil (carátula difuminada de fondo, título, barra con la paleta del
+    tema que manda el teléfono en `customData.tuneboxScreen`, pastilla de
+    pausa y "A continuación"). **Falta verlo en la TV:** el receiver se
+    despliega al hacer push a `main` (GitHub Pages) y no se ha empujado.
+  - **App para Android TV / Google TV (propuesta, hilo propio):** el usuario
+    pidió un enlace en la TV para descargar la app y que se sincronice al
+    hacer Cast. Hoy la app no se instala como app de TV (sin
+    `LEANBACK_LAUNCHER`, sin banner, la interfaz es táctil) y el enlace
+    llevaría a un APK que no sale en el lanzador. La forma de sincronizar es
+    Cast Connect: el receiver web cede la sesión a la app de TV instalada.
+  - El botón de vídeo, con Cast, ya no dice "No hay vídeo para esta canción":
+    dice que sólo se transmite el sonido.
+  - `test/player_queue_test.dart` falló una vez de ~9 corridas de la suite
+    completa (3 tests, entre ellos "skipping forward by hand also steps over a
+    refused track"); sólo el archivo pasa siempre. Parece de tiempos bajo
+    carga; no tiene que ver con Cast.
   - **Stream de YouTube con la pantalla apagada: probado** ese mismo día. Una
     canción de 3:45 sonó entera en `Dozing` y la siguiente se resolvió y
     arrancó sola sin despertar la pantalla.
@@ -61,9 +79,7 @@ decidir, no de programar, y están arriba del todo.
     al teléfono, pero un `play` desde el Nest sí lo necesitaría despierto.
   - Receiver `D2CA181C` **publicado** el 25 de noviembre de 2026 (sin listado
     en la tienda, sender Android `com.tunebox.tunebox`, categoría Music &
-    Audio). Falta comprobar que arranca en un Cast que **no** sea el Nest
-    registrado como dispositivo de desarrollo (Google tarda de 15 min a horas
-    en propagarlo). Si algo falla, `--dart-define=CAST_RECEIVER_APP_ID=CC1AD845`
+    Audio); ya arranca en la TV de Sala, que no es de desarrollo. Si algo falla, `--dart-define=CAST_RECEIVER_APP_ID=CC1AD845`
     usa el Default Media Receiver de Google.
   - iOS: `CastEngine.supported` es sólo Android; falta Info.plist (Bonjour,
     red local) y probar en un iPhone.

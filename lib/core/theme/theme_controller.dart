@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'app_theme.dart';
+
 /// The shapes a background wash can take.
 /// How much of the app shows through the mini player and the navigation bar.
 ///
@@ -229,6 +231,27 @@ class ThemeController extends ChangeNotifier {
     } catch (_) {
       // An unreadable cover just leaves the previous colours in place.
     }
+  }
+
+  /// The palette a Cast screen shows [artwork] in. Always the dark one: a TV
+  /// lights a room, whatever mode the phone is in. It follows the cover only
+  /// when the app does, and is worked out here rather than read from
+  /// [darkFromArtwork], which may still belong to the track before.
+  Future<ColorScheme> castScheme(String? artwork) async {
+    if (_dynamic && artwork != null) {
+      try {
+        return await ColorScheme.fromImageProvider(
+          provider: ResizeImage(NetworkImage(artwork), width: 64, height: 64),
+          brightness: Brightness.dark,
+        );
+      } catch (_) {
+        // An unreadable cover falls back to the app's own colours.
+      }
+    }
+    return ColorScheme.fromSeed(
+      seedColor: _seed == null ? AppTheme.seed : Color(_seed!),
+      brightness: Brightness.dark,
+    );
   }
 
   void _clearArtwork() {

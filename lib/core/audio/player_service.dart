@@ -985,6 +985,28 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     unawaited(CastLocks.hold(on));
   }
 
+  /// How a Cast receiver with a screen should dress [artwork]'s track: the
+  /// app's colours and labels. Supplied from above because the theme and the
+  /// translations live outside `core`; null leaves the receiver's defaults.
+  Future<Map<String, Object?>> Function(String? artwork)? castLook;
+
+  /// What a receiver's screen is told besides the track itself.
+  Future<Map<String, Object?>> _castScreen(Song song) async {
+    // The track after this one, as the phone's own player names it.
+    final next = identical(currentSong, song) && _index + 1 < _songs.length
+        ? _songs[_index + 1].title
+        : null;
+    Map<String, Object?> look = const {};
+    try {
+      // A cover that is slow to decode must not hold the music back.
+      look = await castLook?.call(song.highResThumbnailUrl).timeout(
+                const Duration(seconds: 2),
+              ) ??
+          const {};
+    } catch (_) {}
+    return {...look, 'next': next};
+  }
+
   /// [_playIndex] for a Cast receiver: the phone resolves and serves, the
   /// receiver plays.
   Future<bool> _castIndex(
@@ -1009,6 +1031,7 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
             : Uri.tryParse(song.highResThumbnailUrl!),
         from: from ?? Duration.zero,
         autoplay: autoplay,
+        screen: await _castScreen(song),
       );
     } catch (_) {
       _loaded = false;

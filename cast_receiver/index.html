@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="referrer" content="no-referrer">
     <title>TuneBox Cast receiver</title>
+    <!-- The phone app's typeface; the system fallbacks below keep the screen
+         readable if the font cannot be fetched. -->
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
     <link rel="stylesheet" href="./receiver.css">
     <script src="https://www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
     <script defer src="./receiver.js"></script>
@@ -15,24 +19,34 @@
       <audio id="audio-player"></audio>
       <audio id="sync-audio" preload="auto"></audio>
 
-      <!-- What a screen shows while the sound plays: the receiver used to
-           leave it black with a status line, which read as broken. -->
-      <div id="backdrop" aria-hidden="true"></div>
+      <!-- The phone's full-screen player, laid out for a landscape screen
+           across a room: the cover blurred behind, cover and title in front. -->
+      <div id="backdrop" aria-hidden="true"><div id="backdrop-art"></div></div>
+
       <section id="idle">
         <p class="wordmark">Tunebox</p>
+        <p id="idle-hint"></p>
       </section>
+
       <section id="now" hidden>
         <img id="art" alt="">
         <div class="meta">
           <h1 id="title"></h1>
           <p id="artist"></p>
-          <div class="progress"><div id="bar"></div></div>
+          <div class="progress" aria-hidden="true">
+            <div class="track"><div id="bar"></div></div>
+            <div id="thumb"></div>
+          </div>
           <div class="times">
             <span id="elapsed">0:00</span>
-            <span id="state"></span>
             <span id="total"></span>
           </div>
+          <p id="state" hidden>
+            <svg id="state-icon" viewBox="0 0 24 24" aria-hidden="true"></svg>
+            <span id="state-text"></span>
+          </p>
         </div>
+        <p id="next" hidden></p>
       </section>
 
       <output id="sync-status" aria-live="polite" hidden>Starting receiver…</output>

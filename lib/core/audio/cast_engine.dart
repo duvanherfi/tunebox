@@ -163,6 +163,7 @@ class CastEngine {
     Uri? artwork,
     Duration from = Duration.zero,
     bool autoplay = true,
+    Map<String, Object?>? screen,
   }) async {
     state = CastPlayerState.loading;
     position = from;
@@ -181,6 +182,9 @@ class CastEngine {
           album: album,
           artwork: artwork,
         ),
+        // Read by our receiver only; the default one ignores what it does
+        // not know. Under its own key because `tuneboxCast` means A/V mode.
+        customData: screen == null ? null : {'tuneboxScreen': screen},
       ),
       autoPlay: autoplay,
       playPosition: from,
