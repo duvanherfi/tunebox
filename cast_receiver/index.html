@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="no-referrer">
+    <title>TuneBox Cast receiver</title>
+    <link rel="stylesheet" href="./receiver.css">
+    <script src="https://www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
+    <script defer src="./receiver.js"></script>
+  </head>
+  <body>
+    <main>
+      <video id="video-player" class="castMediaElement" playsinline></video>
+      <audio id="audio-player"></audio>
+      <audio id="sync-audio" preload="auto"></audio>
+      <output id="sync-status" aria-live="polite">Starting receiver…</output>
+    </main>
+  </body>
+</html>
