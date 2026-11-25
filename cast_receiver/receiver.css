@@ -270,3 +270,23 @@ main.video #idle {
 #sync-status[hidden] {
   display: none;
 }
+
+/* Temporary probe: lists what the remote sends, top right, small. */
+#keys {
+  position: fixed;
+  top: 5vh;
+  right: 5vw;
+  margin: 0;
+  padding: 1.2vh 1.6vh;
+  list-style: none;
+  border-radius: 1.2vh;
+  background: rgb(0 0 0 / 55%);
+  color: #f2f2f2;
+  font: 2vh/1.5 Roboto, sans-serif;
+  font-variant-numeric: tabular-nums;
+  max-width: 40vw;
+}
+
+#keys:empty {
+  display: none;
+}

@@ -363,6 +363,42 @@
     showTrack,
   );
 
+  // Temporary probe: which of the remote's buttons reach this page, and as
+  // what. A key that arrives as a keydown can be bound to an action here; one
+  // the framework turns into a command shows up as a request instead.
+  const keyLog = document.getElementById('keys');
+  function logInput(line) {
+    const item = document.createElement('li');
+    const time = new Date().toLocaleTimeString();
+    item.textContent = `${time}  ${line}`;
+    keyLog.prepend(item);
+    while (keyLog.children.length > 8) {
+      keyLog.lastChild.remove();
+    }
+    console.info(`[tunebox-keys] ${line}`);
+  }
+  for (const type of ['keydown', 'keyup']) {
+    window.addEventListener(type, (event) => {
+      logInput(`${type} key=${event.key} code=${event.code} keyCode=${event.keyCode}`);
+    }, true);
+  }
+  const requests = [
+    'REQUEST_PLAY', 'REQUEST_PAUSE', 'REQUEST_SEEK', 'REQUEST_STOP',
+    'REQUEST_QUEUE_UPDATE', 'REQUEST_VOLUME_CHANGE', 'REQUEST_SKIP_AD',
+  ];
+  for (const name of requests) {
+    const type = cast.framework.events.EventType[name];
+    if (type) {
+      playerManager.addEventListener(type, (event) => {
+        const from = event.senderId ?? event.requestData?.senderId ?? '?';
+        logInput(`${name} from=${from}`);
+      });
+    }
+  }
+  // Some TVs only send keys to a page that holds focus.
+  document.body.tabIndex = -1;
+  window.addEventListener('load', () => document.body.focus());
+
   setInterval(synchronize, 250);
   setInterval(tick, 500);
   context.start();
