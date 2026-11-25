@@ -29,6 +29,11 @@ object CastLocks {
                 release()
                 result.success(null)
             }
+            "session" -> {
+                val context = context.applicationContext
+                if (call.arguments == true) CastKeepAlive.start(context) else CastKeepAlive.stop(context)
+                result.success(null)
+            }
             else -> result.notImplemented()
         }
     }

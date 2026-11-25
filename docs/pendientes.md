@@ -33,9 +33,25 @@ decidir, no de programar, y están arriba del todo.
     la cola marca la pista como actual y `Downloads.add` la rechazaba por "ya
     descargando", en silencio. Arreglado y con test en
     `downloads_queue_test.dart`.
-  - Observación: con la sesión de Cast en pausa la app republica
-    `playbackState` cada 500 ms (se ve en `MediaSessionService` del logcat).
-    No rompe nada, pero es trabajo inútil con el wake lock tomado.
+  - **Pulido de Cast hecho** el 25 de noviembre de 2026, medido en el Samsung
+    contra el Nest:
+    - El tick de posición del SDK (cada 500 ms, también en pausa) ya no
+      republica la sesión de medios (`CastEngine.takeProgress`): 0
+      publicaciones en 6 s de pausa.
+    - Los locks de Cast se sueltan a los 5 min de pausa (`_castIdleGrace`) y
+      se vuelven a tomar cuando el receiver informa de que suena.
+    - **Deep doze:** sin primer plano la app perdía la red y el wake lock
+      salía `DISABLED` (audio_service sale del primer plano en pausa y
+      Android 12+ le prohíbe volver: `ForegroundServiceStartNotAllowedException`).
+      Pasaba en cualquier sesión larga con el teléfono quieto. Ahora
+      `CastKeepAlive.kt` mantiene un servicio en primer plano toda la sesión,
+      sobre la notificación 1124. Con `dumpsys deviceidle force-idle` el
+      servidor contesta (206 en 81 ms; antes no contestaba en 15 s), y
+      reanudar desde el Nest toma el lock activo.
+  - Lo de la app `531A4F84` en el Nest: casi seguro que se pulsó el grupo "B"
+    (el orden de la lista cambia). El grupo no se ha probado a propósito.
+  - **Cast que no es el de desarrollo:** en la red hay una "TV de Sala"
+    (R10G). Falta probar el receiver publicado ahí.
   - **Stream de YouTube con la pantalla apagada: probado** ese mismo día. Una
     canción de 3:45 sonó entera en `Dozing` y la siguiente se resolvió y
     arrancó sola sin despertar la pantalla.

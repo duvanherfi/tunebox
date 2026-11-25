@@ -125,6 +125,15 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   /// Moves the bar between the receiver's half-second progress reports.
   Timer? _castTicker;
 
+  /// How long a paused session keeps the phone awake. The receiver resuming
+  /// with its buffer empty needs this phone to answer, so a short pause keeps
+  /// the locks; a session left paused for the evening should not hold the
+  /// CPU and a high-performance Wi-Fi lock all night. Resuming after this
+  /// takes them again as soon as the receiver reports it is playing.
+  static const _castIdleGrace = Duration(minutes: 5);
+  Timer? _castIdleTimer;
+  bool _castLocked = false;
+
   /// Whether the sound is coming out of a Cast receiver right now.
   bool get casting => _cast.connected;
 
@@ -878,6 +887,7 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
         mediaItem.add(item.copyWith(duration: length));
       }
       _publishState();
+      _syncCastLocks();
     });
     _cast.finished.listen((_) {
       if (!casting) return;
@@ -905,7 +915,15 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   Future<void> _onCastSession(bool open) async {
     _castTicker?.cancel();
     _castTicker = null;
-    await CastLocks.hold(open);
+    // Held from the start of the session, before the first track loads: the
+    // receiver's first request for it comes right after.
+    _castIdleTimer?.cancel();
+    _castIdleTimer = null;
+    unawaited(CastLocks.session(open));
+    _setCastLocks(open);
+    // Starts the grace period right away: a session opened over a restored
+    // queue loads nothing, so no status change would ever come to start it.
+    if (open) _syncCastLocks();
 
     if (open) {
       _castTicker = Timer.periodic(const Duration(milliseconds: 250), (_) {
@@ -942,6 +960,29 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     if (!_ticks.isClosed) _ticks.add(at);
     unawaited(_saveResumePoint());
     unawaited(_castServer.stop());
+  }
+
+  /// Keeps the locks while the receiver plays or loads, and lets them go
+  /// [_castIdleGrace] after it stops.
+  void _syncCastLocks() {
+    if (!casting) return;
+    final busy = _cast.playing || _cast.state == CastPlayerState.loading;
+    if (busy) {
+      _castIdleTimer?.cancel();
+      _castIdleTimer = null;
+      _setCastLocks(true);
+    } else if (_castLocked && _castIdleTimer == null) {
+      _castIdleTimer = Timer(_castIdleGrace, () {
+        _castIdleTimer = null;
+        if (casting && !_cast.playing) _setCastLocks(false);
+      });
+    }
+  }
+
+  void _setCastLocks(bool on) {
+    if (_castLocked == on) return;
+    _castLocked = on;
+    unawaited(CastLocks.hold(on));
   }
 
   /// [_playIndex] for a Cast receiver: the phone resolves and serves, the

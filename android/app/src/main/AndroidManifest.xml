@@ -58,6 +58,14 @@
             </intent-filter>
         </service>
 
+        <!-- Keeps the app in the foreground for a whole Cast session, which
+             is what lets it keep serving the receiver in deep Doze. See
+             CastKeepAlive.kt. -->
+        <service
+            android:name=".CastKeepAlive"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback"/>
+
         <!-- Routes headset and lock-screen buttons back into the session. -->
         <receiver
             android:name="com.ryanheise.audioservice.MediaButtonReceiver"

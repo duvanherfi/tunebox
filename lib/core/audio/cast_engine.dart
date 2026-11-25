@@ -215,10 +215,10 @@ class CastEngine {
           // The SDK reports 0/0 while nothing is loaded; that is not a seek
           // back to the start.
           if (progress == 0 && length == 0) return;
-          position = Duration(milliseconds: progress);
-          _positionAt = DateTime.now();
-          if (length > 0) duration = Duration(milliseconds: length);
-          _changes.add(null);
+          takeProgress(
+            Duration(milliseconds: progress),
+            length > 0 ? Duration(milliseconds: length) : null,
+          );
         case 'onMediaStatusChanged':
           if (call.arguments == null) return;
           _applyStatus(
@@ -227,6 +227,25 @@ class CastEngine {
       }
     } catch (error) {
       debugPrint('Cast status ignored: $error');
+    }
+  }
+
+  /// The SDK's half-second progress tick, which keeps coming while paused.
+  ///
+  /// Each one used to reach listeners, and every listener republished the
+  /// media session: twice a second, for as long as a session sat paused. The
+  /// position is still taken every time so [livePosition] does not drift, but
+  /// listeners hear only what they could not have worked out themselves — a
+  /// new length, or a jump (a seek from the receiver or another sender).
+  @visibleForTesting
+  void takeProgress(Duration at, Duration? length) {
+    final expected = livePosition;
+    position = at;
+    _positionAt = DateTime.now();
+    final lengthChanged = length != null && length != duration;
+    if (length != null) duration = length;
+    if (lengthChanged || (at - expected).abs() > const Duration(seconds: 1)) {
+      _changes.add(null);
     }
   }
 
@@ -304,10 +323,18 @@ class _TrackMetadata extends GoogleCastMediaMetadata {
 class CastLocks {
   static const _channel = MethodChannel('com.tunebox.tunebox/cast_locks');
 
-  static Future<void> hold(bool on) async {
+  static Future<void> hold(bool on) => _call(on ? 'acquire' : 'release');
+
+  /// Keeps the app in the foreground for as long as a session is open, so
+  /// deep Doze leaves it its network and honours [hold]. Must be called for
+  /// an opening session while the app is on screen: Android refuses to start
+  /// a foreground service from the background.
+  static Future<void> session(bool open) => _call('session', open);
+
+  static Future<void> _call(String method, [Object? argument]) async {
     if (!Platform.isAndroid) return;
     try {
-      await _channel.invokeMethod(on ? 'acquire' : 'release');
+      await _channel.invokeMethod(method, argument);
     } on MissingPluginException {
       // The background engine audio_service may run without the activity.
     }
