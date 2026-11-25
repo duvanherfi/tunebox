@@ -15,6 +15,9 @@
     <!-- To hand the system installer an APK this app downloaded. There is no
          store here, so an update arrives no other way. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
+    <!-- Casting: the receiver reads the track from this phone over Wi-Fi, so
+         the radio is held awake while a session is open. -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
 
     <application
         android:label="Tunebox"
@@ -89,6 +92,12 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/update_file_paths"/>
         </provider>
+
+        <!-- Google Cast. The options themselves are set from Dart before the
+             Cast context is first created; see core/audio/cast_engine.dart. -->
+        <meta-data
+            android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
+            android:value="com.felnanuke.google_cast.GoogleCastOptionsProvider" />
 
         <!-- Declares the app as a media source for Android Auto. The session
              and browsing tree are the same ones the phone uses. -->

@@ -18,6 +18,27 @@ reproductor que pinta la imagen y la búsqueda que encuentra el vídeo de una
 canción que no lo es. Lo que queda de ese punto son tres cosas de comprobar y
 decidir, no de programar, y están arriba del todo.
 
+- **Google Cast: lo que falta tras la integración de audio** (25 de noviembre
+  de 2026). Lo hecho está abajo, en Hecho. Queda:
+  - Probar **descargas y canciones del teléfono** por Cast (el código las sirve
+    por el mismo servidor LAN; sólo se probó el stream de YouTube).
+  - Probar **una canción entera con la pantalla apagada**: los locks de CPU y
+    Wi-Fi (`CastLocks.kt`) están para eso, pero no se midió.
+  - Receiver `D2CA181C` **publicado** el 25 de noviembre de 2026 (sin listado
+    en la tienda, sender Android `com.tunebox.tunebox`, categoría Music &
+    Audio). Falta comprobar que arranca en un Cast que **no** sea el Nest
+    registrado como dispositivo de desarrollo (Google tarda de 15 min a horas
+    en propagarlo). Si algo falla, `--dart-define=CAST_RECEIVER_APP_ID=CC1AD845`
+    usa el Default Media Receiver de Google.
+  - iOS: `CastEngine.supported` es sólo Android; falta Info.plist (Bonjour,
+    red local) y probar en un iPhone.
+  - Vídeo/A-V en el receiver sigue aplazado.
+  - El `tool/cast_probe`, el spec y el plan de Copilot que citaba esta entrada
+    no están en el repo. El probe seguía instalado en el Samsung
+    (`com.example.cast_probe`) y su descubrimiento tiraba nuestras sesiones al
+    instante: si vuelve a pasar, `adb shell am force-stop com.example.cast_probe`
+    o desinstalarlo.
+
 - **Firmar y repartir la de iOS.** Compila y corre, pero un `.ipa` no se
   instala tocándolo: iOS sólo ejecuta lo firmado con un certificado que
   reconoce. Sin cuenta de pago hay dos caminos —cable con el Apple ID gratis,
@@ -312,6 +333,27 @@ versión.
   repintado, ya contesta null. Si vuelve a salir, ahí es donde hay que mirar.
 
 ## Hecho
+
+- **Google Cast de audio, integrado y probado en dispositivo** (25 de
+  noviembre de 2026). Samsung real + Nest Mini con el receiver `D2CA181C`:
+  conecta, carga el stream de YouTube (`audio/mp4`), pausa, seek a 2:30 (más
+  allá del ~1 MiB, sin problema), llega al final (`FINISHED`) y la cola pasa
+  sola a la siguiente en el Nest; al desconectar vuelve al teléfono **pausado en
+  el segundo remoto** (31,703 s exactos) y play sigue desde ahí en local.
+  La "puerta" de ~1 MiB no aplicaba: el Nest pide al teléfono y el teléfono
+  trocea como ya hace `StreamProxy`.
+  Piezas: `core/audio/cast_server.dart` (HTTP en la Wi-Fi con token por
+  arranque e id por pista; relay troceado vía `StreamProxy.relay` o archivo con
+  Range), `core/audio/cast_engine.dart` (sesión con `flutter_chrome_cast`
+  1.2.6, con dos rodeos: estado leído del canal crudo —el parser del plugin
+  descartaba updates y por eso el probe se quedaba en `loading`— y metadata con
+  las claves del SDK —el plugin mandaba `title`/`artist` sueltos y crasheaba con
+  `releaseDate: null`), `PlayerService` enruta play/pausa/seek/fin a Cast,
+  `CastLocks.kt` para CPU/Wi-Fi, botón en la cabecera del reproductor y hoja de
+  dispositivos. Trampa medida: parar el descubrimiento justo después de elegir
+  dispositivo quita la ruta de MediaRouter y la sesión muere al nacer; sólo se
+  para al cerrar la hoja sin elegir o al terminar la sesión.
+  `permission_handler` sube a ^12 porque el plugin lo exige.
 
 - **Menú de canción en el resultado principal de la búsqueda y en la cola**
   (1 de octubre de 2026). La tarjeta de arriba de la búsqueda no tenía menú, y

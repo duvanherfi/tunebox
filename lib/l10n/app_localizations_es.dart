@@ -1098,4 +1098,23 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get updateSignature =>
       'El archivo que ha llegado no está firmado por Tunebox. Se ha descartado y no se ha instalado nada.';
+
+  @override
+  String get castTip => 'Transmitir';
+
+  @override
+  String get castTitle => 'Reproducir en';
+
+  @override
+  String get castSearching => 'Buscando altavoces y televisores…';
+
+  @override
+  String get castSameWifi =>
+      'Tienen que estar en la misma Wi-Fi que este teléfono.';
+
+  @override
+  String get castPlayingOn => 'Sonando aquí';
+
+  @override
+  String get castStop => 'Reproducir en este teléfono';
 }

@@ -16,6 +16,8 @@ import '../../data/resume_point.dart';
 import '../../data/settings.dart';
 import '../innertube/innertube_client.dart';
 import '../scrobble/scrobbler.dart';
+import 'cast_engine.dart';
+import 'cast_server.dart';
 import 'stream_proxy.dart';
 import 'video_playback.dart';
 
@@ -114,6 +116,17 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   );
   final _proxy = StreamProxy();
   final _video = VideoPlayback();
+
+  /// The speaker across the room, when a Cast session is open. While it is,
+  /// it is the engine: the phone plays nothing and only serves the bytes.
+  final _cast = CastEngine.instance;
+  final _castServer = CastServer();
+
+  /// Moves the bar between the receiver's half-second progress reports.
+  Timer? _castTicker;
+
+  /// Whether the sound is coming out of a Cast receiver right now.
+  bool get casting => _cast.connected;
 
   /// The picture engine, for the widget that draws it. Only ever open while
   /// [showingVideo]; the rest of the time it holds no decoder at all.
@@ -333,7 +346,11 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
 
   /// Likewise for the length: known from the listing before the stream opens.
   Duration? get shownDuration =>
-      (showingVideo ? _video.duration : _player.duration) ??
+      (casting
+          ? _cast.duration
+          : showingVideo
+              ? _video.duration
+              : _player.duration) ??
       currentSong?.duration;
 
   /// Where the sound is coming from right now.
@@ -344,13 +361,19 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   /// lock screen and the car keep describing whichever one is actually making
   /// noise.
   Duration get _enginePosition =>
+      casting ? _cast.livePosition : _localPosition;
+  bool get _enginePlaying => casting ? _cast.playing : _localPlaying;
+
+  /// The phone's own engines, which is what a Cast session takes over from.
+  Duration get _localPosition =>
       showingVideo ? _video.position : _player.position;
-  bool get _enginePlaying => showingVideo ? _video.playing : _player.playing;
+  bool get _localPlaying => showingVideo ? _video.playing : _player.playing;
 
   void _wirePlayerStreams() {
     _player.positionStream.listen((position) {
-      if (!showingVideo && !_ticks.isClosed) _ticks.add(position);
+      if (!showingVideo && !casting && !_ticks.isClosed) _ticks.add(position);
     });
+    _wireCast();
     _video.stateChanges.listen((_) {
       if (!_ticks.isClosed) _ticks.add(_enginePosition);
       // libmpv has no `playbackEventStream` of its own to drive the session, so
@@ -451,7 +474,19 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
       ],
       systemActions: const {MediaAction.seek},
       androidCompactActionIndices: const [0, 1, 2],
-      processingState: showingVideo
+      processingState: casting
+          ? switch (_cast.state) {
+              CastPlayerState.loading => AudioProcessingState.loading,
+              CastPlayerState.buffering => AudioProcessingState.buffering,
+              // Idle between tracks is not the end of the session: the queue
+              // is about to load the next one, and an idle state here would
+              // take the notification down in the gap.
+              CastPlayerState.idle => _loaded
+                  ? AudioProcessingState.ready
+                  : AudioProcessingState.idle,
+              _ => AudioProcessingState.ready,
+            }
+          : showingVideo
           ? (_video.buffering
               ? AudioProcessingState.buffering
               : AudioProcessingState.ready)
@@ -469,7 +504,9 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
       // often enough — measured at 0:25 against a playhead at 1:28 — that
       // taken literally it draws a buffer bar trailing the music, which reads
       // as a stall that is not happening.
-      bufferedPosition: showingVideo
+      bufferedPosition: casting
+          ? _cast.livePosition
+          : showingVideo
           ? (_video.buffered > _video.position
               ? _video.buffered
               : _video.position)
@@ -533,7 +570,7 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     await _resume.save(
       songs: _songs,
       index: _index,
-      position: _loaded ? _player.position : (_pending ?? Duration.zero),
+      position: _loaded ? _enginePosition : (_pending ?? Duration.zero),
       shuffled: _shuffled,
       repeatMode: _repeat.index,
     );
@@ -755,6 +792,8 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
     final song = _songs[index];
     mediaItem.add(_toMediaItem(song));
 
+    if (casting) return _castIndex(song, from: from);
+
     final AudioStream? stream;
     try {
       stream = await _resolve(song);
@@ -825,6 +864,168 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
       unawaited(_innertube.reportPlayback(playing));
     }
     return true;
+  }
+
+  void _wireCast() {
+    if (!CastEngine.supported) return;
+    _cast.changes.listen((_) {
+      if (!casting) return;
+      if (!_ticks.isClosed) _ticks.add(_cast.livePosition);
+      // The receiver knows the real length once it has opened the stream.
+      final length = _cast.duration;
+      final item = mediaItem.value;
+      if (length != null && item != null && item.duration != length) {
+        mediaItem.add(item.copyWith(duration: length));
+      }
+      _publishState();
+    });
+    _cast.finished.listen((_) {
+      if (!casting) return;
+      if (_repeat == AudioServiceRepeatMode.one) {
+        unawaited(_playIndex(_index));
+      } else {
+        unawaited(_advance());
+      }
+    });
+    // A format the receiver cannot open is the same event as a track YouTube
+    // refuses: step over it rather than sit in silence.
+    _cast.failed.listen((_) {
+      if (casting) unawaited(_advance());
+    });
+    _cast.sessions.listen((open) => unawaited(_onCastSession(open)));
+  }
+
+  /// Hands the track across when a session opens or closes.
+  ///
+  /// Opening carries on from the second the phone had reached, playing or
+  /// paused as it was. Closing comes back to the phone **paused** at the
+  /// second the receiver reached: the speaker going quiet is the listener's
+  /// doing, and the phone bursting into sound in their pocket is not what
+  /// they asked for.
+  Future<void> _onCastSession(bool open) async {
+    _castTicker?.cancel();
+    _castTicker = null;
+    await CastLocks.hold(open);
+
+    if (open) {
+      _castTicker = Timer.periodic(const Duration(milliseconds: 250), (_) {
+        if (casting && _cast.playing && !_ticks.isClosed) {
+          _ticks.add(_cast.livePosition);
+        }
+      });
+      final song = currentSong;
+      if (song == null) return;
+      final at = _loaded ? _localPosition : (_pending ?? Duration.zero);
+      final wasPlaying = _loaded && _localPlaying;
+      if (!_loaded) {
+        // Nothing loaded yet (a restored queue): leave it for the first press
+        // of play, which now goes to the receiver.
+        _publishState();
+        return;
+      }
+      if (!await _castIndex(song, from: at, autoplay: wasPlaying)) {
+        await _advance();
+      }
+      return;
+    }
+
+    final at = _cast.lastPosition;
+    _watchtime?.cancel();
+    await _player.stop();
+    _loaded = false;
+    _pending = at;
+    playbackState.add(_transformState().copyWith(
+      processingState: AudioProcessingState.ready,
+      playing: false,
+      updatePosition: at,
+    ));
+    if (!_ticks.isClosed) _ticks.add(at);
+    unawaited(_saveResumePoint());
+    unawaited(_castServer.stop());
+  }
+
+  /// [_playIndex] for a Cast receiver: the phone resolves and serves, the
+  /// receiver plays.
+  Future<bool> _castIndex(
+    Song song, {
+    Duration? from,
+    bool autoplay = true,
+  }) async {
+    if (_video.isOpen) await _video.close();
+    await _player.stop();
+
+    final AudioStream? stream;
+    try {
+      final CastMedia media;
+      (media, stream) = await _publishForCast(song);
+      await _cast.load(
+        url: media.url,
+        contentType: media.contentType,
+        title: song.title,
+        artist: song.artist ?? (song.subtitle.isEmpty ? null : song.subtitle),
+        artwork: song.highResThumbnailUrl == null
+            ? null
+            : Uri.tryParse(song.highResThumbnailUrl!),
+        from: from ?? Duration.zero,
+        autoplay: autoplay,
+      );
+    } catch (_) {
+      _loaded = false;
+      _publishState();
+      return false;
+    }
+
+    _loaded = true;
+    _pending = null;
+    _publishState();
+    unawaited(_history.record(song));
+    unawaited(_saveResumePoint());
+    unawaited(_scrobbler.nowPlaying(song));
+    _startWatchtime(song, stream);
+    if (stream case final playing?) {
+      unawaited(_innertube.reportPlayback(playing));
+    }
+    return true;
+  }
+
+  /// Where the receiver should fetch [song] from, in the same order the phone
+  /// itself prefers: a file on this phone, a download, then the stream.
+  Future<(CastMedia, AudioStream?)> _publishForCast(Song song) async {
+    _videoStreams = const [];
+    _videoAudio = null;
+
+    if (DeviceSongs.isLocal(song.videoId)) {
+      return (
+        await _castServer.publishFile(File(DeviceSongs.pathOf(song.videoId))),
+        null,
+      );
+    }
+    if (_downloads.has(song.videoId)) {
+      return (
+        await _castServer.publishFile(_downloads.fileFor(song.videoId)),
+        null,
+      );
+    }
+
+    final tracks = await _innertube.resolveTracks(
+      song.videoId,
+      maxHeight: _maxVideoHeight,
+    );
+    if (tracks.audio.isEmpty) {
+      throw InnertubeException('Ningún formato se pudo abrir');
+    }
+    // AAC in mp4 first: every Cast receiver decodes it, while Opus in WebM
+    // depends on the device generation.
+    final candidate = tracks.audio.firstWhere(
+      (stream) => stream.mimeType.startsWith('audio/mp4'),
+      orElse: () => tracks.audio.first,
+    );
+    final media = await _castServer.publishStream(
+      candidate.url,
+      mimeType: candidate.mimeType,
+      userAgent: candidate.userAgent,
+    );
+    return (media, candidate);
   }
 
   /// Arms the timer that decides a track was actually listened to.
@@ -1188,16 +1389,33 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
       if (!await _playIndex(_index, from: _pending)) await _advance();
       return;
     }
+    if (casting) return _cast.play();
     if (showingVideo) return _video.play();
     await _player.play();
   }
 
   @override
-  Future<void> pause() => showingVideo ? _video.pause() : _player.pause();
+  Future<void> pause() => casting
+      ? _cast.pause()
+      : showingVideo
+          ? _video.pause()
+          : _player.pause();
 
   @override
-  Future<void> seek(Duration position) =>
-      showingVideo ? _video.seek(position) : _player.seek(position);
+  Future<void> seek(Duration position) {
+    // Before the track has loaded there is nothing to move; remember where it
+    // should start instead, so the bar answers the drag.
+    if (!_loaded) {
+      _pending = position;
+      _ticks.add(position);
+      return Future.value();
+    }
+    return casting
+        ? _cast.seek(position)
+        : showingVideo
+            ? _video.seek(position)
+            : _player.seek(position);
+  }
 
   /// Shows the picture for the track playing now, keeping its place.
   ///
@@ -1208,6 +1426,9 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   /// Answers false when there is nothing to show, which is most tracks: an art
   /// track is a still image and YouTube offers no video formats for it.
   Future<bool> showVideo() async {
+    // The receivers this phase targets have no screen, and a picture on the
+    // phone would be a second copy of the sound.
+    if (casting) return false;
     _videoWanted = true;
     if (showingVideo) return true;
 
@@ -1410,7 +1631,7 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   Future<void> skipToPrevious() async {
     // Matches the convention every music player uses: rewind first, and only
     // change track when already near the start.
-    if (_player.position > const Duration(seconds: 3)) {
+    if (_enginePosition > const Duration(seconds: 3)) {
       await _player.seek(Duration.zero);
       return;
     }
@@ -1435,6 +1656,7 @@ class PlayerService extends BaseAudioHandler with SeekHandler {
   Future<void> stop() async {
     _watchtime?.cancel();
     sleepAfter(null);
+    if (casting) await _cast.stop();
     await _video.close();
     await _player.stop();
     playbackState.add(playbackState.value.copyWith(

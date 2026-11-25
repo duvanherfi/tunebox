@@ -11,6 +11,7 @@ import '../../main.dart';
 import '../nightstand/idle_watcher.dart';
 import '../nightstand/nightstand.dart';
 import '../shared/song_menu.dart';
+import 'cast_sheet.dart';
 import 'lyrics_view.dart';
 import 'playback_sheet.dart';
 import 'swipe_to_change.dart';
@@ -265,7 +266,7 @@ class _Handle extends StatelessWidget {
 
     return Row(
       children: [
-        const SizedBox(width: 48),
+        const CastButton(),
         Expanded(
           child: GestureDetector(
             onTap: onCollapse,

@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import 'core/audio/cast_engine.dart';
 import 'core/audio/player_service.dart';
 import 'core/auth/session.dart';
 import 'core/innertube/innertube_client.dart';
@@ -209,6 +210,16 @@ Future<void> main() async {
   // Paused, at the second it stopped on: reopening the app answers "what was
   // I listening to" without asking the network anything.
   await playerService.restore();
+
+  // Cast needs Google Play services; a phone without them simply has no
+  // button, rather than no app.
+  if (CastEngine.supported) {
+    try {
+      await CastEngine.instance.init();
+    } catch (error) {
+      debugPrint('Cast unavailable: $error');
+    }
+  }
 
   // What the launcher's widget shows, for as long as the app is alive; its
   // buttons keep working after that, since they talk to the service directly.

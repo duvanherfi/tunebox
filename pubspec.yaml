@@ -50,8 +50,9 @@ dependencies:
   path_provider:
   share_plus:
   wakelock_plus:
-  # Pinned: 14.x ships a Gradle script that our toolchain refuses to compile.
-  permission_handler: ^11.3.1
+  # Pinned below 14: 14.x ships a Gradle script that our toolchain refuses to
+  # compile. 12 rather than 11 because flutter_chrome_cast requires it.
+  permission_handler: ^12.0.1
   home_widget:
   # Real backlight rather than a black veil over the page: on an OLED in a dark
   # room that is the whole difference the nightstand screen is for.
@@ -70,6 +71,11 @@ dependencies:
   media_kit:
   media_kit_video:
   media_kit_libs_video:
+
+  # Google Cast. Pinned: 1.2.6 is the version measured against a real Nest
+  # Mini, and two of its parts are worked around in core/audio/cast_engine.dart
+  # in ways a release could break.
+  flutter_chrome_cast: 1.2.6
 
   # The folder picker. Desktop only: it is how someone reaches music that
   # lives outside the folders a platform hands over by default, and on a

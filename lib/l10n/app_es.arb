@@ -365,5 +365,11 @@
   "updateFailed": "No se ha podido consultar GitHub. Int\u00e9ntalo m\u00e1s tarde.",
   "updatePermission": "Hay que decirle a Android que Tunebox puede instalar aplicaciones.",
   "updatePermissionOpen": "Abrir ajustes",
-  "updateSignature": "El archivo que ha llegado no est\u00e1 firmado por Tunebox. Se ha descartado y no se ha instalado nada."
+  "updateSignature": "El archivo que ha llegado no est\u00e1 firmado por Tunebox. Se ha descartado y no se ha instalado nada.",
+  "castTip": "Transmitir",
+  "castTitle": "Reproducir en",
+  "castSearching": "Buscando altavoces y televisores…",
+  "castSameWifi": "Tienen que estar en la misma Wi-Fi que este teléfono.",
+  "castPlayingOn": "Sonando aquí",
+  "castStop": "Reproducir en este teléfono"
 }

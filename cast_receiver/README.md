@@ -1,10 +1,9 @@
 # TuneBox Custom Web Receiver
 
-This static CAF receiver is a feasibility spike for Cast audio and video. It
-plays the request's primary media using CAF and can attach a second audio URL to
-a video request to measure and correct playback drift. It is not evidence that
-the current TuneBox streams stay synchronized; that must be measured on a real
-receiver over several minutes before product integration.
+This static CAF receiver is a feasibility spike for Cast audio. It plays the
+request's primary media using CAF. Experimental support for attaching a second
+audio URL to video remains available for a future phase, but video is deferred
+and has not been validated with TuneBox streams.
 
 ## GitHub Pages setup
 
@@ -27,10 +26,11 @@ flutter run -d <android-device-id> \
   --dart-define=CAST_RECEIVER_APP_ID=<registered-application-id>
 ```
 
-## Sender contract
+## Deferred A/V sender contract
 
-For ordinary audio or video, send a standard CAF `LOAD` request. For separate
-video and audio streams, use the video as the primary media and include:
+The current phase sends audio-only media through a standard CAF `LOAD` request.
+For a future separate video and audio stream experiment, use the video as the
+primary media and include:
 
 ```json
 {
@@ -46,11 +46,12 @@ receiver does not accept credentials in media URLs, log media URLs, or provide
 an HTTP server. The media server must provide the CORS and byte-range behavior
 validated by the separate LAN test.
 
-## Receiver-side test
+## Current receiver-side test
 
-1. Load a short video-only resource and a matching separate audio resource.
+1. Load an audio-only sample.
 2. Verify receiver state, pause/resume, seek, and end behavior from the sender.
-3. Keep it playing for several minutes and observe the on-screen A/V drift and
-   maximum observed drift.
-4. Repeat with representative TuneBox tracks. A successful short sample does
-   not pass the viability gate.
+3. Repeat with representative TuneBox audio tracks. A successful short sample
+   does not pass the viability gate.
+
+Video playback and A/V drift measurement are deferred until a later phase with
+a Cast receiver connected to a screen.

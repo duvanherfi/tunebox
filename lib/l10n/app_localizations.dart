@@ -2095,6 +2095,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The file that arrived is not signed by Tunebox. It has been discarded and nothing was installed.'**
   String get updateSignature;
+
+  /// No description provided for @castTip.
+  ///
+  /// In en, this message translates to:
+  /// **'Cast'**
+  String get castTip;
+
+  /// No description provided for @castTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Play on'**
+  String get castTitle;
+
+  /// No description provided for @castSearching.
+  ///
+  /// In en, this message translates to:
+  /// **'Looking for speakers and TVs…'**
+  String get castSearching;
+
+  /// No description provided for @castSameWifi.
+  ///
+  /// In en, this message translates to:
+  /// **'They have to be on the same Wi-Fi as this phone.'**
+  String get castSameWifi;
+
+  /// No description provided for @castPlayingOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Playing here'**
+  String get castPlayingOn;
+
+  /// No description provided for @castStop.
+  ///
+  /// In en, this message translates to:
+  /// **'Play on this phone'**
+  String get castStop;
 }
 
 class _AppLocalizationsDelegate

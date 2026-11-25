@@ -28,6 +28,11 @@ class MainActivity : AudioServiceActivity() {
             DeviceAccounts.CHANNEL,
         ).setMethodCallHandler { call, result -> accounts.handle(call, result) }
 
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            CastLocks.CHANNEL,
+        ).setMethodCallHandler { call, result -> CastLocks.handle(applicationContext, call, result) }
+
         val installer = Installer(this)
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,

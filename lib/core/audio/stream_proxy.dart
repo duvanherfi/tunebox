@@ -78,7 +78,7 @@ class StreamProxy {
     );
   }
 
-  Future<HttpClientResponse> _fetchChunk(
+  static Future<HttpClientResponse> _fetchChunk(
     HttpClient client,
     Uri origin,
     int start,
@@ -105,6 +105,17 @@ class StreamProxy {
     final agentParam = request.uri.queryParameters['a'];
     final userAgent =
         agentParam == null ? '' : utf8.decode(base64Url.decode(agentParam));
+    await relay(request, origin, userAgent: userAgent);
+  }
+
+  /// Answers [request] with [origin]'s bytes, fetched one bounded window at a
+  /// time. Shared with the LAN server a Cast receiver reads from, which faces
+  /// the same googlevideo refusal and must not be handed the signed URL.
+  static Future<void> relay(
+    HttpRequest request,
+    Uri origin, {
+    String userAgent = '',
+  }) async {
     final client = HttpClient();
     final requested = _RangeSpec.parse(
       request.headers.value(HttpHeaders.rangeHeader),
